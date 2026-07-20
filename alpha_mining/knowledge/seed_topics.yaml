@@ -1,0 +1,220 @@
+version: 1
+topics:
+  - topic_id: capital_efficiency
+    topic_name_cn: 资本效率
+    topic_name_en: Capital Efficiency
+    category: profitability
+    data_category: fundamental
+    description: Compare operating profit generated per unit of invested capital or assets within peer groups.
+    source: seed
+    source_ref: classic_factor_taxonomy
+
+  - topic_id: operating_profitability
+    topic_name_cn: 经营盈利能力
+    topic_name_en: Operating Profitability
+    category: profitability
+    data_category: fundamental
+    description: Favor firms with strong operating income, gross profit, or cash profitability relative to scale.
+    source: seed
+    source_ref: worldquant_brain_submission_skill.md
+
+  - topic_id: earnings_quality_accruals
+    topic_name_cn: 盈利质量与应计
+    topic_name_en: Earnings Quality and Accruals
+    category: quality
+    data_category: fundamental
+    description: Test whether cash-backed earnings and lower accrual intensity predict more persistent returns.
+    source: seed
+    source_ref: classic_factor_taxonomy
+
+  - topic_id: revenue_growth
+    topic_name_cn: 收入成长
+    topic_name_en: Revenue Growth
+    category: growth
+    data_category: fundamental
+    description: Study peer-relative revenue growth while controlling for company scale and reporting frequency.
+    source: seed
+    source_ref: worldquant_brain_submission_skill.md
+
+  - topic_id: margin_improvement
+    topic_name_cn: 利润率改善
+    topic_name_en: Margin Improvement
+    category: growth
+    data_category: fundamental
+    description: Measure shallow medium-horizon changes in operating or gross margins within comparable firms.
+    source: seed
+    source_ref: worldquant_brain_submission_skill.md
+
+  - topic_id: investment_capex_discipline
+    topic_name_cn: 投资与资本开支纪律
+    topic_name_en: Investment and Capex Discipline
+    category: investment
+    data_category: fundamental
+    description: Test whether disciplined asset growth and capital expenditure improve subsequent efficiency.
+    source: seed
+    source_ref: classic_factor_taxonomy
+
+  - topic_id: balance_sheet_leverage
+    topic_name_cn: 资产负债表杠杆
+    topic_name_en: Balance Sheet Leverage
+    category: quality
+    data_category: fundamental
+    description: Compare debt burden and liability structure relative to size within industries.
+    source: seed
+    source_ref: worldquant_brain_submission_skill.md
+
+  - topic_id: sales_yield_value
+    topic_name_cn: 销售收益率价值
+    topic_name_en: Sales Yield Value
+    category: value
+    data_category: fundamental
+    description: Use sales relative to market capitalization as a broad peer-relative valuation signal.
+    source: seed
+    source_ref: worldquant_brain_submission_skill.md
+
+  - topic_id: cash_flow_yield
+    topic_name_cn: 现金流收益率
+    topic_name_en: Cash Flow Yield
+    category: value
+    data_category: fundamental
+    description: Compare operating or free cash flow to market value using robust size normalization.
+    source: seed
+    source_ref: classic_factor_taxonomy
+
+  - topic_id: asset_utilization
+    topic_name_cn: 资产利用效率
+    topic_name_en: Asset Utilization
+    category: efficiency
+    data_category: fundamental
+    description: Test whether firms generating more sales or profit per unit of assets outperform peers.
+    source: seed
+    source_ref: classic_factor_taxonomy
+
+  - topic_id: liquidity_scaled_fundamental_change
+    topic_name_cn: 流动性调整的基本面变化
+    topic_name_en: Liquidity-Scaled Fundamental Change
+    category: liquidity
+    data_category: fundamental
+    description: Combine medium-horizon fundamental changes with liquid-universe scaling and peer ranking.
+    source: seed
+    source_ref: phase1_topic_stats
+    prior_strategy: arch_delta_liquid
+    prior_sample_count: 240
+    prior_pass_rate: 0.083333
+
+  - topic_id: fundamental_time_series_strength
+    topic_name_cn: 基本面时序强度
+    topic_name_en: Fundamental Time-Series Strength
+    category: quality
+    data_category: fundamental
+    description: Apply a single ranking transform to persistent low-frequency fundamental series.
+    source: seed
+    source_ref: phase1_topic_stats
+    prior_strategy: pass_fundamental_ts
+    prior_sample_count: 36
+    prior_pass_rate: 0.083333
+
+  - topic_id: analyst_revision_direction
+    topic_name_cn: 分析师预期修正方向
+    topic_name_en: Analyst Revision Direction
+    category: expectations
+    data_category: analyst
+    description: Track the direction and breadth of earnings or target revisions over a medium horizon.
+    source: seed
+    source_ref: classic_factor_taxonomy
+
+  - topic_id: earnings_surprise_persistence
+    topic_name_cn: 盈利惊喜持续性
+    topic_name_en: Earnings Surprise Persistence
+    category: expectations
+    data_category: analyst
+    description: Test whether broad earnings surprises persist after controlling for industry effects.
+    source: seed
+    source_ref: classic_factor_taxonomy
+
+  - topic_id: news_sentiment_impulse
+    topic_name_cn: 新闻情绪冲击
+    topic_name_en: News Sentiment Impulse
+    category: sentiment
+    data_category: sentiment
+    description: Measure timely news sentiment shocks with a delay aligned to event-data freshness.
+    source: seed
+    source_ref: worldquant_brain_submission_skill.md
+
+  - topic_id: sentiment_reversal
+    topic_name_cn: 情绪反转
+    topic_name_en: Sentiment Reversal
+    category: sentiment
+    data_category: sentiment
+    description: Test whether extreme but broad sentiment readings reverse after the initial reaction.
+    source: seed
+    source_ref: classic_factor_taxonomy
+
+  - topic_id: implied_volatility_skew
+    topic_name_cn: 隐含波动率偏斜
+    topic_name_en: Implied Volatility Skew
+    category: volatility
+    data_category: options
+    description: Use option-implied downside asymmetry as a forward-looking risk and expectation signal.
+    source: seed
+    source_ref: classic_factor_taxonomy
+
+  - topic_id: unusual_options_activity
+    topic_name_cn: 异常期权活动
+    topic_name_en: Unusual Options Activity
+    category: flow
+    data_category: options
+    description: Test whether abnormal option volume or open-interest changes anticipate equity moves.
+    source: seed
+    source_ref: classic_factor_taxonomy
+
+  - topic_id: short_horizon_price_reversal
+    topic_name_cn: 短周期价格反转
+    topic_name_en: Short-Horizon Price Reversal
+    category: mean_reversion
+    data_category: price
+    description: Test broad reversal of overnight or very short close-to-close moves with delay-aware execution.
+    source: paper_derived
+    source_ref: ssrn-2701346.pdf#mean-reversion
+
+  - topic_id: intraday_momentum_industry_neutral
+    topic_name_cn: 行业中性的日内动量
+    topic_name_en: Industry-Neutral Intraday Momentum
+    category: momentum
+    data_category: price
+    description: Test whether intraday direction persists on the next day after industry neutralization.
+    source: paper_derived
+    source_ref: ssrn-2701346.pdf#momentum
+
+  - topic_id: vwap_close_deviation
+    topic_name_cn: VWAP 与收盘价偏离
+    topic_name_en: VWAP-Close Deviation
+    category: mean_reversion
+    data_category: price
+    description: Treat broad VWAP-close divergence as an intraday relative-value or reversal signal.
+    source: seed
+    source_ref: worldquant_brain_submission_skill.md
+
+  - topic_id: fundamental_improvement_price_confirmation
+    topic_name_cn: 基本面改善与价格确认
+    topic_name_en: Fundamental Improvement with Price Confirmation
+    category: composite
+    data_category: hybrid
+    description: Combine one peer-ranked fundamental improvement leg with one shallow price confirmation leg.
+    source: seed
+    source_ref: phase1_topic_stats
+    prior_strategy: arch_hybrid_delta_pv
+    prior_sample_count: 73
+    prior_pass_rate: 0.479452
+
+  - topic_id: quality_low_volatility
+    topic_name_cn: 质量与低波动
+    topic_name_en: Quality and Low Volatility
+    category: composite
+    data_category: hybrid
+    description: Combine durable operating quality with a simple low-volatility qualifier while preserving breadth.
+    source: seed
+    source_ref: phase1_topic_stats
+    prior_strategy: arch_hybrid_z_pv
+    prior_sample_count: 196
+    prior_pass_rate: 0.035714

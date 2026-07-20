@@ -1,0 +1,100 @@
+{
+  "run_type": "Consultant Alpha Factory Shadow Run",
+  "status": "BLOCKED_BEFORE_SEED_SELECTION",
+  "generated_at": "2026-07-20T08:53:45.393407Z",
+  "execute_submit": false,
+  "submit_endpoint_calls": 0,
+  "requested_mode": {
+    "seed_source": "legacy",
+    "cluster_medoid_only": true,
+    "settings_search": "local",
+    "fail_closed": true,
+    "max_recheck_candidates_per_cluster": 1,
+    "max_offspring_per_seed": 8,
+    "settings_cartesian_product": false
+  },
+  "gate_snapshot": {
+    "path": "gate_snapshot.json",
+    "source": "local 总alpha.csv (not a live platform refresh)",
+    "snapshot_count": 30,
+    "fresh_snapshot_count_24h": 0,
+    "freshness_hours": 24,
+    "earliest_last_seen_at": "2026-05-31T21:19:39Z",
+    "latest_last_seen_at": "2026-07-03T13:25:52Z",
+    "gate_name_distribution": {
+      "CONCENTRATED_WEIGHT": 1,
+      "HIGH_TURNOVER": 6,
+      "LOW_FITNESS": 6,
+      "LOW_SHARPE": 6,
+      "LOW_SUB_UNIVERSE_SHARPE": 5,
+      "LOW_TURNOVER": 6
+    },
+    "missing_required_gate_names": [
+      "SELF_CORRELATION",
+      "PROD_CORRELATION"
+    ],
+    "usable_for_submission_stage": false
+  },
+  "inventory": {
+    "historical_alpha_records": 18630,
+    "unique_expressions": 13325,
+    "behavior_clusters": 8739,
+    "lineage_records": 18630,
+    "return_series": 0,
+    "settings_trials": 0,
+    "simulation_requests": 0,
+    "submit_queue_items": 0
+  },
+  "triage": {
+    "RECHECK": 0,
+    "REPAIR": 0,
+    "SEED_ONLY": 13037,
+    "ARCHIVE": 288
+  },
+  "triage_reason_distribution": {
+    "missing_metrics_or_gate": 13037,
+    "invalid_expression": 288
+  },
+  "run_metrics": {
+    "seeds_selected": 0,
+    "offspring_generated": 0,
+    "prescreen_rejected": 0,
+    "simulations": 0,
+    "basic_gate_pass": 0,
+    "consultant_quality_buffer_pass": 0,
+    "self_correlation_explicit_pass": 0,
+    "self_correlation_pending": 0,
+    "final_dry_run_candidates": 0,
+    "blocked_candidate_rows": 0
+  },
+  "local_max_correlation_distribution": {
+    "candidate_evaluations": 0,
+    "return_series_available": 0,
+    "status": "NOT_EVALUATED_NO_CANDIDATES_AND_NO_RETURN_SERIES"
+  },
+  "platform_correlation_historical_distribution": {
+    "SELF_CORRELATION:PENDING": 16120
+  },
+  "dry_run": {
+    "queue_before_evaluation": {},
+    "candidates": 0,
+    "allowed": 0,
+    "blocked": 0,
+    "endpoint_calls": 0
+  },
+  "run_blockers": [
+    "GATE_SNAPSHOT_STALE_OR_MISSING",
+    "REQUIRED_CORRELATION_GATE_SNAPSHOT_MISSING",
+    "LOCAL_RETURN_SERIES_MISSING",
+    "SHADOW_RUN_CLI_CONTRACT_UNSUPPORTED"
+  ],
+  "unsupported_shadow_run_arguments": [
+    "--execute-submit=false",
+    "--seed-source=legacy",
+    "--cluster-medoid-only",
+    "--settings-search=local",
+    "--fail-closed"
+  ],
+  "recommend_expand_shadow_budget": false,
+  "recommendation": "Do not expand the simulation budget. First obtain fresh live platform gate snapshots (including SELF_CORRELATION and PROD_CORRELATION), ingest daily returns, and implement the requested shadow-run CLI contract."
+}

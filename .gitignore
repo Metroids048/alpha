@@ -1,0 +1,70 @@
+# Virtual environments
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+
+# Node
+node_modules/
+package-lock.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment & secrets
+.env
+*.env.local
+
+# Large data outputs (keep structure, ignore data)
+alpha_generated_expressions*.csv
+alpha_submission_feedback.csv
+alpha_batch_diagnostics.csv
+alpha_feedback_diagnostics.csv
+alpha_pipeline_checkpoint.csv
+alpha_pipeline_results.csv
+alpha_pipeline_batch_diagnostic_selection.csv
+alpha_recent_platform_analysis.csv
+alpha_novelty_index.json
+.alpha_datafields_cache.json
+.alpha_datasets_cache.json
+hopeful_alphas*.jsonl
+alpha_candidates.jsonl
+submission_results.jsonl
+alpha_run.log
+alpha_run.err.log
+claude_router.log
+numerai_alpha_inventory.csv
+Alpha Models.csv
+1.csv
+pass.csv
+alpha50.csv
+
+# Plans
+.claude/plans/
+
+# Local forensics backups (exceed GitHub 100MB limit)
+work/codex_crash_forensics_*/logs_2*_backup.sqlite
+work/codex_crash_forensics_*/logs_2*_verify_backup.sqlite
+*.sqlite
+
+# DPAPI-protected WorldQuant authentication state (local current-user scope)
+.wq_auth_state.json
+.wq_auth_state.json.tmp.*
+.wq_auth_state.json.lock
+.wq_browser_cookie.json
+
+# Consultant Factory local outputs (derived data; never commit)
+research_memory.sqlite*
+gate_snapshot.json
+consultant_reports/
+consultant_shadow_runs/
+legacy_inventory.csv
+legacy_cluster_summary.csv
+legacy_seed_candidates.csv
+legacy_repair_candidates.csv
+legacy_archive.csv

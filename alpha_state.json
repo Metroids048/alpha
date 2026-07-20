@@ -1,0 +1,41 @@
+{
+  "generated_hashes": [
+    "f077546bdbe825a9",
+    "5111a8761923a673",
+    "a1838fb0bf0bafad",
+    "e0715f9ea1febda3"
+  ],
+  "template_counts": {
+    "43a93dbd325358ff": 1,
+    "5b8fcbb0aa9b27a8": 2,
+    "fac069957ebaaf26": 1
+  },
+  "field_counts": {
+    "vwap": 1,
+    "debt": 1,
+    "cap": 2,
+    "close": 1,
+    "debt_lt": 1
+  },
+  "family_counts": {
+    "mean_reversion": 2,
+    "fundamental_quality": 2
+  },
+  "hypothesis_counts": {
+    "mean_reversion_1": 2,
+    "fundamental_quality_1": 2
+  },
+  "category_counts": {
+    "price_volume": 2,
+    "fundamental": 2
+  },
+  "horizon_counts": {
+    "ultra_short": 2,
+    "mid": 1,
+    "long": 1
+  },
+  "recent_failures": [],
+  "recent_successes": [],
+  "metric_history": [],
+  "expression_memory": {}
+}

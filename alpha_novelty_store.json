@@ -1,0 +1,3381 @@
+{
+  "version": 1,
+  "records": [
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_cptnewqv1300_nopiq/cap), 20))-0.5",
+      "skel": "rank(ts_mean((fnd6_cptnewqv1300_nopiq/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_cptnewqv1300_nopiq/cap), 63))-0.5",
+      "skel": "rank(ts_mean((fnd6_cptnewqv1300_nopiq/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_cptnewqv1300_nopiq/cap), 126))-0.5",
+      "skel": "rank(ts_mean((fnd6_cptnewqv1300_nopiq/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_cptnewqv1300_nopiq/cap), 252))-0.5",
+      "skel": "rank(ts_mean((fnd6_cptnewqv1300_nopiq/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank((fnd6_cptnewqv1300_nopiq/cap), 126)-0.5",
+      "skel": "ts_rank((fnd6_cptnewqv1300_nopiq/cap), #)-#.#",
+      "tmpl": "ts_rank((F/cap), #)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_zscore((fnd6_cptnewqv1300_nopiq/cap), 252)",
+      "skel": "ts_zscore((fnd6_cptnewqv1300_nopiq/cap), #)",
+      "tmpl": "ts_zscore((F/cap), #)"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_decay_linear((fnd6_cptnewqv1300_nopiq/cap), 20))-0.5",
+      "skel": "rank(ts_decay_linear((fnd6_cptnewqv1300_nopiq/cap), #))-#.#",
+      "tmpl": "rank(ts_decay_linear((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_cptnewqv1300_nopiq/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_cptnewqv1300_nopiq/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_decay_linear((fnd6_cptnewqv1300_nopiq/cap), 20), industry)-0.5",
+      "skel": "group_rank(ts_decay_linear((fnd6_cptnewqv1300_nopiq/cap), #), industry)-#.#",
+      "tmpl": "group_rank(ts_decay_linear((F/cap), #), industry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_dclo/cap), 20))-0.5",
+      "skel": "rank(ts_mean((fnd6_dclo/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_dclo/cap), 63))-0.5",
+      "skel": "rank(ts_mean((fnd6_dclo/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_dclo/cap), 126))-0.5",
+      "skel": "rank(ts_mean((fnd6_dclo/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_dclo/cap), 252))-0.5",
+      "skel": "rank(ts_mean((fnd6_dclo/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank((fnd6_dclo/cap), 126)-0.5",
+      "skel": "ts_rank((fnd6_dclo/cap), #)-#.#",
+      "tmpl": "ts_rank((F/cap), #)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_zscore((fnd6_dclo/cap), 252)",
+      "skel": "ts_zscore((fnd6_dclo/cap), #)",
+      "tmpl": "ts_zscore((F/cap), #)"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_decay_linear((fnd6_dclo/cap), 20))-0.5",
+      "skel": "rank(ts_decay_linear((fnd6_dclo/cap), #))-#.#",
+      "tmpl": "rank(ts_decay_linear((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_dclo/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_dclo/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_decay_linear((fnd6_dclo/cap), 20), industry)-0.5",
+      "skel": "group_rank(ts_decay_linear((fnd6_dclo/cap), #), industry)-#.#",
+      "tmpl": "group_rank(ts_decay_linear((F/cap), #), industry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((return_assets/cap), 20))-0.5",
+      "skel": "rank(ts_mean((return_assets/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((return_assets/cap), 63))-0.5",
+      "skel": "rank(ts_mean((return_assets/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((return_assets/cap), 126))-0.5",
+      "skel": "rank(ts_mean((return_assets/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((return_assets/cap), 252))-0.5",
+      "skel": "rank(ts_mean((return_assets/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank((return_assets/cap), 126)-0.5",
+      "skel": "ts_rank((return_assets/cap), #)-#.#",
+      "tmpl": "ts_rank((F/cap), #)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_zscore((return_assets/cap), 252)",
+      "skel": "ts_zscore((return_assets/cap), #)",
+      "tmpl": "ts_zscore((F/cap), #)"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_decay_linear((return_assets/cap), 20))-0.5",
+      "skel": "rank(ts_decay_linear((return_assets/cap), #))-#.#",
+      "tmpl": "rank(ts_decay_linear((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((return_assets/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((return_assets/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_decay_linear((return_assets/cap), 20), industry)-0.5",
+      "skel": "group_rank(ts_decay_linear((return_assets/cap), #), industry)-#.#",
+      "tmpl": "group_rank(ts_decay_linear((F/cap), #), industry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_drc/cap), 20))-0.5",
+      "skel": "rank(ts_mean((fnd6_drc/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_drc/cap), 63))-0.5",
+      "skel": "rank(ts_mean((fnd6_drc/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_drc/cap), 126))-0.5",
+      "skel": "rank(ts_mean((fnd6_drc/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_drc/cap), 252))-0.5",
+      "skel": "rank(ts_mean((fnd6_drc/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank((fnd6_drc/cap), 126)-0.5",
+      "skel": "ts_rank((fnd6_drc/cap), #)-#.#",
+      "tmpl": "ts_rank((F/cap), #)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_zscore((fnd6_drc/cap), 252)",
+      "skel": "ts_zscore((fnd6_drc/cap), #)",
+      "tmpl": "ts_zscore((F/cap), #)"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_decay_linear((fnd6_drc/cap), 20))-0.5",
+      "skel": "rank(ts_decay_linear((fnd6_drc/cap), #))-#.#",
+      "tmpl": "rank(ts_decay_linear((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_drc/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_drc/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_decay_linear((fnd6_drc/cap), 20), industry)-0.5",
+      "skel": "group_rank(ts_decay_linear((fnd6_drc/cap), #), industry)-#.#",
+      "tmpl": "group_rank(ts_decay_linear((F/cap), #), industry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_niadj/cap), 20))-0.5",
+      "skel": "rank(ts_mean((fnd6_niadj/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_niadj/cap), 63))-0.5",
+      "skel": "rank(ts_mean((fnd6_niadj/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_niadj/cap), 126))-0.5",
+      "skel": "rank(ts_mean((fnd6_niadj/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_niadj/cap), 252))-0.5",
+      "skel": "rank(ts_mean((fnd6_niadj/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank((fnd6_niadj/cap), 126)-0.5",
+      "skel": "ts_rank((fnd6_niadj/cap), #)-#.#",
+      "tmpl": "ts_rank((F/cap), #)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_zscore((fnd6_niadj/cap), 252)",
+      "skel": "ts_zscore((fnd6_niadj/cap), #)",
+      "tmpl": "ts_zscore((F/cap), #)"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_decay_linear((fnd6_niadj/cap), 20))-0.5",
+      "skel": "rank(ts_decay_linear((fnd6_niadj/cap), #))-#.#",
+      "tmpl": "rank(ts_decay_linear((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_niadj/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_niadj/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_decay_linear((fnd6_niadj/cap), 20), industry)-0.5",
+      "skel": "group_rank(ts_decay_linear((fnd6_niadj/cap), #), industry)-#.#",
+      "tmpl": "group_rank(ts_decay_linear((F/cap), #), industry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_cptmfmq_saleq/cap), 20))-0.5",
+      "skel": "rank(ts_mean((fnd6_cptmfmq_saleq/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_cptmfmq_saleq/cap), 63))-0.5",
+      "skel": "rank(ts_mean((fnd6_cptmfmq_saleq/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_cptmfmq_saleq/cap), 126))-0.5",
+      "skel": "rank(ts_mean((fnd6_cptmfmq_saleq/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_cptmfmq_saleq/cap), 252))-0.5",
+      "skel": "rank(ts_mean((fnd6_cptmfmq_saleq/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank((fnd6_cptmfmq_saleq/cap), 126)-0.5",
+      "skel": "ts_rank((fnd6_cptmfmq_saleq/cap), #)-#.#",
+      "tmpl": "ts_rank((F/cap), #)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_zscore((fnd6_cptmfmq_saleq/cap), 252)",
+      "skel": "ts_zscore((fnd6_cptmfmq_saleq/cap), #)",
+      "tmpl": "ts_zscore((F/cap), #)"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_decay_linear((fnd6_cptmfmq_saleq/cap), 20))-0.5",
+      "skel": "rank(ts_decay_linear((fnd6_cptmfmq_saleq/cap), #))-#.#",
+      "tmpl": "rank(ts_decay_linear((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_cptmfmq_saleq/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_cptmfmq_saleq/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_decay_linear((fnd6_cptmfmq_saleq/cap), 20), industry)-0.5",
+      "skel": "group_rank(ts_decay_linear((fnd6_cptmfmq_saleq/cap), #), industry)-#.#",
+      "tmpl": "group_rank(ts_decay_linear((F/cap), #), industry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((ebitda/cap), 20))-0.5",
+      "skel": "rank(ts_mean((ebitda/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((ebitda/cap), 63))-0.5",
+      "skel": "rank(ts_mean((ebitda/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((ebitda/cap), 126))-0.5",
+      "skel": "rank(ts_mean((ebitda/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((ebitda/cap), 252))-0.5",
+      "skel": "rank(ts_mean((ebitda/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank((ebitda/cap), 126)-0.5",
+      "skel": "ts_rank((ebitda/cap), #)-#.#",
+      "tmpl": "ts_rank((F/cap), #)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_zscore((ebitda/cap), 252)",
+      "skel": "ts_zscore((ebitda/cap), #)",
+      "tmpl": "ts_zscore((F/cap), #)"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_decay_linear((ebitda/cap), 20))-0.5",
+      "skel": "rank(ts_decay_linear((ebitda/cap), #))-#.#",
+      "tmpl": "rank(ts_decay_linear((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((ebitda/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((ebitda/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_decay_linear((ebitda/cap), 20), industry)-0.5",
+      "skel": "group_rank(ts_decay_linear((ebitda/cap), #), industry)-#.#",
+      "tmpl": "group_rank(ts_decay_linear((F/cap), #), industry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_cptnewqv1300_oiadpq/cap), 20))-0.5",
+      "skel": "rank(ts_mean((fnd6_cptnewqv1300_oiadpq/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_cptnewqv1300_oiadpq/cap), 63))-0.5",
+      "skel": "rank(ts_mean((fnd6_cptnewqv1300_oiadpq/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_cptnewqv1300_oiadpq/cap), 126))-0.5",
+      "skel": "rank(ts_mean((fnd6_cptnewqv1300_oiadpq/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_cptnewqv1300_oiadpq/cap), 252))-0.5",
+      "skel": "rank(ts_mean((fnd6_cptnewqv1300_oiadpq/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank((fnd6_cptnewqv1300_oiadpq/cap), 126)-0.5",
+      "skel": "ts_rank((fnd6_cptnewqv1300_oiadpq/cap), #)-#.#",
+      "tmpl": "ts_rank((F/cap), #)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_zscore((fnd6_cptnewqv1300_oiadpq/cap), 252)",
+      "skel": "ts_zscore((fnd6_cptnewqv1300_oiadpq/cap), #)",
+      "tmpl": "ts_zscore((F/cap), #)"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_decay_linear((fnd6_cptnewqv1300_oiadpq/cap), 20))-0.5",
+      "skel": "rank(ts_decay_linear((fnd6_cptnewqv1300_oiadpq/cap), #))-#.#",
+      "tmpl": "rank(ts_decay_linear((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_cptnewqv1300_oiadpq/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_cptnewqv1300_oiadpq/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_decay_linear((fnd6_cptnewqv1300_oiadpq/cap), 20), industry)-0.5",
+      "skel": "group_rank(ts_decay_linear((fnd6_cptnewqv1300_oiadpq/cap), #), industry)-#.#",
+      "tmpl": "group_rank(ts_decay_linear((F/cap), #), industry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_newa1v1300_ibc/cap), 20))-0.5",
+      "skel": "rank(ts_mean((fnd6_newa1v1300_ibc/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_newa1v1300_ibc/cap), 63))-0.5",
+      "skel": "rank(ts_mean((fnd6_newa1v1300_ibc/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_newa1v1300_ibc/cap), 126))-0.5",
+      "skel": "rank(ts_mean((fnd6_newa1v1300_ibc/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_newa1v1300_ibc/cap), 252))-0.5",
+      "skel": "rank(ts_mean((fnd6_newa1v1300_ibc/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank((fnd6_newa1v1300_ibc/cap), 126)-0.5",
+      "skel": "ts_rank((fnd6_newa1v1300_ibc/cap), #)-#.#",
+      "tmpl": "ts_rank((F/cap), #)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_zscore((fnd6_newa1v1300_ibc/cap), 252)",
+      "skel": "ts_zscore((fnd6_newa1v1300_ibc/cap), #)",
+      "tmpl": "ts_zscore((F/cap), #)"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_decay_linear((fnd6_newa1v1300_ibc/cap), 20))-0.5",
+      "skel": "rank(ts_decay_linear((fnd6_newa1v1300_ibc/cap), #))-#.#",
+      "tmpl": "rank(ts_decay_linear((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newa1v1300_ibc/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newa1v1300_ibc/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_decay_linear((fnd6_newa1v1300_ibc/cap), 20), industry)-0.5",
+      "skel": "group_rank(ts_decay_linear((fnd6_newa1v1300_ibc/cap), #), industry)-#.#",
+      "tmpl": "group_rank(ts_decay_linear((F/cap), #), industry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_newa1v1300_ebitda/cap), 20))-0.5",
+      "skel": "rank(ts_mean((fnd6_newa1v1300_ebitda/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_newa1v1300_ebitda/cap), 63))-0.5",
+      "skel": "rank(ts_mean((fnd6_newa1v1300_ebitda/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_newa1v1300_ebitda/cap), 126))-0.5",
+      "skel": "rank(ts_mean((fnd6_newa1v1300_ebitda/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_newa1v1300_ebitda/cap), 252))-0.5",
+      "skel": "rank(ts_mean((fnd6_newa1v1300_ebitda/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank((fnd6_newa1v1300_ebitda/cap), 126)-0.5",
+      "skel": "ts_rank((fnd6_newa1v1300_ebitda/cap), #)-#.#",
+      "tmpl": "ts_rank((F/cap), #)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_zscore((fnd6_newa1v1300_ebitda/cap), 252)",
+      "skel": "ts_zscore((fnd6_newa1v1300_ebitda/cap), #)",
+      "tmpl": "ts_zscore((F/cap), #)"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_decay_linear((fnd6_newa1v1300_ebitda/cap), 20))-0.5",
+      "skel": "rank(ts_decay_linear((fnd6_newa1v1300_ebitda/cap), #))-#.#",
+      "tmpl": "rank(ts_decay_linear((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newa1v1300_ebitda/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newa1v1300_ebitda/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_decay_linear((fnd6_newa1v1300_ebitda/cap), 20), industry)-0.5",
+      "skel": "group_rank(ts_decay_linear((fnd6_newa1v1300_ebitda/cap), #), industry)-#.#",
+      "tmpl": "group_rank(ts_decay_linear((F/cap), #), industry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_cptnewqv1300_saleq/cap), 20))-0.5",
+      "skel": "rank(ts_mean((fnd6_cptnewqv1300_saleq/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_cptnewqv1300_saleq/cap), 63))-0.5",
+      "skel": "rank(ts_mean((fnd6_cptnewqv1300_saleq/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_cptnewqv1300_saleq/cap), 126))-0.5",
+      "skel": "rank(ts_mean((fnd6_cptnewqv1300_saleq/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_cptnewqv1300_saleq/cap), 252))-0.5",
+      "skel": "rank(ts_mean((fnd6_cptnewqv1300_saleq/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank((fnd6_cptnewqv1300_saleq/cap), 126)-0.5",
+      "skel": "ts_rank((fnd6_cptnewqv1300_saleq/cap), #)-#.#",
+      "tmpl": "ts_rank((F/cap), #)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_zscore((fnd6_cptnewqv1300_saleq/cap), 252)",
+      "skel": "ts_zscore((fnd6_cptnewqv1300_saleq/cap), #)",
+      "tmpl": "ts_zscore((F/cap), #)"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_decay_linear((fnd6_cptnewqv1300_saleq/cap), 20))-0.5",
+      "skel": "rank(ts_decay_linear((fnd6_cptnewqv1300_saleq/cap), #))-#.#",
+      "tmpl": "rank(ts_decay_linear((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_cptnewqv1300_saleq/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_cptnewqv1300_saleq/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_decay_linear((fnd6_cptnewqv1300_saleq/cap), 20), industry)-0.5",
+      "skel": "group_rank(ts_decay_linear((fnd6_cptnewqv1300_saleq/cap), #), industry)-#.#",
+      "tmpl": "group_rank(ts_decay_linear((F/cap), #), industry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_newa2v1300_sale/cap), 20))-0.5",
+      "skel": "rank(ts_mean((fnd6_newa2v1300_sale/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_newa2v1300_sale/cap), 63))-0.5",
+      "skel": "rank(ts_mean((fnd6_newa2v1300_sale/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_newa2v1300_sale/cap), 126))-0.5",
+      "skel": "rank(ts_mean((fnd6_newa2v1300_sale/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((fnd6_newa2v1300_sale/cap), 252))-0.5",
+      "skel": "rank(ts_mean((fnd6_newa2v1300_sale/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank((fnd6_newa2v1300_sale/cap), 126)-0.5",
+      "skel": "ts_rank((fnd6_newa2v1300_sale/cap), #)-#.#",
+      "tmpl": "ts_rank((F/cap), #)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_zscore((fnd6_newa2v1300_sale/cap), 252)",
+      "skel": "ts_zscore((fnd6_newa2v1300_sale/cap), #)",
+      "tmpl": "ts_zscore((F/cap), #)"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_decay_linear((fnd6_newa2v1300_sale/cap), 20))-0.5",
+      "skel": "rank(ts_decay_linear((fnd6_newa2v1300_sale/cap), #))-#.#",
+      "tmpl": "rank(ts_decay_linear((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newa2v1300_sale/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newa2v1300_sale/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_decay_linear((fnd6_newa2v1300_sale/cap), 20), industry)-0.5",
+      "skel": "group_rank(ts_decay_linear((fnd6_newa2v1300_sale/cap), #), industry)-#.#",
+      "tmpl": "group_rank(ts_decay_linear((F/cap), #), industry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((operating_income/cap), 20))-0.5",
+      "skel": "rank(ts_mean((operating_income/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((operating_income/cap), 63))-0.5",
+      "skel": "rank(ts_mean((operating_income/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((operating_income/cap), 126))-0.5",
+      "skel": "rank(ts_mean((operating_income/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((operating_income/cap), 252))-0.5",
+      "skel": "rank(ts_mean((operating_income/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank((operating_income/cap), 126)-0.5",
+      "skel": "ts_rank((operating_income/cap), #)-#.#",
+      "tmpl": "ts_rank((F/cap), #)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_zscore((operating_income/cap), 252)",
+      "skel": "ts_zscore((operating_income/cap), #)",
+      "tmpl": "ts_zscore((F/cap), #)"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_decay_linear((operating_income/cap), 20))-0.5",
+      "skel": "rank(ts_decay_linear((operating_income/cap), #))-#.#",
+      "tmpl": "rank(ts_decay_linear((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((operating_income/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((operating_income/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_decay_linear((operating_income/cap), 20), industry)-0.5",
+      "skel": "group_rank(ts_decay_linear((operating_income/cap), #), industry)-#.#",
+      "tmpl": "group_rank(ts_decay_linear((F/cap), #), industry)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((working_capital/cap), 20))-0.5",
+      "skel": "rank(ts_mean((working_capital/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((working_capital/cap), 63))-0.5",
+      "skel": "rank(ts_mean((working_capital/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean((working_capital/cap), 126))-0.5",
+      "skel": "rank(ts_mean((working_capital/cap), #))-#.#",
+      "tmpl": "rank(ts_mean((F/cap), #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(max_ebitda_guidance)-0.5",
+      "skel": "rank(max_ebitda_guidance)-#.#",
+      "tmpl": "rank(F)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean(max_ebitda_guidance, 20))-0.5",
+      "skel": "rank(ts_mean(max_ebitda_guidance, #))-#.#",
+      "tmpl": "rank(ts_mean(F, #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean(max_ebitda_guidance, 63))-0.5",
+      "skel": "rank(ts_mean(max_ebitda_guidance, #))-#.#",
+      "tmpl": "rank(ts_mean(F, #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(max_ebitda_guidance, 126)-0.5",
+      "skel": "ts_rank(max_ebitda_guidance, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_zscore(max_ebitda_guidance, 252)",
+      "skel": "ts_zscore(max_ebitda_guidance, #)",
+      "tmpl": "ts_zscore(F, #)"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(max_net_income_guidance)-0.5",
+      "skel": "rank(max_net_income_guidance)-#.#",
+      "tmpl": "rank(F)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean(max_net_income_guidance, 20))-0.5",
+      "skel": "rank(ts_mean(max_net_income_guidance, #))-#.#",
+      "tmpl": "rank(ts_mean(F, #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean(max_net_income_guidance, 63))-0.5",
+      "skel": "rank(ts_mean(max_net_income_guidance, #))-#.#",
+      "tmpl": "rank(ts_mean(F, #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(max_net_income_guidance, 126)-0.5",
+      "skel": "ts_rank(max_net_income_guidance, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_zscore(max_net_income_guidance, 252)",
+      "skel": "ts_zscore(max_net_income_guidance, #)",
+      "tmpl": "ts_zscore(F, #)"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(net_profit_adjusted_value)-0.5",
+      "skel": "rank(net_profit_adjusted_value)-#.#",
+      "tmpl": "rank(F)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean(net_profit_adjusted_value, 20))-0.5",
+      "skel": "rank(ts_mean(net_profit_adjusted_value, #))-#.#",
+      "tmpl": "rank(ts_mean(F, #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean(net_profit_adjusted_value, 63))-0.5",
+      "skel": "rank(ts_mean(net_profit_adjusted_value, #))-#.#",
+      "tmpl": "rank(ts_mean(F, #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(net_profit_adjusted_value, 126)-0.5",
+      "skel": "ts_rank(net_profit_adjusted_value, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_zscore(net_profit_adjusted_value, 252)",
+      "skel": "ts_zscore(net_profit_adjusted_value, #)",
+      "tmpl": "ts_zscore(F, #)"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(anl4_afv4_eps_mean)-0.5",
+      "skel": "rank(anl4_afv4_eps_mean)-#.#",
+      "tmpl": "rank(F)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean(anl4_afv4_eps_mean, 20))-0.5",
+      "skel": "rank(ts_mean(anl4_afv4_eps_mean, #))-#.#",
+      "tmpl": "rank(ts_mean(F, #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean(anl4_afv4_eps_mean, 63))-0.5",
+      "skel": "rank(ts_mean(anl4_afv4_eps_mean, #))-#.#",
+      "tmpl": "rank(ts_mean(F, #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(anl4_afv4_eps_mean, 126)-0.5",
+      "skel": "ts_rank(anl4_afv4_eps_mean, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_zscore(anl4_afv4_eps_mean, 252)",
+      "skel": "ts_zscore(anl4_afv4_eps_mean, #)",
+      "tmpl": "ts_zscore(F, #)"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(sales_estimate_count_quarterly)-0.5",
+      "skel": "rank(sales_estimate_count_quarterly)-#.#",
+      "tmpl": "rank(F)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean(sales_estimate_count_quarterly, 20))-0.5",
+      "skel": "rank(ts_mean(sales_estimate_count_quarterly, #))-#.#",
+      "tmpl": "rank(ts_mean(F, #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_mean(sales_estimate_count_quarterly, 63))-0.5",
+      "skel": "rank(ts_mean(sales_estimate_count_quarterly, #))-#.#",
+      "tmpl": "rank(ts_mean(F, #))-#.#"
+    },
+    {
+      "utc_iso": "2026-05-05T18:41:44.263588+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(sales_estimate_count_quarterly, 126)-0.5",
+      "skel": "ts_rank(sales_estimate_count_quarterly, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((ebit/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((ebit/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((ebit/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_aodo/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_aodo/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_aodo/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_dvpa/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_dvpa/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_dvpa/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_ds/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_ds/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_ds/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_cipen/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_cipen/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_cipen/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_ch/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_ch/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_ch/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_dudd/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_dudd/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_dudd/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_cptmfmq_atq/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_cptmfmq_atq/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_cptmfmq_atq/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_aox/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_aox/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_aox/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((cash_st/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((cash_st/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((cash_st/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(ebit/close, 40))-0.5",
+      "skel": "rank(ts_rank(ebit/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(ebit/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank((ebit/cap), 63)-0.5",
+      "skel": "ts_rank((ebit/cap), #)-#.#",
+      "tmpl": "ts_rank((F/cap), #)-#.#",
+      "corr": "ts_rank((ebit/cap),#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(fnd6_aodo/close, 40))-0.5",
+      "skel": "rank(ts_rank(fnd6_aodo/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(fnd6_aodo/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank((fnd6_aodo/cap), 63)-0.5",
+      "skel": "ts_rank((fnd6_aodo/cap), #)-#.#",
+      "tmpl": "ts_rank((F/cap), #)-#.#",
+      "corr": "ts_rank((fnd6_aodo/cap),#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(fnd6_dvpa/close, 40))-0.5",
+      "skel": "rank(ts_rank(fnd6_dvpa/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(fnd6_dvpa/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank((fnd6_dvpa/cap), 63)-0.5",
+      "skel": "ts_rank((fnd6_dvpa/cap), #)-#.#",
+      "tmpl": "ts_rank((F/cap), #)-#.#",
+      "corr": "ts_rank((fnd6_dvpa/cap),#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(cashflow_op/close, 40))-0.5",
+      "skel": "rank(ts_rank(cashflow_op/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(cashflow_op/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(fnd6_ds/close, 40))-0.5",
+      "skel": "rank(ts_rank(fnd6_ds/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(fnd6_ds/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(ebitda/close, 40))-0.5",
+      "skel": "rank(ts_rank(ebitda/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(ebitda/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(fnd6_cipen/close, 40))-0.5",
+      "skel": "rank(ts_rank(fnd6_cipen/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(fnd6_cipen/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank((fnd6_cipen/cap), 63)-0.5",
+      "skel": "ts_rank((fnd6_cipen/cap), #)-#.#",
+      "tmpl": "ts_rank((F/cap), #)-#.#",
+      "corr": "ts_rank((fnd6_cipen/cap),#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(fnd6_ch/close, 40))-0.5",
+      "skel": "rank(ts_rank(fnd6_ch/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(fnd6_ch/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank((fnd6_ch/cap), 63)-0.5",
+      "skel": "ts_rank((fnd6_ch/cap), #)-#.#",
+      "tmpl": "ts_rank((F/cap), #)-#.#",
+      "corr": "ts_rank((fnd6_ch/cap),#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(fnd6_dudd/close, 40))-0.5",
+      "skel": "rank(ts_rank(fnd6_dudd/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(fnd6_dudd/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank((fnd6_dudd/cap), 63)-0.5",
+      "skel": "ts_rank((fnd6_dudd/cap), #)-#.#",
+      "tmpl": "ts_rank((F/cap), #)-#.#",
+      "corr": "ts_rank((fnd6_dudd/cap),#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(fnd6_cptmfmq_atq/close, 40))-0.5",
+      "skel": "rank(ts_rank(fnd6_cptmfmq_atq/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(fnd6_cptmfmq_atq/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank((fnd6_cptmfmq_atq/cap), 63)-0.5",
+      "skel": "ts_rank((fnd6_cptmfmq_atq/cap), #)-#.#",
+      "tmpl": "ts_rank((F/cap), #)-#.#",
+      "corr": "ts_rank((fnd6_cptmfmq_atq/cap),#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(fnd6_aox/close, 40))-0.5",
+      "skel": "rank(ts_rank(fnd6_aox/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(fnd6_aox/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank((fnd6_aox/cap), 63)-0.5",
+      "skel": "ts_rank((fnd6_aox/cap), #)-#.#",
+      "tmpl": "ts_rank((F/cap), #)-#.#",
+      "corr": "ts_rank((fnd6_aox/cap),#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_dd1/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_dd1/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_dd1/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((assets_curr/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((assets_curr/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((assets_curr/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((bookvalue_ps/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((bookvalue_ps/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((bookvalue_ps/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((debt_st/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((debt_st/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((debt_st/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(cash_st/close, 40))-0.5",
+      "skel": "rank(ts_rank(cash_st/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(cash_st/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank((cash_st/cap), 63)-0.5",
+      "skel": "ts_rank((cash_st/cap), #)-#.#",
+      "tmpl": "ts_rank((F/cap), #)-#.#",
+      "corr": "ts_rank((cash_st/cap),#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(fnd6_dd1/close, 40))-0.5",
+      "skel": "rank(ts_rank(fnd6_dd1/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(fnd6_dd1/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(cashflow_dividends/close, 40))-0.5",
+      "skel": "rank(ts_rank(cashflow_dividends/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(cashflow_dividends/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(fnd6_cptnewqv1300_oibdpq/close, 40))-0.5",
+      "skel": "rank(ts_rank(fnd6_cptnewqv1300_oibdpq/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(fnd6_cptnewqv1300_oibdpq/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(fnd6_dd1q/close, 40))-0.5",
+      "skel": "rank(ts_rank(fnd6_dd1q/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(fnd6_dd1q/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(fnd6_dd2/close, 40))-0.5",
+      "skel": "rank(ts_rank(fnd6_dd2/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(fnd6_dd2/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(fnd6_dvpa/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(fnd6_dvpa/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(fnd6_dvpa/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(fnd6_ds/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(fnd6_ds/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(fnd6_ds/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(fnd6_cptmfmq_atq/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(fnd6_cptmfmq_atq/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(fnd6_cptmfmq_atq/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_acox/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_acox/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_acox/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_dm/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_dm/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_dm/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_dxd3/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_dxd3/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_dxd3/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_dxd4/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_dxd4/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_dxd4/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_itci/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_itci/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_itci/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_lcoxdr/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_lcoxdr/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_lcoxdr/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_loxdr/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_loxdr/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_loxdr/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_mfma1_aoloch/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_mfma1_aoloch/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_mfma1_aoloch/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_mfma1_capx/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_mfma1_capx/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_mfma1_capx/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_mfma1_dpc/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_mfma1_dpc/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_mfma1_dpc/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_mfma2_oancf/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_mfma2_oancf/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_mfma2_oancf/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_mfma2_opeps/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_mfma2_opeps/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_mfma2_opeps/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_mfma2_revt/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_mfma2_revt/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_mfma2_revt/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newa1v1300_aco/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newa1v1300_aco/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newa1v1300_aco/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newa1v1300_acominc/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newa1v1300_acominc/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newa1v1300_acominc/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newa1v1300_act/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newa1v1300_act/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newa1v1300_act/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newa1v1300_aoloch/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newa1v1300_aoloch/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newa1v1300_aoloch/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newa1v1300_capx/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newa1v1300_capx/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newa1v1300_capx/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newa1v1300_chech/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newa1v1300_chech/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newa1v1300_chech/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newa1v1300_cshfd/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newa1v1300_cshfd/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newa1v1300_cshfd/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newa1v1300_dlc/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newa1v1300_dlc/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newa1v1300_dlc/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newa1v1300_dltt/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newa1v1300_dltt/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newa1v1300_dltt/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newa1v1300_dv/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newa1v1300_dv/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newa1v1300_dv/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newa1v1300_ebit/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newa1v1300_ebit/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newa1v1300_ebit/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newa1v1300_fincf/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newa1v1300_fincf/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newa1v1300_fincf/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newa1v1300_gp/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newa1v1300_gp/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newa1v1300_gp/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newa2v1300_mii/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newa2v1300_mii/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newa2v1300_mii/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newa2v1300_ni/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newa2v1300_ni/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newa2v1300_ni/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newa2v1300_nopi/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newa2v1300_nopi/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newa2v1300_nopi/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newa2v1300_oancf/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newa2v1300_oancf/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newa2v1300_oancf/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newa2v1300_oiadp/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newa2v1300_oiadp/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newa2v1300_oiadp/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newa2v1300_oibdp/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newa2v1300_oibdp/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newa2v1300_oibdp/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newa2v1300_opeps/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newa2v1300_opeps/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newa2v1300_opeps/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newa2v1300_wcap/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newa2v1300_wcap/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newa2v1300_wcap/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newa2v1300_xidoc/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newa2v1300_xidoc/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newa2v1300_xidoc/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newqv1300_aocisecglq/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newqv1300_aocisecglq/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newqv1300_aocisecglq/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newqv1300_capsq/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newqv1300_capsq/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newqv1300_capsq/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newqv1300_drltq/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newqv1300_drltq/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newqv1300_drltq/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newqv1300_epspxq/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newqv1300_epspxq/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newqv1300_epspxq/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newqv1300_oepf12/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newqv1300_oepf12/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newqv1300_oepf12/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newqv1300_reunaq/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newqv1300_reunaq/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newqv1300_reunaq/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_newqv1300_wcapq/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_newqv1300_wcapq/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_newqv1300_wcapq/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_nopio/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_nopio/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_nopio/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_oprepsx/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_oprepsx/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_oprepsx/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_optdr/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_optdr/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_optdr/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_rea/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_rea/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_rea/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_recta/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_recta/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_recta/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_txbco/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_txbco/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_txbco/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_txdc/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_txdc/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_txdc/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_txfo/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_txfo/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_txfo/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_txo/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_txo/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_txo/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_xopr/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_xopr/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_xopr/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((operating_expense/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((operating_expense/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((operating_expense/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((pretax_income/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((pretax_income/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((pretax_income/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((return_equity/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((return_equity/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((return_equity/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((revenue/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((revenue/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((revenue/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((sales/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((sales/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((sales/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((sales_growth/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((sales_growth/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((sales_growth/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((sales_ps/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((sales_ps/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((sales_ps/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((working_capital/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((working_capital/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((working_capital/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_cptnewqv1300_oeps12/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_cptnewqv1300_oeps12/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_cptnewqv1300_oeps12/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_cld4/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_cld4/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_cld4/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_cld5/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_cld5/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_cld5/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_cptnewqv1300_epsf12/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_cptnewqv1300_epsf12/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_cptnewqv1300_epsf12/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_cptnewqv1300_atq/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_cptnewqv1300_atq/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_cptnewqv1300_atq/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_cld2/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_cld2/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_cld2/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_dd3/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_dd3/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_dd3/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((debt_lt/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((debt_lt/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((debt_lt/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_acqgdwl/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_acqgdwl/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_acqgdwl/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(fnd6_dltr/close, 40))-0.5",
+      "skel": "rank(ts_rank(fnd6_dltr/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(fnd6_dltr/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(fnd6_dm/close, 40))-0.5",
+      "skel": "rank(ts_rank(fnd6_dm/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(fnd6_dm/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(fnd6_dxd2/close, 40))-0.5",
+      "skel": "rank(ts_rank(fnd6_dxd2/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(fnd6_dxd2/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(fnd6_loxdr/close, 40))-0.5",
+      "skel": "rank(ts_rank(fnd6_loxdr/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(fnd6_loxdr/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(fnd6_newa1v1300_aoloch/close, 40))-0.5",
+      "skel": "rank(ts_rank(fnd6_newa1v1300_aoloch/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(fnd6_newa1v1300_aoloch/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(fnd6_newa2v1300_sale/close, 40))-0.5",
+      "skel": "rank(ts_rank(fnd6_newa2v1300_sale/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(fnd6_newa2v1300_sale/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(fnd6_newa2v1300_wcap/close, 40))-0.5",
+      "skel": "rank(ts_rank(fnd6_newa2v1300_wcap/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(fnd6_newa2v1300_wcap/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(fnd6_newqv1300_capsq/close, 40))-0.5",
+      "skel": "rank(ts_rank(fnd6_newqv1300_capsq/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(fnd6_newqv1300_capsq/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(fnd6_newqv1300_epspxq/close, 40))-0.5",
+      "skel": "rank(ts_rank(fnd6_newqv1300_epspxq/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(fnd6_newqv1300_epspxq/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(fnd6_optdr/close, 40))-0.5",
+      "skel": "rank(ts_rank(fnd6_optdr/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(fnd6_optdr/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(fnd6_txbco/close, 40))-0.5",
+      "skel": "rank(ts_rank(fnd6_txbco/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(fnd6_txbco/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(return_equity/close, 40))-0.5",
+      "skel": "rank(ts_rank(return_equity/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(return_equity/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(actual_sales_value_quarterly, 126)-0.5",
+      "skel": "ts_rank(actual_sales_value_quarterly, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(actual_sales_value_quarterly,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(anl4_ebitda_value, 126)-0.5",
+      "skel": "ts_rank(anl4_ebitda_value, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(anl4_ebitda_value,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(anl4_netprofit_value, 126)-0.5",
+      "skel": "ts_rank(anl4_netprofit_value, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(anl4_netprofit_value,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(anl4_netprofita_value, 126)-0.5",
+      "skel": "ts_rank(anl4_netprofita_value, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(anl4_netprofita_value,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(anl4_qfv4_eps_high, 126)-0.5",
+      "skel": "ts_rank(anl4_qfv4_eps_high, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(anl4_qfv4_eps_high,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(anl4_qfv4_eps_low, 126)-0.5",
+      "skel": "ts_rank(anl4_qfv4_eps_low, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(anl4_qfv4_eps_low,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(anl4_qfv4_eps_mean, 126)-0.5",
+      "skel": "ts_rank(anl4_qfv4_eps_mean, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(anl4_qfv4_eps_mean,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(anl4_qfv4_eps_number, 126)-0.5",
+      "skel": "ts_rank(anl4_qfv4_eps_number, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(anl4_qfv4_eps_number,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(anl4_qfv4_median_eps, 126)-0.5",
+      "skel": "ts_rank(anl4_qfv4_median_eps, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(anl4_qfv4_median_eps,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(beta_last_360_days_spy, 63)-0.5",
+      "skel": "ts_rank(beta_last_360_days_spy, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(beta_last_360_days_spy,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(beta_last_60_days_spy, 63)-0.5",
+      "skel": "ts_rank(beta_last_60_days_spy, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(beta_last_60_days_spy,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(book_value_per_share_min_guidance_qtr, 126)-0.5",
+      "skel": "ts_rank(book_value_per_share_min_guidance_qtr, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(book_value_per_share_min_guidance_qtr,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(capital_expenditure_max_guidance_qtr, 126)-0.5",
+      "skel": "ts_rank(capital_expenditure_max_guidance_qtr, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(capital_expenditure_max_guidance_qtr,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(cash_flow_operations_min_guidance, 126)-0.5",
+      "skel": "ts_rank(cash_flow_operations_min_guidance, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(cash_flow_operations_min_guidance,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(cashflow_efficiency_rank_derivative, 63)-0.5",
+      "skel": "ts_rank(cashflow_efficiency_rank_derivative, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(cashflow_efficiency_rank_derivative,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(cashflow_per_share_max_guidance, 126)-0.5",
+      "skel": "ts_rank(cashflow_per_share_max_guidance, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(cashflow_per_share_max_guidance,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(cashflow_per_share_max_guidance_quarterly, 126)-0.5",
+      "skel": "ts_rank(cashflow_per_share_max_guidance_quarterly, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(cashflow_per_share_max_guidance_quarterly,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(cashflow_per_share_min_guidance, 126)-0.5",
+      "skel": "ts_rank(cashflow_per_share_min_guidance, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(cashflow_per_share_min_guidance,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(cashflow_per_share_min_guidance_quarterly, 126)-0.5",
+      "skel": "ts_rank(cashflow_per_share_min_guidance_quarterly, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(cashflow_per_share_min_guidance_quarterly,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(composite_factor_score_derivative, 63)-0.5",
+      "skel": "ts_rank(composite_factor_score_derivative, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(composite_factor_score_derivative,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(correlation_last_30_days_spy, 63)-0.5",
+      "skel": "ts_rank(correlation_last_30_days_spy, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(correlation_last_30_days_spy,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(correlation_last_360_days_spy, 63)-0.5",
+      "skel": "ts_rank(correlation_last_360_days_spy, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(correlation_last_360_days_spy,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(correlation_last_90_days_spy, 63)-0.5",
+      "skel": "ts_rank(correlation_last_90_days_spy, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(correlation_last_90_days_spy,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(dividend_max_guidance_quarterly, 126)-0.5",
+      "skel": "ts_rank(dividend_max_guidance_quarterly, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(dividend_max_guidance_quarterly,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(dividend_max_guidance_value, 126)-0.5",
+      "skel": "ts_rank(dividend_max_guidance_value, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(dividend_max_guidance_value,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(dividend_min_guidance_quarterly, 126)-0.5",
+      "skel": "ts_rank(dividend_min_guidance_quarterly, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(dividend_min_guidance_quarterly,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(dividend_min_guidance_value, 126)-0.5",
+      "skel": "ts_rank(dividend_min_guidance_value, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(dividend_min_guidance_value,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(earnings_certainty_rank_derivative, 63)-0.5",
+      "skel": "ts_rank(earnings_certainty_rank_derivative, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(earnings_certainty_rank_derivative,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(earnings_per_share_average, 126)-0.5",
+      "skel": "ts_rank(earnings_per_share_average, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(earnings_per_share_average,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(earnings_per_share_estimate_count, 126)-0.5",
+      "skel": "ts_rank(earnings_per_share_estimate_count, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(earnings_per_share_estimate_count,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(earnings_per_share_max_guidance, 126)-0.5",
+      "skel": "ts_rank(earnings_per_share_max_guidance, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(earnings_per_share_max_guidance,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(earnings_per_share_maximum, 126)-0.5",
+      "skel": "ts_rank(earnings_per_share_maximum, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(earnings_per_share_maximum,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(earnings_per_share_median_value, 126)-0.5",
+      "skel": "ts_rank(earnings_per_share_median_value, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(earnings_per_share_median_value,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(earnings_per_share_min_guidance, 126)-0.5",
+      "skel": "ts_rank(earnings_per_share_min_guidance, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(earnings_per_share_min_guidance,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(earnings_per_share_minimum, 126)-0.5",
+      "skel": "ts_rank(earnings_per_share_minimum, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(earnings_per_share_minimum,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(ebit_reported_value, 126)-0.5",
+      "skel": "ts_rank(ebit_reported_value, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(ebit_reported_value,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(eps_adjusted_min_guidance_qtr, 126)-0.5",
+      "skel": "ts_rank(eps_adjusted_min_guidance_qtr, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(eps_adjusted_min_guidance_qtr,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(eps_adjusted_min_guidance_value, 126)-0.5",
+      "skel": "ts_rank(eps_adjusted_min_guidance_value, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(eps_adjusted_min_guidance_value,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(eps_max_guidance_quarterly, 126)-0.5",
+      "skel": "ts_rank(eps_max_guidance_quarterly, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(eps_max_guidance_quarterly,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(eps_min_guidance_quarterly, 126)-0.5",
+      "skel": "ts_rank(eps_min_guidance_quarterly, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(eps_min_guidance_quarterly,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(eps_reported_min_guidance_qtr, 126)-0.5",
+      "skel": "ts_rank(eps_reported_min_guidance_qtr, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(eps_reported_min_guidance_qtr,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(free_cash_flow_per_share_max_guidance, 126)-0.5",
+      "skel": "ts_rank(free_cash_flow_per_share_max_guidance, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(free_cash_flow_per_share_max_guidance,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(fscore_bfl_growth, 63)-0.5",
+      "skel": "ts_rank(fscore_bfl_growth, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(fscore_bfl_growth,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(fscore_bfl_momentum, 63)-0.5",
+      "skel": "ts_rank(fscore_bfl_momentum, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(fscore_bfl_momentum,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(fscore_bfl_profitability, 63)-0.5",
+      "skel": "ts_rank(fscore_bfl_profitability, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(fscore_bfl_profitability,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(fscore_bfl_quality, 63)-0.5",
+      "skel": "ts_rank(fscore_bfl_quality, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(fscore_bfl_quality,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank(fscore_bfl_surface, 63)-0.5",
+      "skel": "ts_rank(fscore_bfl_surface, #)-#.#",
+      "tmpl": "ts_rank(F, #)-#.#",
+      "corr": "ts_rank(fscore_bfl_surface,#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_dcvsub/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_dcvsub/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_dcvsub/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_dlto/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_dlto/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_dlto/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "rank(ts_rank(eps/close, 40))-0.5",
+      "skel": "rank(ts_rank(eps/close, #))-#.#",
+      "tmpl": "rank(ts_rank(F/F, #))-#.#",
+      "corr": "rank(ts_rank(eps/close,#))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "ts_rank((eps/cap), 63)-0.5",
+      "skel": "ts_rank((eps/cap), #)-#.#",
+      "tmpl": "ts_rank((F/cap), #)-#.#",
+      "corr": "ts_rank((eps/cap),#)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(assets/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(assets/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(assets/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(assets_curr/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(assets_curr/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(assets_curr/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(cashflow_fin/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(cashflow_fin/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(cashflow_fin/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(fnd6_capxv/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(fnd6_capxv/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(fnd6_capxv/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(fnd6_cptnewqv1300_epsfxq/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(fnd6_cptnewqv1300_epsfxq/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(fnd6_cptnewqv1300_epsfxq/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(fnd6_cptnewqv1300_saleq/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(fnd6_cptnewqv1300_saleq/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(fnd6_cptnewqv1300_saleq/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(fnd6_dd1q/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(fnd6_dd1q/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(fnd6_dd1q/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(fnd6_dltr/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(fnd6_dltr/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(fnd6_dltr/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(fnd6_dm/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(fnd6_dm/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(fnd6_dm/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(fnd6_itci/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(fnd6_itci/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(fnd6_itci/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(fnd6_mfma2_opeps/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(fnd6_mfma2_opeps/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(fnd6_mfma2_opeps/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(fnd6_newa1v1300_ebit/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(fnd6_newa1v1300_ebit/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(fnd6_newa1v1300_ebit/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(fnd6_newa1v1300_ibc/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(fnd6_newa1v1300_ibc/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(fnd6_newa1v1300_ibc/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(fnd6_newa2v1300_sale/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(fnd6_newa2v1300_sale/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(fnd6_newa2v1300_sale/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(fnd6_newqv1300_epspxq/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(fnd6_newqv1300_epspxq/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(fnd6_newqv1300_epspxq/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(fnd6_newqv1300_oepf12/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(fnd6_newqv1300_oepf12/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(fnd6_newqv1300_oepf12/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(fnd6_newqv1300_xoprq/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(fnd6_newqv1300_xoprq/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(fnd6_newqv1300_xoprq/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(fnd6_niadj/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(fnd6_niadj/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(fnd6_niadj/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(fnd6_txbco/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(fnd6_txbco/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(fnd6_txbco/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(fnd6_txdc/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(fnd6_txdc/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(fnd6_txdc/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(fnd6_txr/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(fnd6_txr/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(fnd6_txr/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(fnd6_xopr/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(fnd6_xopr/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(fnd6_xopr/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(rank(sales/cap), bucket(rank(cap), range=\"0.1,1,0.1\"))",
+      "skel": "group_neutralize(rank(sales/cap), bucket(rank(cap), range=\"#.#,#,#.#\"))",
+      "tmpl": "group_neutralize(rank(F/cap), bucket(rank(cap), F=\"#.#,#,#.#\"))",
+      "corr": "group_neutralize(rank(sales/cap),bucket(rank(cap),range=\"#.#,#,#.#\"))"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(ts_mean(ts_backfill(news_close_vol, 20), 20), industry)",
+      "skel": "group_neutralize(ts_mean(ts_backfill(news_close_vol, #), #), industry)",
+      "tmpl": "group_neutralize(ts_mean(ts_backfill(F, #), #), industry)",
+      "corr": "group_neutralize(ts_mean(ts_backfill(news_close_vol,#),#),industry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(ts_mean(ts_backfill(news_curr_vol, 20), 20), industry)",
+      "skel": "group_neutralize(ts_mean(ts_backfill(news_curr_vol, #), #), industry)",
+      "tmpl": "group_neutralize(ts_mean(ts_backfill(F, #), #), industry)",
+      "corr": "group_neutralize(ts_mean(ts_backfill(news_curr_vol,#),#),industry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(ts_mean(ts_backfill(news_dividend_yield, 20), 20), industry)",
+      "skel": "group_neutralize(ts_mean(ts_backfill(news_dividend_yield, #), #), industry)",
+      "tmpl": "group_neutralize(ts_mean(ts_backfill(F, #), #), industry)",
+      "corr": "group_neutralize(ts_mean(ts_backfill(news_dividend_yield,#),#),industry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(ts_mean(ts_backfill(news_eod_close, 20), 20), industry)",
+      "skel": "group_neutralize(ts_mean(ts_backfill(news_eod_close, #), #), industry)",
+      "tmpl": "group_neutralize(ts_mean(ts_backfill(F, #), #), industry)",
+      "corr": "group_neutralize(ts_mean(ts_backfill(news_eod_close,#),#),industry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(ts_mean(ts_backfill(news_eod_high, 20), 20), industry)",
+      "skel": "group_neutralize(ts_mean(ts_backfill(news_eod_high, #), #), industry)",
+      "tmpl": "group_neutralize(ts_mean(ts_backfill(F, #), #), industry)",
+      "corr": "group_neutralize(ts_mean(ts_backfill(news_eod_high,#),#),industry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(ts_mean(ts_backfill(news_eod_low, 20), 20), industry)",
+      "skel": "group_neutralize(ts_mean(ts_backfill(news_eod_low, #), #), industry)",
+      "tmpl": "group_neutralize(ts_mean(ts_backfill(F, #), #), industry)",
+      "corr": "group_neutralize(ts_mean(ts_backfill(news_eod_low,#),#),industry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(ts_mean(ts_backfill(news_eod_vwap, 20), 20), industry)",
+      "skel": "group_neutralize(ts_mean(ts_backfill(news_eod_vwap, #), #), industry)",
+      "tmpl": "group_neutralize(ts_mean(ts_backfill(F, #), #), industry)",
+      "corr": "group_neutralize(ts_mean(ts_backfill(news_eod_vwap,#),#),industry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(ts_mean(ts_backfill(news_eps_actual, 20), 20), industry)",
+      "skel": "group_neutralize(ts_mean(ts_backfill(news_eps_actual, #), #), industry)",
+      "tmpl": "group_neutralize(ts_mean(ts_backfill(F, #), #), industry)",
+      "corr": "group_neutralize(ts_mean(ts_backfill(news_eps_actual,#),#),industry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(ts_mean(ts_backfill(news_main_vwap, 20), 20), industry)",
+      "skel": "group_neutralize(ts_mean(ts_backfill(news_main_vwap, #), #), industry)",
+      "tmpl": "group_neutralize(ts_mean(ts_backfill(F, #), #), industry)",
+      "corr": "group_neutralize(ts_mean(ts_backfill(news_main_vwap,#),#),industry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(ts_mean(ts_backfill(news_max_up_amt, 20), 20), industry)",
+      "skel": "group_neutralize(ts_mean(ts_backfill(news_max_up_amt, #), #), industry)",
+      "tmpl": "group_neutralize(ts_mean(ts_backfill(F, #), #), industry)",
+      "corr": "group_neutralize(ts_mean(ts_backfill(news_max_up_amt,#),#),industry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(ts_mean(ts_backfill(news_mins_1_pct_dn, 20), 20), industry)",
+      "skel": "group_neutralize(ts_mean(ts_backfill(news_mins_1_pct_dn, #), #), industry)",
+      "tmpl": "group_neutralize(ts_mean(ts_backfill(F, #), #), industry)",
+      "corr": "group_neutralize(ts_mean(ts_backfill(news_mins_1_pct_dn,#),#),industry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(ts_mean(ts_backfill(news_open, 20), 20), industry)",
+      "skel": "group_neutralize(ts_mean(ts_backfill(news_open, #), #), industry)",
+      "tmpl": "group_neutralize(ts_mean(ts_backfill(F, #), #), industry)",
+      "corr": "group_neutralize(ts_mean(ts_backfill(news_open,#),#),industry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(ts_mean(ts_backfill(news_pct_5_min, 20), 20), industry)",
+      "skel": "group_neutralize(ts_mean(ts_backfill(news_pct_5_min, #), #), industry)",
+      "tmpl": "group_neutralize(ts_mean(ts_backfill(F, #), #), industry)",
+      "corr": "group_neutralize(ts_mean(ts_backfill(news_pct_5_min,#),#),industry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(ts_mean(ts_backfill(news_pct_60min, 20), 20), industry)",
+      "skel": "group_neutralize(ts_mean(ts_backfill(news_pct_60min, #), #), industry)",
+      "tmpl": "group_neutralize(ts_mean(ts_backfill(F, #), #), industry)",
+      "corr": "group_neutralize(ts_mean(ts_backfill(news_pct_60min,#),#),industry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(ts_mean(ts_backfill(news_ratio_vol, 20), 20), industry)",
+      "skel": "group_neutralize(ts_mean(ts_backfill(news_ratio_vol, #), #), industry)",
+      "tmpl": "group_neutralize(ts_mean(ts_backfill(F, #), #), industry)",
+      "corr": "group_neutralize(ts_mean(ts_backfill(news_ratio_vol,#),#),industry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_neutralize(ts_mean(ts_backfill(news_spy_last, 20), 20), industry)",
+      "skel": "group_neutralize(ts_mean(ts_backfill(news_spy_last, #), #), industry)",
+      "tmpl": "group_neutralize(ts_mean(ts_backfill(F, #), #), industry)",
+      "corr": "group_neutralize(ts_mean(ts_backfill(news_spy_last,#),#),industry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_rank(ts_mean((fnd6_aldo/cap), 63), subindustry)-0.5",
+      "skel": "group_rank(ts_mean((fnd6_aldo/cap), #), subindustry)-#.#",
+      "tmpl": "group_rank(ts_mean((F/cap), #), subindustry)-#.#",
+      "corr": "group_rank(ts_mean((fnd6_aldo/cap),#),subindustry)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(actual_sales_value_quarterly, 63), sector)",
+      "skel": "group_zscore(ts_zscore(actual_sales_value_quarterly, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(actual_sales_value_quarterly,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(anl4_ebitda_value, 63), sector)",
+      "skel": "group_zscore(ts_zscore(anl4_ebitda_value, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(anl4_ebitda_value,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(anl4_netprofit_value, 63), sector)",
+      "skel": "group_zscore(ts_zscore(anl4_netprofit_value, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(anl4_netprofit_value,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(anl4_netprofita_value, 63), sector)",
+      "skel": "group_zscore(ts_zscore(anl4_netprofita_value, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(anl4_netprofita_value,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(anl4_qfv4_eps_high, 63), sector)",
+      "skel": "group_zscore(ts_zscore(anl4_qfv4_eps_high, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(anl4_qfv4_eps_high,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(anl4_qfv4_eps_low, 63), sector)",
+      "skel": "group_zscore(ts_zscore(anl4_qfv4_eps_low, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(anl4_qfv4_eps_low,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(anl4_qfv4_eps_mean, 63), sector)",
+      "skel": "group_zscore(ts_zscore(anl4_qfv4_eps_mean, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(anl4_qfv4_eps_mean,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(anl4_qfv4_eps_number, 63), sector)",
+      "skel": "group_zscore(ts_zscore(anl4_qfv4_eps_number, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(anl4_qfv4_eps_number,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(anl4_qfv4_median_eps, 63), sector)",
+      "skel": "group_zscore(ts_zscore(anl4_qfv4_median_eps, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(anl4_qfv4_median_eps,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(beta_last_360_days_spy, 63), sector)",
+      "skel": "group_zscore(ts_zscore(beta_last_360_days_spy, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(beta_last_360_days_spy,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(beta_last_60_days_spy, 63), sector)",
+      "skel": "group_zscore(ts_zscore(beta_last_60_days_spy, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(beta_last_60_days_spy,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(book_value_per_share_min_guidance_qtr, 63), sector)",
+      "skel": "group_zscore(ts_zscore(book_value_per_share_min_guidance_qtr, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(book_value_per_share_min_guidance_qtr,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(capital_expenditure_max_guidance_qtr, 63), sector)",
+      "skel": "group_zscore(ts_zscore(capital_expenditure_max_guidance_qtr, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(capital_expenditure_max_guidance_qtr,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(cash_flow_operations_min_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(cash_flow_operations_min_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(cash_flow_operations_min_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(cashflow_efficiency_rank_derivative, 63), sector)",
+      "skel": "group_zscore(ts_zscore(cashflow_efficiency_rank_derivative, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(cashflow_efficiency_rank_derivative,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(cashflow_per_share_max_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(cashflow_per_share_max_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(cashflow_per_share_max_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(cashflow_per_share_max_guidance_quarterly, 63), sector)",
+      "skel": "group_zscore(ts_zscore(cashflow_per_share_max_guidance_quarterly, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(cashflow_per_share_max_guidance_quarterly,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(cashflow_per_share_min_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(cashflow_per_share_min_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(cashflow_per_share_min_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(cashflow_per_share_min_guidance_quarterly, 63), sector)",
+      "skel": "group_zscore(ts_zscore(cashflow_per_share_min_guidance_quarterly, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(cashflow_per_share_min_guidance_quarterly,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(composite_factor_score_derivative, 63), sector)",
+      "skel": "group_zscore(ts_zscore(composite_factor_score_derivative, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(composite_factor_score_derivative,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(correlation_last_30_days_spy, 63), sector)",
+      "skel": "group_zscore(ts_zscore(correlation_last_30_days_spy, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(correlation_last_30_days_spy,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(correlation_last_360_days_spy, 63), sector)",
+      "skel": "group_zscore(ts_zscore(correlation_last_360_days_spy, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(correlation_last_360_days_spy,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(correlation_last_90_days_spy, 63), sector)",
+      "skel": "group_zscore(ts_zscore(correlation_last_90_days_spy, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(correlation_last_90_days_spy,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(dividend_max_guidance_quarterly, 63), sector)",
+      "skel": "group_zscore(ts_zscore(dividend_max_guidance_quarterly, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(dividend_max_guidance_quarterly,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(dividend_max_guidance_value, 63), sector)",
+      "skel": "group_zscore(ts_zscore(dividend_max_guidance_value, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(dividend_max_guidance_value,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(dividend_min_guidance_quarterly, 63), sector)",
+      "skel": "group_zscore(ts_zscore(dividend_min_guidance_quarterly, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(dividend_min_guidance_quarterly,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(dividend_min_guidance_value, 63), sector)",
+      "skel": "group_zscore(ts_zscore(dividend_min_guidance_value, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(dividend_min_guidance_value,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(earnings_certainty_rank_derivative, 63), sector)",
+      "skel": "group_zscore(ts_zscore(earnings_certainty_rank_derivative, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(earnings_certainty_rank_derivative,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(earnings_per_share_average, 63), sector)",
+      "skel": "group_zscore(ts_zscore(earnings_per_share_average, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(earnings_per_share_average,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(earnings_per_share_estimate_count, 63), sector)",
+      "skel": "group_zscore(ts_zscore(earnings_per_share_estimate_count, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(earnings_per_share_estimate_count,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(earnings_per_share_max_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(earnings_per_share_max_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(earnings_per_share_max_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(earnings_per_share_maximum, 63), sector)",
+      "skel": "group_zscore(ts_zscore(earnings_per_share_maximum, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(earnings_per_share_maximum,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(earnings_per_share_median_value, 63), sector)",
+      "skel": "group_zscore(ts_zscore(earnings_per_share_median_value, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(earnings_per_share_median_value,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(earnings_per_share_min_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(earnings_per_share_min_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(earnings_per_share_min_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(earnings_per_share_minimum, 63), sector)",
+      "skel": "group_zscore(ts_zscore(earnings_per_share_minimum, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(earnings_per_share_minimum,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(ebit_reported_value, 63), sector)",
+      "skel": "group_zscore(ts_zscore(ebit_reported_value, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(ebit_reported_value,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(eps_adjusted_min_guidance_qtr, 63), sector)",
+      "skel": "group_zscore(ts_zscore(eps_adjusted_min_guidance_qtr, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(eps_adjusted_min_guidance_qtr,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(eps_adjusted_min_guidance_value, 63), sector)",
+      "skel": "group_zscore(ts_zscore(eps_adjusted_min_guidance_value, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(eps_adjusted_min_guidance_value,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(eps_max_guidance_quarterly, 63), sector)",
+      "skel": "group_zscore(ts_zscore(eps_max_guidance_quarterly, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(eps_max_guidance_quarterly,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(eps_min_guidance_quarterly, 63), sector)",
+      "skel": "group_zscore(ts_zscore(eps_min_guidance_quarterly, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(eps_min_guidance_quarterly,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(eps_reported_min_guidance_qtr, 63), sector)",
+      "skel": "group_zscore(ts_zscore(eps_reported_min_guidance_qtr, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(eps_reported_min_guidance_qtr,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(free_cash_flow_per_share_max_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(free_cash_flow_per_share_max_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(free_cash_flow_per_share_max_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(fscore_bfl_growth, 63), sector)",
+      "skel": "group_zscore(ts_zscore(fscore_bfl_growth, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(fscore_bfl_growth,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(fscore_bfl_momentum, 63), sector)",
+      "skel": "group_zscore(ts_zscore(fscore_bfl_momentum, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(fscore_bfl_momentum,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(fscore_bfl_profitability, 63), sector)",
+      "skel": "group_zscore(ts_zscore(fscore_bfl_profitability, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(fscore_bfl_profitability,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(fscore_bfl_quality, 63), sector)",
+      "skel": "group_zscore(ts_zscore(fscore_bfl_quality, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(fscore_bfl_quality,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(fscore_bfl_surface, 63), sector)",
+      "skel": "group_zscore(ts_zscore(fscore_bfl_surface, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(fscore_bfl_surface,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(fscore_bfl_surface_accel, 63), sector)",
+      "skel": "group_zscore(ts_zscore(fscore_bfl_surface_accel, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(fscore_bfl_surface_accel,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(growth_potential_rank_derivative, 63), sector)",
+      "skel": "group_zscore(ts_zscore(growth_potential_rank_derivative, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(growth_potential_rank_derivative,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(highest_sales_estimate, 63), sector)",
+      "skel": "group_zscore(ts_zscore(highest_sales_estimate, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(highest_sales_estimate,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(lowest_sales_estimate, 63), sector)",
+      "skel": "group_zscore(ts_zscore(lowest_sales_estimate, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(lowest_sales_estimate,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_adjusted_eps_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_adjusted_eps_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_adjusted_eps_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_adjusted_eps_guidance_2, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_adjusted_eps_guidance_2, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_adjusted_eps_guidance_2,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_adjusted_net_profit_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_adjusted_net_profit_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_adjusted_net_profit_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_book_value_per_share_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_book_value_per_share_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_book_value_per_share_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_book_value_per_share_guidance_2, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_book_value_per_share_guidance_2, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_book_value_per_share_guidance_2,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_capital_expenditure_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_capital_expenditure_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_capital_expenditure_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_custom_eps_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_custom_eps_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_custom_eps_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_customized_eps_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_customized_eps_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_customized_eps_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_ebit_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_ebit_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_ebit_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_ebitda_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_ebitda_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_ebitda_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_free_cash_flow_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_free_cash_flow_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_free_cash_flow_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_free_cashflow_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_free_cashflow_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_free_cashflow_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_free_cashflow_per_share_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_free_cashflow_per_share_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_free_cashflow_per_share_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_gross_income_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_gross_income_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_gross_income_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_gross_income_guidance_2, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_gross_income_guidance_2, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_gross_income_guidance_2,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_investing_cashflow_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_investing_cashflow_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_investing_cashflow_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_investing_cashflow_guidance_2, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_investing_cashflow_guidance_2, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_investing_cashflow_guidance_2,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_net_debt_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_net_debt_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_net_debt_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_net_income_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_net_income_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_net_income_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_net_profit_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_net_profit_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_net_profit_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_operating_cashflow_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_operating_cashflow_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_operating_cashflow_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_operating_cashflow_guidance_2, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_operating_cashflow_guidance_2, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_operating_cashflow_guidance_2,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_pretax_profit_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_pretax_profit_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_pretax_profit_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_reported_eps_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_reported_eps_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_reported_eps_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_reported_eps_guidance_2, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_reported_eps_guidance_2, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_reported_eps_guidance_2,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_reported_pretax_income_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_reported_pretax_income_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_reported_pretax_income_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_reported_pretax_income_guidance_2, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_reported_pretax_income_guidance_2, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_reported_pretax_income_guidance_2,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_tangible_book_value_per_share_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_tangible_book_value_per_share_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_tangible_book_value_per_share_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_total_assets_guidance, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_total_assets_guidance, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_total_assets_guidance,#),sector)"
+    },
+    {
+      "utc_iso": "2026-05-06T20:30:07.808782+00:00",
+      "tag": "run_candidates",
+      "sig": "group_zscore(ts_zscore(max_total_assets_guidance_2, 63), sector)",
+      "skel": "group_zscore(ts_zscore(max_total_assets_guidance_2, #), sector)",
+      "tmpl": "group_zscore(ts_zscore(F, #), sector)",
+      "corr": "group_zscore(ts_zscore(max_total_assets_guidance_2,#),sector)"
+    }
+  ]
+}

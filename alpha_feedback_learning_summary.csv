@@ -1,0 +1,16 @@
+﻿family,source,operator,field,window,Neutralization,Decay,Truncation,count,metric_gate_pass_rate,platform_pass_evidence_rate,negative_rate,zeroish_rate,turnover_fail_rate,self_correlation_pending_rate,self_correlation_fail_rate,prod_correlation_pending_rate,prod_correlation_fail_rate,low_sub_universe_fail_rate,concentrated_weight_fail_rate,top_blocked_reason
+unknown,unknown,unknown,unknown,126,,,,29,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,self_or_platform_check_pending
+near_pass_variant,near_pass,unknown,unknown,126,MARKET,6,0.05,283,0.978799,0.0,0.0,0.0,0.0,0.261484,0.0,0.0,0.0,0.0,0.0,platform_non_self_not_pass
+near_pass_variant,near_pass,unknown,unknown,126,MARKET,8,0.05,277,0.974729,0.0,0.0,0.0,0.0,0.263538,0.0,0.0,0.0,0.0,0.0,platform_non_self_not_pass
+near_pass_variant,near_pass,unknown,unknown,252,MARKET,8,0.05,444,0.972973,0.0,0.0,0.0,0.0,0.283784,0.0,0.0,0.0,0.0,0.0,platform_non_self_not_pass
+near_pass_variant,near_pass,unknown,unknown,126,MARKET,4,0.05,283,0.971731,0.0,0.0,0.0,0.0,0.240283,0.0,0.0,0.0,0.0,0.0,platform_non_self_not_pass
+near_pass_variant,near_pass,unknown,unknown,252,MARKET,6,0.05,455,0.964835,0.0,0.0,0.0,0.0,0.279121,0.0,0.0,0.0,0.0,0.0,platform_non_self_not_pass
+near_pass_variant,near_pass,unknown,unknown,252,MARKET,4,0.05,483,0.942029,0.0,0.0,0.0,0.0,0.300207,0.0,0.0,0.0,0.0,0.0,platform_non_self_not_pass
+unknown,unknown,unknown,unknown,252,,,,72,0.916667,0.0,0.0,0.0,0.0,0.180556,0.0,0.0,0.0,0.0,0.0,self_or_platform_check_pending
+arch_hybrid_delta_pv,proven,unknown,unknown,252,MARKET,4,0.05,6,0.666667,0.0,0.0,0.0,0.0,0.666667,0.0,0.0,0.0,0.166667,0.0,self_correlation_pending
+near_pass_variant,near_pass,unknown,unknown,252,,,,21,0.47619,0.0,0.0,0.0,0.0,0.380952,0.0,0.0,0.0,0.0,0.0,missing_core_metrics
+near_pass_variant,near_pass,unknown,unknown,126,,,,10,0.2,0.0,0.0,0.0,0.0,0.2,0.0,0.0,0.0,0.0,0.0,missing_core_metrics
+arch_hybrid_z_pv,proven,unknown,unknown,126,MARKET,4,0.05,6,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,sharpe_not_above_1.25
+alpha_models_template,Alpha Models.csv,unknown,unknown,252,,,,3,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,missing_core_metrics
+alpha_models_template,Alpha Models.csv,unknown,unknown,252,SUBINDUSTRY,6,0.05,5,0.0,0.0,0.2,0.4,0.0,0.4,0.0,0.0,0.0,0.0,0.0,sharpe_not_above_1.25
+alpha_models_template,Alpha Models.csv,unknown,unknown,20,INDUSTRY,6,0.05,6,0.0,0.0,0.333333,0.0,0.5,0.666667,0.0,0.0,0.0,0.0,0.166667,sharpe_not_above_1.25

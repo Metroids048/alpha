@@ -1,0 +1,915 @@
+﻿cluster_id,family,data_fields,cluster_size,avg_sharpe,avg_turnover,expression,sharpe,turnover,failure_reasons
+near_pass_variant|adv20_anl4_ebitda_value_close_volume_vwap,near_pass_variant,adv20 | anl4_ebitda_value | close | volume | vwap,992,1.94,0.16263999999999998,"((group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3)*rank(ts_mean(volume, 63)/adv20)",1.94,0.1628,"check: check_timeout:pending
+ok
+
+Aggregate Data:
+Sharpe
+1.94
+Turnover
+16.28%
+Fitness
+1.72
+Returns
+12.73%
+Drawdown
+5.54%
+Margin
+0.00‱"
+near_pass_variant|adv20_anl4_ebitda_value_close_volume_vwap,near_pass_variant,adv20 | anl4_ebitda_value | close | volume | vwap,992,1.94,0.16263999999999998,"((group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3)*rank(ts_mean(volume, 63)/(1+adv20))",1.94,0.1628,"check: check_timeout:pending
+Incompatible unit for input of ""add"" at index 1, expected ""Unit[]"", found ""Unit[CSPrice:1,CSShare:1]"". <linkToCommonErrorMessages>Learn more</linkToCommonErrorMessages>
+
+Aggregate Data:
+Sharpe
+1.94
+Turnover
+16.28%
+Fitness
+1.72
+Returns
+12.73%
+Drawdown
+5.54%
+Margin
+0.00‱"
+near_pass_variant|adv20_anl4_ebitda_value_close_volume_vwap,near_pass_variant,adv20 | anl4_ebitda_value | close | volume | vwap,992,1.94,0.16263999999999998,"((group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close, 252)-0.5)*0.3)*rank(ts_mean(volume, 63)/(1+adv20))",1.94,0.1624,"check: check_timeout:pending
+Incompatible unit for input of ""add"" at index 1, expected ""Unit[]"", found ""Unit[CSPrice:1,CSShare:1]"". <linkToCommonErrorMessages>Learn more</linkToCommonErrorMessages>
+
+Aggregate Data:
+Sharpe
+1.94
+Turnover
+16.24%
+Fitness
+1.72
+Returns
+12.73%
+Drawdown
+5.60%
+Margin
+0.00‱"
+near_pass_variant|adv20_anl4_ebitda_value_close_volume_vwap,near_pass_variant,adv20 | anl4_ebitda_value | close | volume | vwap,992,1.94,0.16263999999999998,"((group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close, 252)-0.5)*0.3)*rank(ts_mean(volume, 63)/adv20)",1.94,0.1624,"check: check_timeout:pending
+ok
+
+Aggregate Data:
+Sharpe
+1.94
+Turnover
+16.24%
+Fitness
+1.72
+Returns
+12.73%
+Drawdown
+5.60%
+Margin
+0.00‱"
+near_pass_variant|adv20_anl4_ebitda_value_close_volume_vwap,near_pass_variant,adv20 | anl4_ebitda_value | close | volume | vwap,992,1.94,0.16263999999999998,"((group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3)*rank(ts_mean(volume, 63)/adv20)",1.94,0.1628,"check: poll_only
+LOW_SHARPE:PASS:1.94/1.25; LOW_FITNESS:PASS:1.72/1.0; LOW_TURNOVER:PASS:0.1628/0.01; HIGH_TURNOVER:PASS:0.1628/0.7; CONCENTRATED_WEIGHT:PASS; LOW_SUB_UNIVERSE_SHARPE:PASS:1.18/0.84; SELF_CORRELATION:PENDING; MATCHES_COMPETITION:PASS
+ok
+
+Aggregate Data:
+Sharpe
+1.94
+Turnover
+16.28%
+Fitness
+1.72
+Returns
+12.73%
+Drawdown
+5.54%
+Margin
+0.00‱"
+near_pass_variant|adv20_assets_close_volume_vwap,near_pass_variant,adv20 | assets | close | volume | vwap,553,2.13,0.1687,"((group_rank(ts_delta(assets, 252)/cap,sector)-0.5)*0.7+(ts_rank(vwap/close, 126)-0.5)*0.3)*rank(ts_mean(volume, 126)/adv20)",2.13,0.1687,"check: check_timeout:pending
+ok
+
+Aggregate Data:
+Sharpe
+2.13
+Turnover
+16.87%
+Fitness
+1.68
+Returns
+10.51%
+Drawdown
+5.60%
+Margin
+0.00‱"
+near_pass_variant|adv20_assets_close_volume_vwap,near_pass_variant,adv20 | assets | close | volume | vwap,553,2.13,0.1687,"((group_rank(ts_delta(assets,252)/cap,sector)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3)*rank(ts_mean(volume, 126)/(1+adv20))",2.13,0.1687,"check: check_timeout:pending
+LOW_SHARPE:PASS:2.13/1.25; LOW_FITNESS:PASS:1.68/1.0; LOW_TURNOVER:PASS:0.1687/0.01; HIGH_TURNOVER:PASS:0.1687/0.7; CONCENTRATED_WEIGHT:PASS; LOW_SUB_UNIVERSE_SHARPE:PASS:1.24/0.92; UNITS:WARNING; SELF_CORRELATION:PENDING; MATCHES_COMPETITION:PASS
+Incompatible unit for input of ""add"" at index 1, expected ""Unit[]"", found ""Unit[CSPrice:1,CSShare:1]"". <linkToCommonErrorMessages>Learn more</linkToCommonErrorMessages>
+
+Aggregate Data:
+Sharpe
+2.13
+Turnover
+16.87%
+Fitness
+1.68
+Returns
+10.51%
+Drawdown
+5.60%
+Margin
+0.00‱"
+near_pass_variant|adv20_assets_close_volume_vwap,near_pass_variant,adv20 | assets | close | volume | vwap,553,2.13,0.1687,"((group_rank(ts_delta(assets,252)/cap,sector)-0.5)*0.7+(ts_rank(vwap/close, 126)-0.5)*0.3)*rank(ts_mean(volume, 126)/adv20)",2.13,0.1687,"check: check_timeout:pending
+ok
+
+Aggregate Data:
+Sharpe
+2.13
+Turnover
+16.87%
+Fitness
+1.68
+Returns
+10.51%
+Drawdown
+5.60%
+Margin
+0.00‱"
+near_pass_variant|adv20_assets_close_volume_vwap,near_pass_variant,adv20 | assets | close | volume | vwap,553,2.13,0.1687,"((group_rank(ts_delta(assets, 252)/cap,sector)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3)*rank(ts_mean(volume, 126)/(1+adv20))",2.13,0.1687,"check: check_timeout:pending
+LOW_SHARPE:PASS:2.13/1.25; LOW_FITNESS:PASS:1.68/1.0; LOW_TURNOVER:PASS:0.1687/0.01; HIGH_TURNOVER:PASS:0.1687/0.7; CONCENTRATED_WEIGHT:PASS; LOW_SUB_UNIVERSE_SHARPE:PASS:1.24/0.92; UNITS:WARNING; SELF_CORRELATION:PENDING; MATCHES_COMPETITION:PASS
+Incompatible unit for input of ""add"" at index 1, expected ""Unit[]"", found ""Unit[CSPrice:1,CSShare:1]"". <linkToCommonErrorMessages>Learn more</linkToCommonErrorMessages>
+
+Aggregate Data:
+Sharpe
+2.13
+Turnover
+16.87%
+Fitness
+1.68
+Returns
+10.51%
+Drawdown
+5.60%
+Margin
+0.00‱"
+near_pass_variant|adv20_assets_close_volume_vwap,near_pass_variant,adv20 | assets | close | volume | vwap,553,2.13,0.1687,"((group_rank(ts_delta(assets, 252)/cap,sector)-0.5)*0.7+(ts_rank(vwap/close, 126)-0.5)*0.3)*rank(ts_mean(volume, 126)/adv20)",2.13,0.1687,"check: poll_only
+LOW_SHARPE:PASS:2.13/1.25; LOW_FITNESS:PASS:1.68/1.0; LOW_TURNOVER:PASS:0.1687/0.01; HIGH_TURNOVER:PASS:0.1687/0.7; CONCENTRATED_WEIGHT:PASS; LOW_SUB_UNIVERSE_SHARPE:PASS:1.24/0.92; SELF_CORRELATION:PENDING; MATCHES_COMPETITION:PASS
+ok
+
+Aggregate Data:
+Sharpe
+2.13
+Turnover
+16.87%
+Fitness
+1.68
+Returns
+10.51%
+Drawdown
+5.60%
+Margin
+0.00‱"
+near_pass_variant|anl4_ebitda_value_close_vwap,near_pass_variant,anl4_ebitda_value | close | vwap,517,2.0,0.14266,"(group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3",2.0,0.1429,"check: metric_pass:self_correlation_pending
+LOW_SHARPE:PASS:2.0/1.25; LOW_FITNESS:PASS:1.89/1.0; LOW_TURNOVER:PASS:0.1429/0.01; HIGH_TURNOVER:PASS:0.1429/0.7; CONCENTRATED_WEIGHT:PASS; LOW_SUB_UNIVERSE_SHARPE:PASS:1.34/0.87; SELF_CORRELATION:PENDING; MATCHES_COMPETITION:PASS
+ok
+
+Aggregate Data:
+Sharpe
+2.00
+Turnover
+14.29%
+Fitness
+1.89
+Returns
+12.79%
+Drawdown
+5.98%
+Margin
+0.00‱"
+near_pass_variant|anl4_ebitda_value_close_vwap,near_pass_variant,anl4_ebitda_value | close | vwap,517,2.0,0.14266,"(group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close, 252)-0.5)*0.3",2.0,0.1423,"check: check_timeout:pending
+ok
+
+Aggregate Data:
+Sharpe
+2.00
+Turnover
+14.23%
+Fitness
+1.90
+Returns
+12.80%
+Drawdown
+6.25%
+Margin
+0.00‱"
+near_pass_variant|anl4_ebitda_value_close_vwap,near_pass_variant,anl4_ebitda_value | close | vwap,517,2.0,0.14266,"(group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close, 126)-0.5)*0.3",2.0,0.1429,"check: check_timeout:pending
+ok
+
+Aggregate Data:
+Sharpe
+2.00
+Turnover
+14.29%
+Fitness
+1.89
+Returns
+12.79%
+Drawdown
+5.98%
+Margin
+0.00‱"
+near_pass_variant|anl4_ebitda_value_close_vwap,near_pass_variant,anl4_ebitda_value | close | vwap,517,2.0,0.14266,"(group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close, 252)-0.5)*0.3",2.0,0.1423,"check: poll_only
+LOW_SHARPE:PASS:2.0/1.25; LOW_FITNESS:PASS:1.9/1.0; LOW_TURNOVER:PASS:0.1423/0.01; HIGH_TURNOVER:PASS:0.1423/0.7; CONCENTRATED_WEIGHT:PASS; LOW_SUB_UNIVERSE_SHARPE:PASS:1.36/0.87; SELF_CORRELATION:PENDING; MATCHES_COMPETITION:PASS
+ok
+
+Aggregate Data:
+Sharpe
+2.00
+Turnover
+14.23%
+Fitness
+1.90
+Returns
+12.80%
+Drawdown
+6.25%
+Margin
+0.00‱"
+near_pass_variant|anl4_ebitda_value_close_vwap,near_pass_variant,anl4_ebitda_value | close | vwap,517,2.0,0.14266,"(group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3",2.0,0.1429,"check: poll_only
+LOW_SHARPE:PASS:2.0/1.25; LOW_FITNESS:PASS:1.89/1.0; LOW_TURNOVER:PASS:0.1429/0.01; HIGH_TURNOVER:PASS:0.1429/0.7; CONCENTRATED_WEIGHT:PASS; LOW_SUB_UNIVERSE_SHARPE:PASS:1.34/0.87; SELF_CORRELATION:PENDING; MATCHES_COMPETITION:PASS
+ok
+
+Aggregate Data:
+Sharpe
+2.00
+Turnover
+14.29%
+Fitness
+1.89
+Returns
+12.79%
+Drawdown
+5.98%
+Margin
+0.00‱"
+near_pass_variant|adv20_anl4_ebitda_value_close_trade_when_volume_vwap,near_pass_variant,adv20 | anl4_ebitda_value | close | trade_when | volume | vwap,273,1.9899999999999998,0.1429,"trade_when(rank(ts_mean(volume,63)/adv20),((group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3),-1)",1.99,0.1429,"check: check_timeout:pending
+ok
+
+Aggregate Data:
+Sharpe
+1.99
+Turnover
+14.29%
+Fitness
+1.88
+Returns
+12.76%
+Drawdown
+5.95%
+Margin
+0.00‱"
+near_pass_variant|adv20_anl4_ebitda_value_close_trade_when_volume_vwap,near_pass_variant,adv20 | anl4_ebitda_value | close | trade_when | volume | vwap,273,1.9899999999999998,0.1429,"trade_when(rank(ts_mean(volume,63)/adv20),((group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3),-1)",1.99,0.1429,"check: check_timeout:pending
+ok
+
+Aggregate Data:
+Sharpe
+1.99
+Turnover
+14.29%
+Fitness
+1.88
+Returns
+12.76%
+Drawdown
+5.95%
+Margin
+0.00‱"
+near_pass_variant|adv20_anl4_ebitda_value_close_trade_when_volume_vwap,near_pass_variant,adv20 | anl4_ebitda_value | close | trade_when | volume | vwap,273,1.9899999999999998,0.1429,"trade_when(rank(ts_mean(volume,63)/adv20),((group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3),-1)",1.99,0.1429,"check: check_timeout:pending
+ok
+
+Aggregate Data:
+Sharpe
+1.99
+Turnover
+14.29%
+Fitness
+1.88
+Returns
+12.76%
+Drawdown
+5.95%
+Margin
+0.00‱"
+near_pass_variant|adv20_anl4_ebitda_value_close_trade_when_volume_vwap,near_pass_variant,adv20 | anl4_ebitda_value | close | trade_when | volume | vwap,273,1.9899999999999998,0.1429,"trade_when(rank(ts_mean(volume,63)/adv20),((group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3),-1)",1.99,0.1429,"check: poll_only
+LOW_SHARPE:PASS:1.99/1.25; LOW_FITNESS:PASS:1.88/1.0; LOW_TURNOVER:PASS:0.1429/0.01; HIGH_TURNOVER:PASS:0.1429/0.7; CONCENTRATED_WEIGHT:PASS; LOW_SUB_UNIVERSE_SHARPE:PASS:1.34/0.86; SELF_CORRELATION:PENDING; MATCHES_COMPETITION:PASS
+ok
+
+Aggregate Data:
+Sharpe
+1.99
+Turnover
+14.29%
+Fitness
+1.88
+Returns
+12.76%
+Drawdown
+5.95%
+Margin
+0.00‱"
+near_pass_variant|adv20_anl4_ebitda_value_close_trade_when_volume_vwap,near_pass_variant,adv20 | anl4_ebitda_value | close | trade_when | volume | vwap,273,1.9899999999999998,0.1429,"trade_when(rank(ts_mean(volume,63)/adv20),((group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3),-1)",1.99,0.1429,"check: poll_only
+LOW_SHARPE:PASS:1.99/1.25; LOW_FITNESS:PASS:1.88/1.0; LOW_TURNOVER:PASS:0.1429/0.01; HIGH_TURNOVER:PASS:0.1429/0.7; CONCENTRATED_WEIGHT:PASS; LOW_SUB_UNIVERSE_SHARPE:PASS:1.34/0.86; SELF_CORRELATION:PENDING; MATCHES_COMPETITION:PASS
+ok
+
+Aggregate Data:
+Sharpe
+1.99
+Turnover
+14.29%
+Fitness
+1.88
+Returns
+12.76%
+Drawdown
+5.95%
+Margin
+0.00‱"
+unknown|adv20_anl4_ebitda_value_close_volume_vwap,unknown,adv20 | anl4_ebitda_value | close | volume | vwap,32,,,"((group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3)*rank(ts_mean(volume, 63)/adv20)",,,
+unknown|adv20_anl4_ebitda_value_close_volume_vwap,unknown,adv20 | anl4_ebitda_value | close | volume | vwap,32,,,"((group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3)*rank(ts_mean(volume, 63)/(1+adv20))",,,
+unknown|adv20_anl4_ebitda_value_close_volume_vwap,unknown,adv20 | anl4_ebitda_value | close | volume | vwap,32,,,"((group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3)*rank(ts_mean(volume, 63)/adv20)",,,
+unknown|adv20_anl4_ebitda_value_close_volume_vwap,unknown,adv20 | anl4_ebitda_value | close | volume | vwap,32,,,"((group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close, 252)-0.5)*0.3)*rank(ts_mean(volume, 63)/adv20)",,,
+unknown|adv20_anl4_ebitda_value_close_volume_vwap,unknown,adv20 | anl4_ebitda_value | close | volume | vwap,32,,,"((group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close, 252)-0.5)*0.3)*rank(ts_mean(volume, 63)/(1+adv20))",,,
+unknown|adv20_assets_close_volume_vwap,unknown,adv20 | assets | close | volume | vwap,26,,,"((group_rank(ts_delta(assets,252)/cap,sector)-0.5)*0.7+(ts_rank(vwap/close, 126)-0.5)*0.3)*rank(ts_mean(volume, 126)/(1+adv20))",,,
+unknown|adv20_assets_close_volume_vwap,unknown,adv20 | assets | close | volume | vwap,26,,,"((group_rank(ts_delta(assets, 252)/cap,sector)-0.5)*0.7+(ts_rank(vwap/close, 126)-0.5)*0.3)*rank(ts_mean(volume, 126)/(1+adv20))",,,
+unknown|adv20_assets_close_volume_vwap,unknown,adv20 | assets | close | volume | vwap,26,,,"((group_rank(ts_delta(assets,252)/cap,sector)-0.5)*0.7+(ts_rank(vwap/close, 126)-0.5)*0.3)*rank(ts_mean(volume, 126)/(1+adv20))",,,
+unknown|adv20_assets_close_volume_vwap,unknown,adv20 | assets | close | volume | vwap,26,,,"((group_rank(ts_delta(assets,252)/cap,sector)-0.5)*0.7+(ts_rank(vwap/close, 252)-0.5)*0.3)*rank(ts_mean(volume, 126)/adv20)",,,
+unknown|adv20_assets_close_volume_vwap,unknown,adv20 | assets | close | volume | vwap,26,,,"((group_rank(ts_delta(assets,252)/cap,sector)-0.5)*0.7+(ts_rank(vwap/close, 252)-0.5)*0.3)*rank(ts_mean(volume, 126)/(1+adv20))",,,
+unknown|anl4_ebitda_value_close_vwap,unknown,anl4_ebitda_value | close | vwap,22,,,"(group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close, 252)-0.5)*0.3",,,
+unknown|anl4_ebitda_value_close_vwap,unknown,anl4_ebitda_value | close | vwap,22,,,"(group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close, 252)-0.5)*0.3",,,
+unknown|anl4_ebitda_value_close_vwap,unknown,anl4_ebitda_value | close | vwap,22,,,"(group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3",,,
+unknown|anl4_ebitda_value_close_vwap,unknown,anl4_ebitda_value | close | vwap,22,,,"(group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close, 126)-0.5)*0.3",,,
+unknown|anl4_ebitda_value_close_vwap,unknown,anl4_ebitda_value | close | vwap,22,,,"(group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close, 252)-0.5)*0.3",,,
+near_pass_variant|assets_close_vwap,near_pass_variant,assets | close | vwap,12,1.902,0.13378,"(group_rank(ts_delta(assets, 252)/cap,sector)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3",1.93,0.1505,"check: check_timeout:pending
+ok
+
+Aggregate Data:
+Sharpe
+1.93
+Turnover
+15.05%
+Fitness
+1.59
+Returns
+10.18%
+Drawdown
+6.94%
+Margin
+0.00‱"
+near_pass_variant|assets_close_vwap,near_pass_variant,assets | close | vwap,12,1.902,0.13378,"(group_rank(ts_delta(assets, 252)/cap,sector)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3",1.93,0.1505,"check: poll_only
+LOW_SHARPE:PASS:1.93/1.25; LOW_FITNESS:PASS:1.59/1.0; LOW_TURNOVER:PASS:0.1505/0.01; HIGH_TURNOVER:PASS:0.1505/0.7; CONCENTRATED_WEIGHT:PASS; LOW_SUB_UNIVERSE_SHARPE:PASS:1.38/0.84; SELF_CORRELATION:PENDING; MATCHES_COMPETITION:PASS
+ok
+
+Aggregate Data:
+Sharpe
+1.93
+Turnover
+15.05%
+Fitness
+1.59
+Returns
+10.18%
+Drawdown
+6.94%
+Margin
+0.00‱"
+near_pass_variant|assets_close_vwap,near_pass_variant,assets | close | vwap,12,1.902,0.13378,"(group_rank(ts_delta(assets,252)/cap,sector)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3",1.93,0.1505,"check: check_timeout:pending
+ok
+
+Aggregate Data:
+Sharpe
+1.93
+Turnover
+15.05%
+Fitness
+1.59
+Returns
+10.18%
+Drawdown
+6.94%
+Margin
+0.00‱"
+near_pass_variant|assets_close_vwap,near_pass_variant,assets | close | vwap,12,1.902,0.13378,"(group_rank(ts_delta(assets, 252)/cap,sector)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3",1.86,0.1087,"check: metric_pass:self_correlation_pending
+LOW_SHARPE:PASS:1.86/1.25; LOW_FITNESS:PASS:1.63/1.0; LOW_TURNOVER:PASS:0.1087/0.01; HIGH_TURNOVER:PASS:0.1087/0.7; CONCENTRATED_WEIGHT:PASS; LOW_SUB_UNIVERSE_SHARPE:PASS:1.28/0.81; SELF_CORRELATION:PENDING; MATCHES_COMPETITION:PASS
+ok
+
+Aggregate Data:
+Sharpe
+1.86
+Turnover
+10.87%
+Fitness
+1.63
+Returns
+9.57%
+Drawdown
+7.34%
+Margin
+0.00‱"
+near_pass_variant|assets_close_vwap,near_pass_variant,assets | close | vwap,12,1.902,0.13378,"(group_rank(ts_delta(assets, 252)/cap,sector)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3",1.86,0.1087,"check: poll_only
+LOW_SHARPE:PASS:1.86/1.25; LOW_FITNESS:PASS:1.63/1.0; LOW_TURNOVER:PASS:0.1087/0.01; HIGH_TURNOVER:PASS:0.1087/0.7; CONCENTRATED_WEIGHT:PASS; LOW_SUB_UNIVERSE_SHARPE:PASS:1.28/0.81; SELF_CORRELATION:PENDING; MATCHES_COMPETITION:PASS
+ok
+
+Aggregate Data:
+Sharpe
+1.86
+Turnover
+10.87%
+Fitness
+1.63
+Returns
+9.57%
+Drawdown
+7.34%
+Margin
+0.00‱"
+unknown|adv20_anl4_ebitda_value_close_trade_when_volume_vwap,unknown,adv20 | anl4_ebitda_value | close | trade_when | volume | vwap,11,,,"trade_when(rank(ts_mean(volume,63)/adv20),((group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3),-1)",,,
+unknown|adv20_anl4_ebitda_value_close_trade_when_volume_vwap,unknown,adv20 | anl4_ebitda_value | close | trade_when | volume | vwap,11,,,"trade_when(rank(ts_mean(volume,63)/adv20),((group_rank(ts_delta(anl4_ebitda_value, 126)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3),-1)",,,
+unknown|adv20_anl4_ebitda_value_close_trade_when_volume_vwap,unknown,adv20 | anl4_ebitda_value | close | trade_when | volume | vwap,11,,,"trade_when(rank(ts_mean(volume,63)/adv20),((group_rank(ts_delta(anl4_ebitda_value, 252)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close, 252)-0.5)*0.3),-1)",,,
+unknown|adv20_anl4_ebitda_value_close_trade_when_volume_vwap,unknown,adv20 | anl4_ebitda_value | close | trade_when | volume | vwap,11,,,"trade_when(rank(ts_mean(volume,63)/adv20),((group_rank(ts_delta(anl4_ebitda_value,252)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3),-1)",,,
+unknown|adv20_anl4_ebitda_value_close_trade_when_volume_vwap,unknown,adv20 | anl4_ebitda_value | close | trade_when | volume | vwap,11,,,"trade_when(rank(ts_mean(volume,63)/adv20),((group_rank(ts_delta(anl4_ebitda_value,252)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close, 126)-0.5)*0.3),-1)",,,
+unknown|assets_close_vwap,unknown,assets | close | vwap,4,,,"(group_rank(ts_delta(assets,252)/cap,sector)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3",,,
+unknown|assets_close_vwap,unknown,assets | close | vwap,4,,,"(group_rank(ts_delta(assets,252)/cap,sector)-0.5)*0.7+(ts_rank(vwap/close, 126)-0.5)*0.3",,,
+unknown|assets_close_vwap,unknown,assets | close | vwap,4,,,"(group_rank(ts_delta(assets,252)/cap,sector)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3",,,
+unknown|assets_close_vwap,unknown,assets | close | vwap,4,,,"(group_rank(ts_delta(assets,252)/cap,sector)-0.5)*0.7+(ts_rank(vwap/close, 126)-0.5)*0.3",,,
+unknown|fnd7_ointfund_qta,unknown,fnd7_ointfund_qta,4,,,"-(group_neutralize(ts_zscore(fnd7_ointfund_qta, 252), subindustry))",,,
+unknown|fnd7_ointfund_qta,unknown,fnd7_ointfund_qta,4,,,"-(group_neutralize(ts_zscore(fnd7_ointfund_qta, 252), subindustry))",,,
+unknown|fnd7_ointfund_qta,unknown,fnd7_ointfund_qta,4,,,"-(group_neutralize(ts_zscore(fnd7_ointfund_qta, 252), subindustry))",,,
+unknown|fnd7_ointfund_qta,unknown,fnd7_ointfund_qta,4,,,"-(group_neutralize(ts_zscore(fnd7_ointfund_qta, 252), subindustry))",,,
+unknown|fnd7_ointfund_qcktsrp,unknown,fnd7_ointfund_qcktsrp,2,,,"group_neutralize(ts_zscore(fnd7_ointfund_qcktsrp, 252), subindustry)",,,
+unknown|fnd7_ointfund_qcktsrp,unknown,fnd7_ointfund_qcktsrp,2,,,"group_neutralize(ts_zscore(fnd7_ointfund_qcktsrp, 252), subindustry)",,,
+alpha_models_template|fnd7_ointfund_qcktsrp,alpha_models_template,fnd7_ointfund_qcktsrp,2,,,"group_neutralize(ts_zscore(fnd7_ointfund_qcktsrp, 252), subindustry)",,,"check: skip_check:missing_core_metrics
+ok
+
+Aggregate Data:
+Sharpe
+N/A
+Turnover
+N/A
+Fitness
+N/A
+Returns
+N/A
+Drawdown
+N/A
+Margin
+N/A"
+alpha_models_template|fnd7_ointfund_qcktsrp,alpha_models_template,fnd7_ointfund_qcktsrp,2,,,"group_neutralize(ts_zscore(fnd7_ointfund_qcktsrp, 252), subindustry)",,,"check: skip_check:missing_core_metrics
+ok
+
+Aggregate Data:
+Sharpe
+N/A
+Turnover
+N/A
+Fitness
+N/A
+Returns
+N/A
+Drawdown
+N/A
+Margin
+N/A"
+alpha_models_template|max_shareholders_equity_guidance_ts_backfill,alpha_models_template,max_shareholders_equity_guidance | ts_backfill,2,0.0,0.1037,"-(group_neutralize(ts_mean(ts_backfill(max_shareholders_equity_guidance, 20), 20), industry))",0.81,0.1037,"check: check_failed:LOW_SHARPE,LOW_FITNESS,CONCENTRATED_WEIGHT
+Sharpe of 0.81 is below cutoff of 1.25.
+Fitness of 0.96 is below cutoff of 1.00.
+Weight concentration 50% is above cutoff of 10% on 2019-11-04.
+
+Aggregate Data:
+Sharpe
+0.81
+Turnover
+10.37%
+Fitness
+0.96
+Returns
+17.71%
+Drawdown
+43.46%
+Margin
+0.00‱"
+alpha_models_template|max_shareholders_equity_guidance_ts_backfill,alpha_models_template,max_shareholders_equity_guidance | ts_backfill,2,0.0,0.1037,"group_neutralize(ts_mean(ts_backfill(max_shareholders_equity_guidance, 20), 20), industry)",-0.81,0.1037,"check: poll_only
+Sharpe of -0.81 is below cutoff of 1.25.
+Fitness of -0.96 is below cutoff of 1.00.
+Weight concentration 50% is above cutoff of 10% on 2019-11-04.
+Sub-universe Sharpe of -1.23 is below cutoff of -0.35.
+
+Aggregate Data:
+Sharpe
+-0.81
+Turnover
+10.37%
+Fitness
+-0.96
+Returns
+-17.71%
+Drawdown
+97.95%
+Margin
+-0.00‱"
+alpha_models_template|min_stock_option_expense_guidance_ts_backfill,alpha_models_template,min_stock_option_expense_guidance | ts_backfill,2,0.0,0.0059,"-(group_neutralize(ts_mean(ts_backfill(min_stock_option_expense_guidance, 20), 20), industry))",0.25,0.0059,"check: check_failed:LOW_SHARPE,LOW_FITNESS,LOW_TURNOVER
+Sharpe of 0.25 is below cutoff of 1.25.
+Fitness of 0.13 is below cutoff of 1.00.
+Turnover of 0.59% is below cutoff of 1.00%.
+
+Aggregate Data:
+Sharpe
+0.25
+Turnover
+0.59%
+Fitness
+0.13
+Returns
+3.16%
+Drawdown
+25.72%
+Margin
+0.01‱"
+alpha_models_template|min_stock_option_expense_guidance_ts_backfill,alpha_models_template,min_stock_option_expense_guidance | ts_backfill,2,0.0,0.0059,"group_neutralize(ts_mean(ts_backfill(min_stock_option_expense_guidance, 20), 20), industry)",-0.25,0.0059,"check: poll_only
+Sharpe of -0.25 is below cutoff of 1.25.
+Fitness of -0.13 is below cutoff of 1.00.
+Turnover of 0.59% is below cutoff of 1.00%.
+Sub-universe Sharpe of -0.81 is below cutoff of -0.11.
+
+Aggregate Data:
+Sharpe
+-0.25
+Turnover
+0.59%
+Fitness
+-0.13
+Returns
+-3.16%
+Drawdown
+26.53%
+Margin
+-0.01‱"
+alpha_models_template|one_month_change_mean_earnings_estimate_scaled_price,alpha_models_template,one_month_change_mean_earnings_estimate_scaled_price,1,,,"group_neutralize(ts_zscore(one_month_change_mean_earnings_estimate_scaled_price, 252), subindustry)",,,"check: skip_check:missing_core_metrics
+ok
+
+Aggregate Data:
+Sharpe
+N/A
+Turnover
+N/A
+Fitness
+N/A
+Returns
+N/A
+Drawdown
+N/A
+Margin
+N/A"
+alpha_models_template|analyst_revision_rank_derivative,alpha_models_template,analyst_revision_rank_derivative,1,-0.12,0.2104,"group_neutralize(ts_zscore(analyst_revision_rank_derivative, 252), subindustry)",-0.12,0.2104,"check: skip_check:sharpe_below_threshold
+ok
+
+Aggregate Data:
+Sharpe
+-0.12
+Turnover
+21.04%
+Fitness
+-0.02
+Returns
+-0.89%
+Drawdown
+19.47%
+Margin
+-0.00‱"
+alpha_models_template|fnd6_cptnewqv1300_opepsq,alpha_models_template,fnd6_cptnewqv1300_opepsq,1,0.69,0.0535,"group_neutralize(ts_zscore(fnd6_cptnewqv1300_opepsq, 252), subindustry)",0.69,0.0535,"check: skip_check:sharpe_below_threshold
+ok
+
+Aggregate Data:
+Sharpe
+0.69
+Turnover
+5.35%
+Fitness
+0.33
+Returns
+2.92%
+Drawdown
+10.58%
+Margin
+0.00‱"
+alpha_models_template|anl4_fs_detail_estimates_advanced_af_nd_ebitda_mean,alpha_models_template,anl4_fs_detail_estimates_advanced_af_nd_ebitda_mean,1,0.79,0.0546,"group_neutralize(ts_zscore(anl4_fs_detail_estimates_advanced_af_nd_ebitda_mean, 252), subindustry)",0.79,0.0546,"check: skip_check:sharpe_below_threshold
+ok
+
+Aggregate Data:
+Sharpe
+0.79
+Turnover
+5.46%
+Fitness
+0.50
+Returns
+5.09%
+Drawdown
+8.81%
+Margin
+0.00‱"
+alpha_models_template|probability_non_investment_grade_rating_ts_backfill,alpha_models_template,probability_non_investment_grade_rating | ts_backfill,1,0.2,0.0091,"group_neutralize(ts_mean(ts_backfill(probability_non_investment_grade_rating, 20), 20), industry)",0.2,0.0091,"check: skip_check:sharpe_below_threshold
+ok
+
+Aggregate Data:
+Sharpe
+0.20
+Turnover
+0.91%
+Fitness
+0.09
+Returns
+2.60%
+Drawdown
+29.32%
+Margin
+0.01‱"
+arch_hybrid_z_pv|close_shares_issued_stock_options_exercised_vwap,arch_hybrid_z_pv,close | shares_issued_stock_options_exercised | vwap,1,0.62,0.1035,"group_neutralize(ts_zscore(shares_issued_stock_options_exercised/cap,126)+(ts_rank(vwap/close,126)-0.5)*0.3,market)",0.62,0.1035,"check: skip_check:sharpe_below_threshold
+Sharpe of 0.62 is below cutoff of 1.25.
+Fitness of 0.51 is below cutoff of 1.00.
+
+Aggregate Data:
+Sharpe
+0.62
+Turnover
+10.35%
+Fitness
+0.51
+Returns
+8.46%
+Drawdown
+19.97%
+Margin
+0.00‱"
+arch_hybrid_z_pv|close_common_stock_shares_outstanding_count_vwap,arch_hybrid_z_pv,close | common_stock_shares_outstanding_count | vwap,1,0.59,0.1135,"group_neutralize(ts_zscore(common_stock_shares_outstanding_count/cap,126)+(ts_rank(vwap/close,126)-0.5)*0.3,industry)",0.59,0.1135,"check: skip_check:sharpe_below_threshold
+Sharpe of 0.59 is below cutoff of 1.25.
+Fitness of 0.46 is below cutoff of 1.00.
+
+Aggregate Data:
+Sharpe
+0.59
+Turnover
+11.35%
+Fitness
+0.46
+Returns
+7.75%
+Drawdown
+16.70%
+Margin
+0.00‱"
+arch_hybrid_z_pv|close_diluted_shares_outstanding_adjustment_vwap,arch_hybrid_z_pv,close | diluted_shares_outstanding_adjustment | vwap,1,0.52,0.0969,"group_neutralize(ts_zscore(diluted_shares_outstanding_adjustment/cap,126)+(ts_rank(vwap/close,126)-0.5)*0.3,industry)",0.52,0.0969,"check: skip_check:sharpe_below_threshold
+Sharpe of 0.52 is below cutoff of 1.25.
+Fitness of 0.27 is below cutoff of 1.00.
+
+Aggregate Data:
+Sharpe
+0.52
+Turnover
+9.69%
+Fitness
+0.27
+Returns
+3.48%
+Drawdown
+6.30%
+Margin
+0.00‱"
+arch_hybrid_z_pv|close_non_option_equity_awards_forfeited_count_vwap,arch_hybrid_z_pv,close | non_option_equity_awards_forfeited_count | vwap,1,0.7,0.1028,"group_neutralize(ts_zscore(non_option_equity_awards_forfeited_count/cap,126)+(ts_rank(vwap/close,126)-0.5)*0.3,market)",0.7,0.1028,"check: skip_check:sharpe_below_threshold
+Sharpe of 0.70 is below cutoff of 1.25.
+Fitness of 0.61 is below cutoff of 1.00.
+
+Aggregate Data:
+Sharpe
+0.70
+Turnover
+10.28%
+Fitness
+0.61
+Returns
+9.45%
+Drawdown
+14.10%
+Margin
+0.00‱"
+arch_hybrid_z_pv|close_operating_leases_minimum_payments_due_thereafter_vwap,arch_hybrid_z_pv,close | operating_leases_minimum_payments_due_thereafter | vwap,1,0.78,0.1072,"group_neutralize(ts_zscore(operating_leases_minimum_payments_due_thereafter/cap,126)+(ts_rank(vwap/close,126)-0.5)*0.3,industry)",0.78,0.1072,"check: skip_check:sharpe_below_threshold
+Sharpe of 0.78 is below cutoff of 1.25.
+Fitness of 0.64 is below cutoff of 1.00.
+
+Aggregate Data:
+Sharpe
+0.78
+Turnover
+10.72%
+Fitness
+0.64
+Returns
+8.49%
+Drawdown
+12.39%
+Margin
+0.00‱"
+arch_hybrid_delta_pv|close_operating_income_vwap,arch_hybrid_delta_pv,close | operating_income | vwap,1,1.39,0.1535,"(group_rank(ts_delta(operating_income,252)/cap,sector)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3",1.39,0.1535,"check: metric_pass:self_correlation_pending
+LOW_SHARPE:PASS:1.39/1.25; LOW_FITNESS:PASS:1.24/1.0; LOW_TURNOVER:PASS:0.1535/0.01; HIGH_TURNOVER:PASS:0.1535/0.7; CONCENTRATED_WEIGHT:PASS; LOW_SUB_UNIVERSE_SHARPE:PASS:0.84/0.6; SELF_CORRELATION:PENDING; MATCHES_COMPETITION:PASS
+ok
+
+Aggregate Data:
+Sharpe
+1.39
+Turnover
+15.35%
+Fitness
+1.24
+Returns
+12.25%
+Drawdown
+10.71%
+Margin
+0.00‱"
+arch_hybrid_delta_pv|close_operating_expense_vwap,arch_hybrid_delta_pv,close | operating_expense | vwap,1,1.43,0.1532,"(group_rank(ts_delta(operating_expense,252)/cap,market)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3",1.43,0.1532,"check: check_failed:LOW_SUB_UNIVERSE_SHARPE
+Sub-universe Sharpe of 0.60 is below cutoff of 0.62.
+
+Aggregate Data:
+Sharpe
+1.43
+Turnover
+15.32%
+Fitness
+1.11
+Returns
+9.28%
+Drawdown
+12.44%
+Margin
+0.00‱"
+arch_hybrid_delta_pv|cashflow_dividends_close_vwap,arch_hybrid_delta_pv,cashflow_dividends | close | vwap,1,1.12,0.1613,"(group_rank(ts_delta(cashflow_dividends,252)/cap,sector)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3",1.12,0.1613,"check: skip_check:sharpe_below_threshold
+Sharpe of 1.12 is below cutoff of 1.25.
+Fitness of 0.91 is below cutoff of 1.00.
+
+Aggregate Data:
+Sharpe
+1.12
+Turnover
+16.13%
+Fitness
+0.91
+Returns
+10.57%
+Drawdown
+17.99%
+Margin
+0.00‱"
+arch_hybrid_delta_pv|annual_intangible_assets_net_carrying_value_close_vwap,arch_hybrid_delta_pv,annual_intangible_assets_net_carrying_value | close | vwap,1,1.39,0.1338,"(group_rank(ts_delta(annual_intangible_assets_net_carrying_value,252)/cap,industry)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3",1.39,0.1338,"check: metric_pass:self_correlation_pending
+LOW_SHARPE:PASS:1.39/1.25; LOW_FITNESS:PASS:1.08/1.0; LOW_TURNOVER:PASS:0.1338/0.01; HIGH_TURNOVER:PASS:0.1338/0.7; CONCENTRATED_WEIGHT:PASS; LOW_SUB_UNIVERSE_SHARPE:PASS:1.18/0.6; SELF_CORRELATION:PENDING; MATCHES_COMPETITION:PASS
+ok
+
+Aggregate Data:
+Sharpe
+1.39
+Turnover
+13.38%
+Fitness
+1.08
+Returns
+8.02%
+Drawdown
+5.39%
+Margin
+0.00‱"
+alpha_models_template|expected_rating_value_ts_backfill,alpha_models_template,expected_rating_value | ts_backfill,1,0.25,0.0114,"group_neutralize(ts_mean(ts_backfill(expected_rating_value, 20), 20), industry)",0.25,0.0114,"check: skip_check:sharpe_below_threshold
+ok
+
+Aggregate Data:
+Sharpe
+0.25
+Turnover
+1.14%
+Fitness
+0.14
+Returns
+3.76%
+Drawdown
+34.54%
+Margin
+0.01‱"
+arch_hybrid_z_pv|close_non_option_equity_awards_granted_count_vwap,arch_hybrid_z_pv,close | non_option_equity_awards_granted_count | vwap,1,0.69,0.1047,"group_neutralize(ts_zscore(non_option_equity_awards_granted_count/cap,126)+(ts_rank(vwap/close,126)-0.5)*0.3,sector)",0.69,0.1047,"check: skip_check:sharpe_below_threshold
+Sharpe of 0.69 is below cutoff of 1.25.
+Fitness of 0.58 is below cutoff of 1.00.
+
+Aggregate Data:
+Sharpe
+0.69
+Turnover
+10.47%
+Fitness
+0.58
+Returns
+8.75%
+Drawdown
+14.82%
+Margin
+0.00‱"
+arch_hybrid_delta_pv|close_intangible_assets_amortization_vwap,arch_hybrid_delta_pv,close | intangible_assets_amortization | vwap,1,1.26,0.1338,"(group_rank(ts_delta(intangible_assets_amortization,252)/cap,market)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3",1.26,0.1338,"check: metric_pass:self_correlation_pending
+LOW_SHARPE:PASS:1.26/1.25; LOW_FITNESS:PASS:1.02/1.0; LOW_TURNOVER:PASS:0.1338/0.01; HIGH_TURNOVER:PASS:0.1338/0.7; CONCENTRATED_WEIGHT:PASS; LOW_SUB_UNIVERSE_SHARPE:PASS:0.83/0.55; SELF_CORRELATION:PENDING; MATCHES_COMPETITION:PASS
+ok
+
+Aggregate Data:
+Sharpe
+1.26
+Turnover
+13.38%
+Fitness
+1.02
+Returns
+8.85%
+Drawdown
+6.87%
+Margin
+0.00‱"
+arch_hybrid_delta_pv|close_intangible_assets_amortization_total_vwap,arch_hybrid_delta_pv,close | intangible_assets_amortization_total | vwap,1,1.3,0.142,"(group_rank(ts_delta(intangible_assets_amortization_total,252)/cap,sector)-0.5)*0.7+(ts_rank(vwap/close,126)-0.5)*0.3",1.3,0.142,"check: skip_check:fitness_below_threshold
+Fitness of 0.97 is below cutoff of 1.00.
+
+Aggregate Data:
+Sharpe
+1.30
+Turnover
+14.20%
+Fitness
+0.97
+Returns
+7.89%
+Drawdown
+5.09%
+Margin
+0.00‱"
+alpha_models_template|sales_ps,alpha_models_template,sales_ps,1,0.12,0.0532,"group_neutralize(ts_zscore(sales_ps, 252), subindustry)",0.12,0.0532,"check: poll_only
+Sharpe of 0.12 is below cutoff of 1.25.
+Fitness of 0.03 is below cutoff of 1.00.
+Sub-universe Sharpe of 0.01 is below cutoff of 0.05.
+
+Aggregate Data:
+Sharpe
+0.12
+Turnover
+5.32%
+Fitness
+0.03
+Returns
+0.58%
+Drawdown
+13.49%
+Margin
+0.00‱"
+alpha_models_template|fnd6_newa1v1300_ebitda,alpha_models_template,fnd6_newa1v1300_ebitda,1,0.19,0.079,"group_neutralize(ts_zscore(fnd6_newa1v1300_ebitda, 252), subindustry)",0.19,0.079,"check: poll_only
+Sharpe of 0.19 is below cutoff of 1.25.
+Fitness of 0.05 is below cutoff of 1.00.
+Sub-universe Sharpe of -0.01 is below cutoff of 0.08.
+
+Aggregate Data:
+Sharpe
+0.19
+Turnover
+7.90%
+Fitness
+0.05
+Returns
+1.03%
+Drawdown
+9.54%
+Margin
+0.00‱"
+arch_level_liquid|adv20_median_long_term_eps_growth_projection_volume,arch_level_liquid,adv20 | median_long_term_eps_growth_projection | volume,1,0.75,0.4141,"group_neutralize(ts_zscore(median_long_term_eps_growth_projection/cap,252)*rank(ts_mean(volume,126)/adv20),market)",0.75,0.4141,"check: skip_check:sharpe_below_threshold
+ok
+
+Aggregate Data:
+Sharpe
+0.75
+Turnover
+41.41%
+Fitness
+0.16
+Returns
+1.88%
+Drawdown
+4.22%
+Margin
+0.00‱"
+arch_level_liquid|adv20_common_stock_shares_outstanding_count_volume,arch_level_liquid,adv20 | common_stock_shares_outstanding_count | volume,1,0.17,0.102,"group_neutralize(ts_zscore(common_stock_shares_outstanding_count/cap,252)*rank(ts_mean(volume,126)/adv20),industry)",0.17,0.102,"check: skip_check:sharpe_below_threshold
+ok
+
+Aggregate Data:
+Sharpe
+0.17
+Turnover
+10.20%
+Fitness
+0.07
+Returns
+2.20%
+Drawdown
+22.94%
+Margin
+0.00‱"

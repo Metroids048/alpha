@@ -1,0 +1,28 @@
+# 与 PipelineConfig 对齐的推荐默认值（可选：后续用 PyYAML 加载并覆盖 cfg）
+simulate:
+  max_concurrent_simulations: 12   # 0 表示串行；遇 429 可调低到 8–10
+  sqlite_runs_path: null           # 例如 "alpha_mining_runs.sqlite"
+
+submit:
+  dry_run_submit: true
+  max_submit: 20
+
+# Consultant Factory uses only safety margins here. Platform limits are learned
+# from versioned simulation/check responses in the Gate Registry.
+consultant:
+  gate_freshness_hours: 24
+  quality_margin: 0.05
+  turnover_margin: 0.01
+  correlation_margin: 0.03
+  correlation_ceiling: 0.65
+  near_pass_ratio: 0.90
+  min_correlation_overlap: 60
+  max_candidates_per_hypothesis: 8
+  max_behavior_per_round: 2
+  max_parent_offspring: 8
+  hard_parent_offspring: 12
+  max_settings_trials: 6
+  per_candidate_settings_budget: 6
+  simulation_budget: 64
+  execute_submit: false
+  confirmation_phrase: I_UNDERSTAND_REAL_SUBMISSION

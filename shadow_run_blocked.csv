@@ -1,0 +1,5 @@
+﻿scope,candidate_id,stage,reason,detail,final_queue_eligible
+RUN,,BEFORE_SEED_SELECTION,GATE_SNAPSHOT_STALE_OR_MISSING,0/30 snapshots are fresh within 24 hours,False
+RUN,,BEFORE_SEED_SELECTION,REQUIRED_CORRELATION_GATE_SNAPSHOT_MISSING,"SELF_CORRELATION,PROD_CORRELATION",False
+RUN,,BEFORE_SEED_SELECTION,LOCAL_RETURN_SERIES_MISSING,alpha_daily_returns contains 0 distinct expression series,False
+RUN,,BEFORE_SEED_SELECTION,SHADOW_RUN_CLI_CONTRACT_UNSUPPORTED,the five required shadow-run arguments were rejected by argparse,False

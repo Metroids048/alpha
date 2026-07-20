@@ -1,0 +1,654 @@
+2026-05-16T14:14:06Z [supervisor] start max_restarts=200 loop_args=['--batch-size', '120', '--inter-cycle-sleep', '120', '--resilient-async', '--no-prebatch-recheck']
+2026-05-16T14:14:07Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:14:53Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:15:38Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:16:24Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:17:10Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:17:55Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:18:41Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:19:27Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:20:13Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:20:58Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:21:44Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:22:30Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:23:15Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:24:01Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:24:47Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:25:33Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:26:18Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:27:04Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:27:50Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:28:35Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:29:21Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:30:07Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:30:53Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:31:38Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:32:24Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:33:10Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:33:55Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:34:41Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:35:27Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:36:13Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:36:58Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:37:44Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:38:30Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:39:15Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:40:01Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:40:47Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:41:33Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:42:18Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:43:04Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:43:50Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:44:35Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:45:21Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:46:07Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:46:53Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:47:38Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:48:24Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:49:10Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:49:55Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:50:41Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:51:27Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:52:13Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:52:58Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:53:44Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:54:30Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:55:16Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:56:01Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:56:47Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:57:33Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:58:18Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:59:04Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T14:59:50Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:00:35Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:01:21Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:02:07Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:02:53Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:03:38Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:04:24Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:05:10Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:05:55Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:06:41Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:07:27Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:08:13Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:08:58Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:09:44Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:10:30Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:11:15Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:12:01Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:12:47Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:13:33Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:14:18Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:15:04Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:15:50Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:16:35Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:17:21Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:18:07Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:18:53Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:19:38Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:20:24Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:21:10Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:21:55Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:22:41Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:23:27Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:24:13Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:24:58Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:25:44Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:26:30Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:27:15Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:28:01Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:28:47Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:29:33Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:30:18Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:31:04Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:31:50Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:32:35Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:33:21Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:34:07Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:34:53Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:35:38Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:36:24Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:37:10Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:37:55Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:38:41Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:39:27Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:40:12Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:40:58Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:41:44Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:42:30Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:43:15Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:44:01Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:44:47Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:45:32Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:46:18Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:47:04Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:47:50Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:48:35Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:49:21Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:50:07Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:50:52Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:51:38Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:52:24Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:53:10Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:53:55Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:54:41Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:55:27Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:56:12Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:56:58Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:57:44Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:58:30Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T15:59:15Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T16:00:01Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T16:00:47Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T16:01:32Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T16:02:18Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T16:03:04Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T16:03:50Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T16:04:35Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T16:05:21Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T16:06:07Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T16:06:52Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T16:07:38Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T16:08:24Z [supervisor] waiting for existing pipeline PIDs=[37100, 43652]
+2026-05-16T16:09:10Z [supervisor] launch restart#0 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:09:10Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:09:10Z [supervisor] restart in 90s (attempt 1)
+2026-05-16T16:10:40Z [supervisor] launch restart#1 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:10:40Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:10:40Z [supervisor] restart in 90s (attempt 2)
+2026-05-16T16:12:10Z [supervisor] launch restart#2 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:12:10Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:12:10Z [supervisor] restart in 90s (attempt 3)
+2026-05-16T16:13:40Z [supervisor] launch restart#3 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:13:40Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:13:40Z [supervisor] restart in 90s (attempt 4)
+2026-05-16T16:15:10Z [supervisor] launch restart#4 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:15:10Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:15:10Z [supervisor] restart in 90s (attempt 5)
+2026-05-16T16:16:40Z [supervisor] launch restart#5 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:16:40Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:16:40Z [supervisor] restart in 90s (attempt 6)
+2026-05-16T16:18:10Z [supervisor] launch restart#6 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:18:10Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:18:10Z [supervisor] restart in 90s (attempt 7)
+2026-05-16T16:19:40Z [supervisor] launch restart#7 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:19:40Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:19:40Z [supervisor] restart in 90s (attempt 8)
+2026-05-16T16:21:10Z [supervisor] launch restart#8 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:21:10Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:21:10Z [supervisor] restart in 90s (attempt 9)
+2026-05-16T16:22:40Z [supervisor] launch restart#9 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:22:40Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:22:40Z [supervisor] restart in 90s (attempt 10)
+2026-05-16T16:24:10Z [supervisor] launch restart#10 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:24:10Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:24:10Z [supervisor] restart in 90s (attempt 11)
+2026-05-16T16:25:40Z [supervisor] launch restart#11 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:25:40Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:25:40Z [supervisor] restart in 90s (attempt 12)
+2026-05-16T16:27:10Z [supervisor] launch restart#12 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:27:10Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:27:10Z [supervisor] restart in 90s (attempt 13)
+2026-05-16T16:28:40Z [supervisor] launch restart#13 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:28:41Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:28:41Z [supervisor] restart in 90s (attempt 14)
+2026-05-16T16:30:11Z [supervisor] launch restart#14 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:30:11Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:30:11Z [supervisor] restart in 90s (attempt 15)
+2026-05-16T16:31:41Z [supervisor] launch restart#15 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:31:41Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:31:41Z [supervisor] restart in 90s (attempt 16)
+2026-05-16T16:33:11Z [supervisor] launch restart#16 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:33:11Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:33:11Z [supervisor] restart in 90s (attempt 17)
+2026-05-16T16:34:41Z [supervisor] launch restart#17 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:34:41Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:34:41Z [supervisor] restart in 90s (attempt 18)
+2026-05-16T16:36:11Z [supervisor] launch restart#18 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:36:11Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:36:11Z [supervisor] restart in 90s (attempt 19)
+2026-05-16T16:37:41Z [supervisor] launch restart#19 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:37:41Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:37:41Z [supervisor] restart in 90s (attempt 20)
+2026-05-16T16:39:11Z [supervisor] launch restart#20 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:39:11Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:39:11Z [supervisor] restart in 90s (attempt 21)
+2026-05-16T16:40:41Z [supervisor] launch restart#21 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:40:41Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:40:41Z [supervisor] restart in 90s (attempt 22)
+2026-05-16T16:42:11Z [supervisor] launch restart#22 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:42:11Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:42:11Z [supervisor] restart in 90s (attempt 23)
+2026-05-16T16:43:41Z [supervisor] launch restart#23 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:43:41Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:43:41Z [supervisor] restart in 90s (attempt 24)
+2026-05-16T16:45:11Z [supervisor] launch restart#24 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:45:11Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:45:11Z [supervisor] restart in 90s (attempt 25)
+2026-05-16T16:46:41Z [supervisor] launch restart#25 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:46:41Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:46:41Z [supervisor] restart in 90s (attempt 26)
+2026-05-16T16:48:11Z [supervisor] launch restart#26 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:48:11Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:48:11Z [supervisor] restart in 90s (attempt 27)
+2026-05-16T16:49:41Z [supervisor] launch restart#27 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:49:42Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:49:42Z [supervisor] restart in 90s (attempt 28)
+2026-05-16T16:51:12Z [supervisor] launch restart#28 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:51:12Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:51:12Z [supervisor] restart in 90s (attempt 29)
+2026-05-16T16:52:42Z [supervisor] launch restart#29 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:52:42Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:52:42Z [supervisor] restart in 90s (attempt 30)
+2026-05-16T16:54:12Z [supervisor] launch restart#30 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:54:12Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:54:12Z [supervisor] restart in 90s (attempt 31)
+2026-05-16T16:55:42Z [supervisor] launch restart#31 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:55:42Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:55:42Z [supervisor] restart in 90s (attempt 32)
+2026-05-16T16:57:12Z [supervisor] launch restart#32 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:57:12Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:57:12Z [supervisor] restart in 90s (attempt 33)
+2026-05-16T16:58:42Z [supervisor] launch restart#33 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T16:58:42Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T16:58:42Z [supervisor] restart in 90s (attempt 34)
+2026-05-16T17:00:12Z [supervisor] launch restart#34 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:00:12Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:00:12Z [supervisor] restart in 90s (attempt 35)
+2026-05-16T17:01:43Z [supervisor] launch restart#35 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:01:43Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:01:43Z [supervisor] restart in 90s (attempt 36)
+2026-05-16T17:03:13Z [supervisor] launch restart#36 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:03:13Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:03:13Z [supervisor] restart in 90s (attempt 37)
+2026-05-16T17:04:43Z [supervisor] launch restart#37 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:04:44Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:04:44Z [supervisor] restart in 90s (attempt 38)
+2026-05-16T17:06:14Z [supervisor] launch restart#38 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:06:14Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:06:14Z [supervisor] restart in 90s (attempt 39)
+2026-05-16T17:07:44Z [supervisor] launch restart#39 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:07:44Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:07:44Z [supervisor] restart in 90s (attempt 40)
+2026-05-16T17:09:14Z [supervisor] launch restart#40 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:09:14Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:09:14Z [supervisor] restart in 90s (attempt 41)
+2026-05-16T17:10:44Z [supervisor] launch restart#41 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:10:44Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:10:44Z [supervisor] restart in 90s (attempt 42)
+2026-05-16T17:12:14Z [supervisor] launch restart#42 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:12:14Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:12:14Z [supervisor] restart in 90s (attempt 43)
+2026-05-16T17:13:44Z [supervisor] launch restart#43 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:13:44Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:13:44Z [supervisor] restart in 90s (attempt 44)
+2026-05-16T17:15:14Z [supervisor] launch restart#44 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:15:14Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:15:14Z [supervisor] restart in 90s (attempt 45)
+2026-05-16T17:16:44Z [supervisor] launch restart#45 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:16:44Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:16:44Z [supervisor] restart in 90s (attempt 46)
+2026-05-16T17:18:14Z [supervisor] launch restart#46 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:18:14Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:18:14Z [supervisor] restart in 90s (attempt 47)
+2026-05-16T17:19:44Z [supervisor] launch restart#47 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:19:44Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:19:44Z [supervisor] restart in 90s (attempt 48)
+2026-05-16T17:21:14Z [supervisor] launch restart#48 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:21:14Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:21:14Z [supervisor] restart in 90s (attempt 49)
+2026-05-16T17:22:44Z [supervisor] launch restart#49 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:22:44Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:22:44Z [supervisor] restart in 90s (attempt 50)
+2026-05-16T17:24:14Z [supervisor] launch restart#50 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:24:15Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:24:15Z [supervisor] restart in 90s (attempt 51)
+2026-05-16T17:25:45Z [supervisor] launch restart#51 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:25:45Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:25:45Z [supervisor] restart in 90s (attempt 52)
+2026-05-16T17:27:15Z [supervisor] launch restart#52 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:27:15Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:27:15Z [supervisor] restart in 90s (attempt 53)
+2026-05-16T17:28:45Z [supervisor] launch restart#53 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:28:45Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:28:45Z [supervisor] restart in 90s (attempt 54)
+2026-05-16T17:30:15Z [supervisor] launch restart#54 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:30:15Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:30:15Z [supervisor] restart in 90s (attempt 55)
+2026-05-16T17:31:45Z [supervisor] launch restart#55 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:31:45Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:31:45Z [supervisor] restart in 90s (attempt 56)
+2026-05-16T17:33:15Z [supervisor] launch restart#56 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:33:15Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:33:15Z [supervisor] restart in 90s (attempt 57)
+2026-05-16T17:34:45Z [supervisor] launch restart#57 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:34:45Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:34:45Z [supervisor] restart in 90s (attempt 58)
+2026-05-16T17:36:15Z [supervisor] launch restart#58 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:36:15Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:36:15Z [supervisor] restart in 90s (attempt 59)
+2026-05-16T17:37:45Z [supervisor] launch restart#59 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:37:45Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:37:45Z [supervisor] restart in 90s (attempt 60)
+2026-05-16T17:39:15Z [supervisor] launch restart#60 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:39:15Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:39:15Z [supervisor] restart in 90s (attempt 61)
+2026-05-16T17:40:45Z [supervisor] launch restart#61 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:40:45Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:40:45Z [supervisor] restart in 90s (attempt 62)
+2026-05-16T17:42:15Z [supervisor] launch restart#62 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:42:15Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:42:15Z [supervisor] restart in 90s (attempt 63)
+2026-05-16T17:43:45Z [supervisor] launch restart#63 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:43:45Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:43:45Z [supervisor] restart in 90s (attempt 64)
+2026-05-16T17:45:15Z [supervisor] launch restart#64 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:45:15Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:45:15Z [supervisor] restart in 90s (attempt 65)
+2026-05-16T17:46:45Z [supervisor] launch restart#65 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:46:46Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:46:46Z [supervisor] restart in 90s (attempt 66)
+2026-05-16T17:48:16Z [supervisor] launch restart#66 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:48:16Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:48:16Z [supervisor] restart in 90s (attempt 67)
+2026-05-16T17:49:46Z [supervisor] launch restart#67 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:49:46Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:49:46Z [supervisor] restart in 90s (attempt 68)
+2026-05-16T17:51:16Z [supervisor] launch restart#68 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:51:16Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:51:16Z [supervisor] restart in 90s (attempt 69)
+2026-05-16T17:52:46Z [supervisor] launch restart#69 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:52:46Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:52:46Z [supervisor] restart in 90s (attempt 70)
+2026-05-16T17:54:16Z [supervisor] launch restart#70 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:54:16Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:54:16Z [supervisor] restart in 90s (attempt 71)
+2026-05-16T17:55:46Z [supervisor] launch restart#71 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:55:46Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:55:46Z [supervisor] restart in 90s (attempt 72)
+2026-05-16T17:57:16Z [supervisor] launch restart#72 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:57:16Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:57:16Z [supervisor] restart in 90s (attempt 73)
+2026-05-16T17:58:46Z [supervisor] launch restart#73 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T17:58:46Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T17:58:46Z [supervisor] restart in 90s (attempt 74)
+2026-05-16T18:00:16Z [supervisor] launch restart#74 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:00:16Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:00:16Z [supervisor] restart in 90s (attempt 75)
+2026-05-16T18:01:46Z [supervisor] launch restart#75 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:01:46Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:01:46Z [supervisor] restart in 90s (attempt 76)
+2026-05-16T18:03:16Z [supervisor] launch restart#76 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:03:16Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:03:16Z [supervisor] restart in 90s (attempt 77)
+2026-05-16T18:04:46Z [supervisor] launch restart#77 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:04:46Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:04:46Z [supervisor] restart in 90s (attempt 78)
+2026-05-16T18:06:16Z [supervisor] launch restart#78 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:06:16Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:06:16Z [supervisor] restart in 90s (attempt 79)
+2026-05-16T18:07:46Z [supervisor] launch restart#79 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:07:47Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:07:47Z [supervisor] restart in 90s (attempt 80)
+2026-05-16T18:09:17Z [supervisor] launch restart#80 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:09:17Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:09:17Z [supervisor] restart in 90s (attempt 81)
+2026-05-16T18:10:47Z [supervisor] launch restart#81 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:10:47Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:10:47Z [supervisor] restart in 90s (attempt 82)
+2026-05-16T18:12:17Z [supervisor] launch restart#82 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:12:17Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:12:17Z [supervisor] restart in 90s (attempt 83)
+2026-05-16T18:13:47Z [supervisor] launch restart#83 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:13:47Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:13:47Z [supervisor] restart in 90s (attempt 84)
+2026-05-16T18:15:17Z [supervisor] launch restart#84 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:15:17Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:15:17Z [supervisor] restart in 90s (attempt 85)
+2026-05-16T18:16:47Z [supervisor] launch restart#85 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:16:47Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:16:47Z [supervisor] restart in 90s (attempt 86)
+2026-05-16T18:18:17Z [supervisor] launch restart#86 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:18:17Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:18:17Z [supervisor] restart in 90s (attempt 87)
+2026-05-16T18:19:47Z [supervisor] launch restart#87 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:19:47Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:19:47Z [supervisor] restart in 90s (attempt 88)
+2026-05-16T18:21:17Z [supervisor] launch restart#88 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:21:17Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:21:17Z [supervisor] restart in 90s (attempt 89)
+2026-05-16T18:22:47Z [supervisor] launch restart#89 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:22:47Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:22:47Z [supervisor] restart in 90s (attempt 90)
+2026-05-16T18:24:17Z [supervisor] launch restart#90 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:24:17Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:24:17Z [supervisor] restart in 90s (attempt 91)
+2026-05-16T18:25:47Z [supervisor] launch restart#91 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:25:47Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:25:47Z [supervisor] restart in 90s (attempt 92)
+2026-05-16T18:27:17Z [supervisor] launch restart#92 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:27:17Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:27:17Z [supervisor] restart in 90s (attempt 93)
+2026-05-16T18:28:47Z [supervisor] launch restart#93 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:28:48Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:28:48Z [supervisor] restart in 90s (attempt 94)
+2026-05-16T18:30:18Z [supervisor] launch restart#94 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:30:18Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:30:18Z [supervisor] restart in 90s (attempt 95)
+2026-05-16T18:31:48Z [supervisor] launch restart#95 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:31:48Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:31:48Z [supervisor] restart in 90s (attempt 96)
+2026-05-16T18:33:18Z [supervisor] launch restart#96 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:33:18Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:33:18Z [supervisor] restart in 90s (attempt 97)
+2026-05-16T18:34:48Z [supervisor] launch restart#97 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:34:48Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:34:48Z [supervisor] restart in 90s (attempt 98)
+2026-05-16T18:36:18Z [supervisor] launch restart#98 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:36:18Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:36:18Z [supervisor] restart in 90s (attempt 99)
+2026-05-16T18:37:48Z [supervisor] launch restart#99 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:37:48Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:37:48Z [supervisor] restart in 90s (attempt 100)
+2026-05-16T18:39:18Z [supervisor] launch restart#100 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:39:18Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:39:18Z [supervisor] restart in 90s (attempt 101)
+2026-05-16T18:40:48Z [supervisor] launch restart#101 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:40:48Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:40:48Z [supervisor] restart in 90s (attempt 102)
+2026-05-16T18:42:18Z [supervisor] launch restart#102 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:42:18Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:42:18Z [supervisor] restart in 90s (attempt 103)
+2026-05-16T18:43:48Z [supervisor] launch restart#103 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:43:48Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:43:48Z [supervisor] restart in 90s (attempt 104)
+2026-05-16T18:45:18Z [supervisor] launch restart#104 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:45:18Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:45:18Z [supervisor] restart in 90s (attempt 105)
+2026-05-16T18:46:48Z [supervisor] launch restart#105 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:46:48Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:46:48Z [supervisor] restart in 90s (attempt 106)
+2026-05-16T18:48:18Z [supervisor] launch restart#106 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:48:18Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:48:18Z [supervisor] restart in 90s (attempt 107)
+2026-05-16T18:49:48Z [supervisor] launch restart#107 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:49:49Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:49:49Z [supervisor] restart in 90s (attempt 108)
+2026-05-16T18:51:19Z [supervisor] launch restart#108 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:51:19Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:51:19Z [supervisor] restart in 90s (attempt 109)
+2026-05-16T18:52:49Z [supervisor] launch restart#109 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:52:49Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:52:49Z [supervisor] restart in 90s (attempt 110)
+2026-05-16T18:54:19Z [supervisor] launch restart#110 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:54:19Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:54:19Z [supervisor] restart in 90s (attempt 111)
+2026-05-16T18:55:49Z [supervisor] launch restart#111 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:55:49Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:55:49Z [supervisor] restart in 90s (attempt 112)
+2026-05-16T18:57:19Z [supervisor] launch restart#112 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:57:19Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:57:19Z [supervisor] restart in 90s (attempt 113)
+2026-05-16T18:58:49Z [supervisor] launch restart#113 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T18:58:49Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T18:58:49Z [supervisor] restart in 90s (attempt 114)
+2026-05-16T19:00:19Z [supervisor] launch restart#114 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:00:19Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:00:19Z [supervisor] restart in 90s (attempt 115)
+2026-05-16T19:01:49Z [supervisor] launch restart#115 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:01:49Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:01:49Z [supervisor] restart in 90s (attempt 116)
+2026-05-16T19:03:19Z [supervisor] launch restart#116 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:03:19Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:03:19Z [supervisor] restart in 90s (attempt 117)
+2026-05-16T19:04:49Z [supervisor] launch restart#117 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:04:49Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:04:49Z [supervisor] restart in 90s (attempt 118)
+2026-05-16T19:06:19Z [supervisor] launch restart#118 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:06:19Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:06:19Z [supervisor] restart in 90s (attempt 119)
+2026-05-16T19:07:49Z [supervisor] launch restart#119 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:07:49Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:07:49Z [supervisor] restart in 90s (attempt 120)
+2026-05-16T19:09:19Z [supervisor] launch restart#120 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:09:19Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:09:19Z [supervisor] restart in 90s (attempt 121)
+2026-05-16T19:10:49Z [supervisor] launch restart#121 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:10:49Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:10:49Z [supervisor] restart in 90s (attempt 122)
+2026-05-16T19:12:19Z [supervisor] launch restart#122 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:12:20Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:12:20Z [supervisor] restart in 90s (attempt 123)
+2026-05-16T19:13:50Z [supervisor] launch restart#123 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:13:50Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:13:50Z [supervisor] restart in 90s (attempt 124)
+2026-05-16T19:15:20Z [supervisor] launch restart#124 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:15:20Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:15:20Z [supervisor] restart in 90s (attempt 125)
+2026-05-16T19:16:50Z [supervisor] launch restart#125 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:16:50Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:16:50Z [supervisor] restart in 90s (attempt 126)
+2026-05-16T19:18:20Z [supervisor] launch restart#126 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:18:20Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:18:20Z [supervisor] restart in 90s (attempt 127)
+2026-05-16T19:19:50Z [supervisor] launch restart#127 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:19:50Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:19:50Z [supervisor] restart in 90s (attempt 128)
+2026-05-16T19:21:20Z [supervisor] launch restart#128 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:21:20Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:21:20Z [supervisor] restart in 90s (attempt 129)
+2026-05-16T19:22:50Z [supervisor] launch restart#129 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:22:50Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:22:50Z [supervisor] restart in 90s (attempt 130)
+2026-05-16T19:24:20Z [supervisor] launch restart#130 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:24:20Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:24:20Z [supervisor] restart in 90s (attempt 131)
+2026-05-16T19:25:50Z [supervisor] launch restart#131 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:25:50Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:25:50Z [supervisor] restart in 90s (attempt 132)
+2026-05-16T19:27:20Z [supervisor] launch restart#132 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:27:20Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:27:20Z [supervisor] restart in 90s (attempt 133)
+2026-05-16T19:28:50Z [supervisor] launch restart#133 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:28:50Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:28:50Z [supervisor] restart in 90s (attempt 134)
+2026-05-16T19:30:20Z [supervisor] launch restart#134 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:30:20Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:30:20Z [supervisor] restart in 90s (attempt 135)
+2026-05-16T19:31:50Z [supervisor] launch restart#135 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:31:51Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:31:51Z [supervisor] restart in 90s (attempt 136)
+2026-05-16T19:33:21Z [supervisor] launch restart#136 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:33:21Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:33:21Z [supervisor] restart in 90s (attempt 137)
+2026-05-16T19:34:51Z [supervisor] launch restart#137 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:34:51Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:34:51Z [supervisor] restart in 90s (attempt 138)
+2026-05-16T19:36:21Z [supervisor] launch restart#138 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:36:21Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:36:21Z [supervisor] restart in 90s (attempt 139)
+2026-05-16T19:37:51Z [supervisor] launch restart#139 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:37:51Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:37:51Z [supervisor] restart in 90s (attempt 140)
+2026-05-16T19:39:21Z [supervisor] launch restart#140 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:39:21Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:39:21Z [supervisor] restart in 90s (attempt 141)
+2026-05-16T19:40:51Z [supervisor] launch restart#141 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:40:51Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:40:51Z [supervisor] restart in 90s (attempt 142)
+2026-05-16T19:42:21Z [supervisor] launch restart#142 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:42:21Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:42:21Z [supervisor] restart in 90s (attempt 143)
+2026-05-16T19:43:51Z [supervisor] launch restart#143 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:43:51Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:43:51Z [supervisor] restart in 90s (attempt 144)
+2026-05-16T19:45:21Z [supervisor] launch restart#144 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:45:21Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:45:21Z [supervisor] restart in 90s (attempt 145)
+2026-05-16T19:46:51Z [supervisor] launch restart#145 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:46:51Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:46:51Z [supervisor] restart in 90s (attempt 146)
+2026-05-16T19:48:21Z [supervisor] launch restart#146 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:48:21Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:48:21Z [supervisor] restart in 90s (attempt 147)
+2026-05-16T19:49:51Z [supervisor] launch restart#147 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:49:51Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:49:51Z [supervisor] restart in 90s (attempt 148)
+2026-05-16T19:51:21Z [supervisor] launch restart#148 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:51:21Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:51:21Z [supervisor] restart in 90s (attempt 149)
+2026-05-16T19:52:51Z [supervisor] launch restart#149 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:52:52Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:52:52Z [supervisor] restart in 90s (attempt 150)
+2026-05-16T19:54:22Z [supervisor] launch restart#150 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:54:22Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:54:22Z [supervisor] restart in 90s (attempt 151)
+2026-05-16T19:55:52Z [supervisor] launch restart#151 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:55:52Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:55:52Z [supervisor] restart in 90s (attempt 152)
+2026-05-16T19:57:22Z [supervisor] launch restart#152 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:57:22Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:57:22Z [supervisor] restart in 90s (attempt 153)
+2026-05-16T19:58:52Z [supervisor] launch restart#153 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T19:58:52Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T19:58:52Z [supervisor] restart in 90s (attempt 154)
+2026-05-16T20:00:22Z [supervisor] launch restart#154 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T20:00:22Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T20:00:22Z [supervisor] restart in 90s (attempt 155)
+2026-05-16T20:01:52Z [supervisor] launch restart#155 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T20:01:52Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T20:01:52Z [supervisor] restart in 90s (attempt 156)
+2026-05-16T20:03:22Z [supervisor] launch restart#156 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T20:03:22Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T20:03:22Z [supervisor] restart in 90s (attempt 157)
+2026-05-16T20:04:52Z [supervisor] launch restart#157 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T20:04:52Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T20:04:52Z [supervisor] restart in 90s (attempt 158)
+2026-05-16T20:06:22Z [supervisor] launch restart#158 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T20:06:22Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T20:06:22Z [supervisor] restart in 90s (attempt 159)
+2026-05-16T20:07:52Z [supervisor] launch restart#159 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T20:07:52Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T20:07:52Z [supervisor] restart in 90s (attempt 160)
+2026-05-16T20:09:22Z [supervisor] launch restart#160 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T20:09:22Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T20:09:22Z [supervisor] restart in 90s (attempt 161)
+2026-05-16T20:10:52Z [supervisor] launch restart#161 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T20:10:52Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T20:10:52Z [supervisor] restart in 90s (attempt 162)
+2026-05-16T20:12:22Z [supervisor] launch restart#162 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T20:12:22Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T20:12:22Z [supervisor] restart in 90s (attempt 163)
+2026-05-16T20:13:52Z [supervisor] launch restart#163 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T20:13:52Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T20:13:53Z [supervisor] restart in 90s (attempt 164)
+2026-05-16T20:15:23Z [supervisor] launch restart#164 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T20:15:23Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T20:15:23Z [supervisor] restart in 90s (attempt 165)
+2026-05-16T20:16:53Z [supervisor] launch restart#165 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T20:16:53Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T20:16:53Z [supervisor] restart in 90s (attempt 166)
+2026-05-16T20:18:23Z [supervisor] launch restart#166 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
+2026-05-16T20:18:23Z [supervisor] exited rc=2 elapsed=0s
+2026-05-16T20:18:23Z [supervisor] restart in 90s (attempt 167)
+2026-05-16T20:19:53Z [supervisor] launch restart#167 cmd=C:\Users\Windows11\Desktop\alpha\.venv\Scripts\python.exe C:\Users\Windows11\Desktop\alpha\run_pipeline_loop.py --batch-size 120 --inter-cycle-sleep 120 --resilient-async --no-prebatch-recheck
