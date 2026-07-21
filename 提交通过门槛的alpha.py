@@ -29,21 +29,24 @@ import requests
 BASE = "https://api.worldquantbrain.com"
 SIM_URL = f"{BASE}/simulations"
 COOKIE_FILE = ".wq_browser_cookie.json"
+COOKIE_NEXT_FILE = ".wq_browser_cookie.next.json"
 
 # ── auth ─────────────────────────────────────────────────────────────────────
 
-def load_cookie() -> str:
-    p = Path(COOKIE_FILE)
+def load_cookie(path: str | Path = COOKIE_FILE) -> str:
+    p = Path(path)
     if p.is_file():
         try:
-            return json.loads(p.read_text())["cookie"]
+            return str(json.loads(p.read_text(encoding="utf-8")).get("cookie") or "")
         except Exception:
             pass
     return ""
 
 
 def save_cookie(cookie: str) -> None:
-    Path(COOKIE_FILE).write_text(json.dumps({"cookie": cookie}))
+    Path(COOKIE_FILE).write_text(
+        json.dumps({"cookie": cookie}, ensure_ascii=False), encoding="utf-8"
+    )
 
 
 def make_session(cookie: str) -> requests.Session:
@@ -67,12 +70,63 @@ def test_session(sess: requests.Session) -> bool:
         return False
 
 
+def _promote_next_cookie() -> str:
+    """Consume standby cookie file if present and valid."""
+    nxt = Path(COOKIE_NEXT_FILE)
+    if not nxt.is_file():
+        return ""
+    cookie = load_cookie(nxt)
+    if not cookie:
+        return ""
+    sess = make_session(cookie)
+    if not test_session(sess):
+        print(f"[cookie] 备用文件无效，保留 {COOKIE_NEXT_FILE}")
+        return ""
+    save_cookie(cookie)
+    try:
+        nxt.unlink()
+    except OSError:
+        pass
+    print(f"[cookie] 已启用备用 cookie（{COOKIE_NEXT_FILE} → {COOKIE_FILE}）")
+    return cookie
+
+
 def refresh_cookie_interactive() -> str:
+    """Prefer standby/file reload; only fall back to stdin when available."""
     print("\n" + "=" * 60)
-    print("Cookie 已过期（401），需要刷新")
+    print("Cookie 已过期（401），尝试自动刷新")
     print("=" * 60)
+
+    promoted = _promote_next_cookie()
+    if promoted:
+        return promoted
+
+    # Re-read active file in case it was updated externally without killing the job
+    reloaded = load_cookie()
+    if reloaded and test_session(make_session(reloaded)):
+        print(f"[cookie] 已从 {COOKIE_FILE} 重载")
+        return reloaded
+
+    # Non-interactive: poll for file updates so the agent can drop a new cookie
+    # without terminating this process.
+    if not sys.stdin.isatty():
+        print(f"[cookie] 无终端输入；等待更新 {COOKIE_NEXT_FILE} 或 {COOKIE_FILE} …")
+        deadline = time.time() + 30 * 60
+        while time.time() < deadline:
+            promoted = _promote_next_cookie()
+            if promoted:
+                return promoted
+            reloaded = load_cookie()
+            if reloaded and test_session(make_session(reloaded)):
+                print(f"[cookie] 已从 {COOKIE_FILE} 重载")
+                return reloaded
+            time.sleep(5)
+        print("[cookie] 等待超时，未拿到可用 cookie")
+        return ""
+
     print("请在 BRAIN 平台 (https://platform.worldquantbrain.com)")
     print("按 F12 → Network → 点任意请求 → 复制 cookie: 请求头")
+    print(f"或写入 {COOKIE_NEXT_FILE} / {COOKIE_FILE}")
     print("=" * 60)
     cookie = input("粘贴新的 cookie 值: ").strip()
     if cookie:
@@ -351,8 +405,6 @@ def run(csv_path: str, sleep_between: float, max_poll: float,
 
 
 def main() -> None:
-    print("[blocked] 旧版静态门槛重模拟入口已禁用；请使用 python -m alpha_mining legacy triage")
-    return
     ap = argparse.ArgumentParser(description="逐条 simulate BRAIN alpha 队列（只提交通过门槛的行）")
     ap.add_argument("--csv",   default="alpha_resim_queue.csv", help="队列CSV路径")
     ap.add_argument("--sleep", type=float, default=3.0, help="每次提交间隔秒数 (默认3s)")
