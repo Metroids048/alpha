@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 PASS = "PASS"
@@ -25,6 +26,18 @@ class CandidateContext:
     theme_required: bool = False
     pyramid_required: bool = False
     metrics: dict[str, float] = field(default_factory=dict)
+    ledger_status: str = ""
+    ledger_synced_at: str = ""
+    ledger_sync_id: str = ""
+    candidate_sync_id: str = ""
+    ledger_freshness_hours: float = 24.0
+    description_valid: bool = True
+    platform_status: str = "UNSUBMITTED"
+    description_status: str = ""
+    prod_correlation_required: bool = False
+    prod_corr_exception_confirmed: bool = False
+    write_intent_statuses: tuple[str, ...] = ()
+    execute_submit_enabled: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -45,31 +58,25 @@ class SubmissionGuard:
         }
         if not by_name:
             reasons.append("CHECKS_MISSING")
-        for name in context.mandatory_checks:
+        mandatory = {name.upper() for name in context.mandatory_checks}
+        mandatory.update(
+            str(check.get("name") or "").upper()
+            for check in context.checks
+            if isinstance(check, dict) and check.get("mandatory") is True
+        )
+        for name in sorted(mandatory):
             status = by_name.get(name.upper(), "MISSING")
             if status != PASS:
                 reasons.append(f"MANDATORY_{name.upper()}_{status}")
         self_status = by_name.get("SELF_CORRELATION", "MISSING")
         if self_status != PASS:
             reasons.append(f"SELF_CORRELATION_{self_status}")
-        # PROD_CORRELATION and PRODUCTION_CORRELATION are synonyms for the same gate.
-        # Check if EITHER name is present; if both are absent, treat as MISSING.
-        prod_corr_status = by_name.get("PROD_CORRELATION")
-        production_corr_status = by_name.get("PRODUCTION_CORRELATION")
-
-        if prod_corr_status is not None:
-            effective_status = prod_corr_status
-            effective_name = "PROD_CORRELATION"
-        elif production_corr_status is not None:
-            effective_status = production_corr_status
-            effective_name = "PRODUCTION_CORRELATION"
-        else:
-            # Neither variant is present in the response → treat as MISSING (fail-closed).
-            effective_status = "MISSING"
-            effective_name = "PROD_CORRELATION"
-
-        if effective_status != PASS:
-            reasons.append(f"{effective_name}_{effective_status}")
+        if context.prod_correlation_required:
+            prod_status = by_name.get(
+                "PROD_CORRELATION", by_name.get("PRODUCTION_CORRELATION", "MISSING")
+            )
+            if prod_status != PASS and not context.prod_corr_exception_confirmed:
+                reasons.append(f"PROD_CORRELATION_{prod_status}")
         for required, name in (
             (context.competition_required, "MATCHES_COMPETITION"),
             (context.theme_required, "MATCHES_THEME"),
@@ -100,4 +107,33 @@ class SubmissionGuard:
             reasons.append("DUPLICATE")
         if context.submitted_cluster:
             reasons.append("SUBMITTED_CLUSTER")
+        if context.description_status and context.description_status.upper() not in {
+            "VERIFIED",
+            "NOT_REQUIRED",
+        }:
+            reasons.append("DESCRIPTION_NOT_VERIFIED")
+        elif not context.description_valid:
+            reasons.append("DESCRIPTION_INVALID_OR_MISSING")
+        if str(context.platform_status or "UNKNOWN").upper() != "UNSUBMITTED":
+            reasons.append(f"PLATFORM_STATUS_{str(context.platform_status or 'UNKNOWN').upper()}")
+        for write_status in context.write_intent_statuses:
+            normalized = str(write_status or "UNKNOWN").upper()
+            if normalized in {"PENDING", "PROCESSING", "UNCERTAIN", "UNKNOWN"}:
+                reasons.append(f"WRITE_INTENT_{normalized}")
+        if context.execute_submit_enabled is False:
+            reasons.append("EXECUTE_SUBMIT_DISABLED")
+        ledger_fresh = context.ledger_status.upper() == "COMPLETE"
+        try:
+            synced = datetime.fromisoformat(context.ledger_synced_at.replace("Z", "+00:00"))
+            if synced.tzinfo is None:
+                synced = synced.replace(tzinfo=timezone.utc)
+            ledger_fresh = ledger_fresh and synced >= datetime.now(timezone.utc) - timedelta(hours=context.ledger_freshness_hours)
+        except (AttributeError, TypeError, ValueError):
+            ledger_fresh = False
+        if not ledger_fresh:
+            reasons.append("PLATFORM_LEDGER_STALE_OR_MISSING")
+        if not context.ledger_sync_id or not context.candidate_sync_id:
+            reasons.append("PLATFORM_LEDGER_SYNC_MISSING")
+        elif context.ledger_sync_id != context.candidate_sync_id:
+            reasons.append("PLATFORM_LEDGER_SYNC_MISMATCH")
         return GuardDecision(not reasons, tuple(dict.fromkeys(reasons)))

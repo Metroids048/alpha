@@ -1,0 +1,24 @@
+{
+  "task_id": "<id>",
+  "status": "PLANNED",
+  "goal": "<observable outcome>",
+  "acceptance_criteria": [],
+  "assumptions": [],
+  "unknowns": [],
+  "attempt": 0,
+  "max_attempts": 3,
+  "changed_files": [],
+  "verification": {
+    "targeted_tests": "NOT_RUN",
+    "full_tests": "NOT_RUN",
+    "lint": "NOT_RUN",
+    "typecheck": "NOT_RUN",
+    "build": "NOT_RUN",
+    "integration": "NOT_RUN",
+    "domain": "NOT_RUN"
+  },
+  "failures": [],
+  "review_verdict": "NOT_RUN",
+  "known_limitations": [],
+  "next_action": "<next action>"
+}

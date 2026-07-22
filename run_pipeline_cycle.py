@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Single pipeline cycle entry: optional resilient async patch, then delegate to v50 CLI."""
+"""Single pipeline cycle entry for the fail-closed vNext Consultant Factory."""
 
 from __future__ import annotations
 
@@ -27,13 +27,11 @@ def _strip_resilient_flag(argv: list[str]) -> tuple[list[str], bool]:
 def main() -> int:
     argv, use_resilient = _strip_resilient_flag(sys.argv[1:])
     sys.argv = [sys.argv[0], *argv]
+    from alpha_mining.factory.runtime import main as factory_main
+
     if use_resilient:
-        from alpha_mining.simulate.resilient_async import apply_patch
-
-        apply_patch()
-    import auto_alpha_pipeline_rebuilt_v50 as pipeline
-
-    return int(pipeline.main())
+        argv.append("--resilient-async")
+    return int(factory_main(argv))
 
 
 if __name__ == "__main__":

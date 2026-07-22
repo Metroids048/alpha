@@ -1,0 +1,15 @@
+---
+description: Mandatory project workflow, scope control, evidence and safety rules
+alwaysApply: true
+---
+
+# Core workflow
+
+- Read and follow the project-root `AGENTS.md` before substantial work.
+- If the request is analysis, planning, review, research, diagnosis, or explanation only, do not edit files.
+- Before implementation, identify observable acceptance criteria and inspect relevant code, tests, configuration, and current changes.
+- Keep the change minimal and within scope. Do not perform unrelated refactors, upgrades, formatting sweeps, or API changes.
+- Do not fabricate commands, files, APIs, outputs, tests, logs, benchmarks, or external responses.
+- Never expose secrets or perform destructive, production, irreversible, or real-money actions without explicit authorization.
+- If Plan mode is active, produce and refine the plan only. Do not edit files or run mutating commands until the user explicitly starts implementation.
+- At completion, provide actual verification evidence and mark unavailable checks as unverified.

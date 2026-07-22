@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import sqlite3
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -139,13 +140,17 @@ def _base_context(**overrides) -> CandidateContext:
         gate_snapshots_fresh=True,
         quality_buffer_pass=True,
         local_correlation_status="PASS",
+        ledger_status="COMPLETE",
+        ledger_synced_at=datetime.now(timezone.utc).isoformat(),
+        ledger_sync_id="sync-1",
+        candidate_sync_id="sync-1",
     )
     defaults.update(overrides)
     return CandidateContext(**defaults)
 
 
-def test_prod_corr_missing_blocks_submit():
-    """No PROD_CORRELATION check in response → treated as MISSING → blocked."""
+def test_prod_corr_missing_is_optional_when_platform_does_not_mark_it_mandatory():
+    """Do not invent a PROD_CORRELATION requirement absent from platform evidence."""
     ctx = _base_context(
         checks=[
             {"name": "LOW_SHARPE", "result": "PASS"},
@@ -154,9 +159,8 @@ def test_prod_corr_missing_blocks_submit():
         ]
     )
     decision = SubmissionGuard().evaluate(ctx)
-    assert not decision.allowed
-    missing_reasons = [r for r in decision.reasons if "PROD_CORRELATION" in r and "MISSING" in r]
-    assert missing_reasons, f"Expected PROD_CORRELATION_MISSING in reasons; got {decision.reasons}"
+    assert decision.allowed
+    assert not any("PROD_CORRELATION" in reason for reason in decision.reasons)
 
 
 def test_prod_corr_unknown_blocks_submit():
@@ -451,11 +455,10 @@ def test_local_model_cannot_override_platform_fail():
 # 12 – Runtime uses current main engine
 # ---------------------------------------------------------------------------
 
-def test_runtime_uses_current_main_engine():
-    """The active production entry point must delegate to auto_alpha_pipeline_rebuilt_v50."""
+def test_runtime_uses_vnext_factory_engine():
+    """The active entry point must use the fail-closed vNext factory runtime."""
     cycle_path = Path(__file__).parent.parent / "run_pipeline_cycle.py"
     assert cycle_path.exists(), "run_pipeline_cycle.py missing"
     content = cycle_path.read_text(encoding="utf-8")
-    assert "auto_alpha_pipeline_rebuilt_v50" in content, (
-        "run_pipeline_cycle.py must import auto_alpha_pipeline_rebuilt_v50 as the engine"
-    )
+    assert "alpha_mining.factory.runtime" in content
+    assert "auto_alpha_pipeline_rebuilt_v50" not in content

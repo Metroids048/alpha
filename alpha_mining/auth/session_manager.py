@@ -589,3 +589,47 @@ def auth_state_status(
         return "stale"
     except Exception:
         return "unavailable"
+
+
+def clear_local_auth_artifacts(paths: list[str | Path]) -> tuple[str, ...]:
+    """Delete only explicitly named local auth/session files; never scans Git or logs."""
+    removed: list[str] = []
+    for value in paths:
+        target = Path(value).expanduser().resolve()
+        if target.is_dir():
+            raise AuthStateError(f"refusing to delete authentication directory: {target}")
+        if target.is_file():
+            target.unlink()
+            removed.append(str(target))
+    return tuple(removed)
+
+
+def auth_state_metadata(
+    state_path: str | Path,
+    *,
+    now: datetime | None = None,
+    cooldown_seconds: float = 1500,
+    daily_cap: int = 5,
+) -> dict[str, Any]:
+    """Return non-secret authentication timing/counter metadata only."""
+    path = Path(state_path).expanduser().resolve()
+    current = (now or _utc_now()).astimezone(timezone.utc)
+    payload: dict[str, Any] = {
+        "auth_status": auth_state_status(path, cooldown_seconds=cooldown_seconds, daily_cap=daily_cap),
+        "last_successful_auth": None,
+        "auth_age_seconds": None,
+        "auth_attempts_today": 0,
+        "generation": 0,
+    }
+    if not path.is_file():
+        return payload
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        last = _last_auth(raw)
+        payload["last_successful_auth"] = str(raw.get("last_auth_utc") or "") or None
+        payload["auth_age_seconds"] = max(0.0, (current - last).total_seconds()) if last else None
+        payload["auth_attempts_today"] = int(raw.get("auth_attempts") or 0)
+        payload["generation"] = int(raw.get("generation") or 0)
+    except Exception:
+        payload["auth_status"] = "unavailable"
+    return payload

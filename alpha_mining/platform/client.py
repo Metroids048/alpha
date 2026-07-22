@@ -13,6 +13,7 @@ from typing import Any, Callable, Iterable
 import requests
 
 from alpha_mining.auth.session_manager import AuthSettings, ensure_authenticated
+from alpha_mining.platform.access import PlatformAccessController
 
 BASE_URL = "https://api.worldquantbrain.com"
 
@@ -44,10 +45,16 @@ class ReadOnlyPlatformClient:
     min_interval: float = 0.5
     max_attempts: int = 3
     sleeper: Callable[[float], None] = field(default=time.sleep, repr=False)
+    database: str | Path = "research_memory.sqlite"
+    lock_path: str | Path = "worldquant_api.lock"
+    controller: PlatformAccessController | None = field(default=None, repr=False)
+    active_sync_id: str = field(default="", init=False, repr=False)
 
     def __post_init__(self) -> None:
         self.session = requests.Session()
         self._last_request_at = 0.0
+        if self.controller is None:
+            self.controller = PlatformAccessController(self.database, self.lock_path)
 
     def _pace(self) -> None:
         wait = max(
@@ -56,6 +63,9 @@ class ReadOnlyPlatformClient:
         if wait:
             self.sleeper(wait)
         self._last_request_at = time.monotonic()
+
+    def set_sync_id(self, sync_id: str) -> None:
+        self.active_sync_id = str(sync_id or "")
 
     def authenticate(self, *, force: bool = False) -> None:
         username = os.environ.get("WQ_USERNAME", "").strip()
@@ -71,39 +81,79 @@ class ReadOnlyPlatformClient:
                     "protected session unavailable and WQ_PASSWORD is not configured"
                 )
             self._pace()
-            return self.session.post(
+            return self.request(
+                "POST",
                 f"{BASE_URL}/authentication",
+                endpoint_class="authentication",
+                allow_server_retry=False,
                 auth=(username, password),
-                timeout=self.timeout,
             )
 
         ensure_authenticated(
             self.session,
             login,
             username,
-            AuthSettings(state_path=self.state_path),
+            AuthSettings(state_path=self.state_path, max_attempts=1),
             force=force,
         )
 
     def request(
-        self, method: str, url: str, *, allow_server_retry: bool = True, **kwargs: Any
+        self,
+        method: str,
+        url: str,
+        *,
+        allow_server_retry: bool = True,
+        endpoint_class: str = "read",
+        recovery_probe: bool = False,
+        sync_id: str = "",
+        **kwargs: Any,
     ) -> Any:
-        attempts = max(1, int(self.max_attempts))
-        reauthenticated = False
+        verb = str(method).upper()
+        attempts = max(1, int(self.max_attempts)) if verb == "GET" and allow_server_retry else 1
         for attempt in range(1, attempts + 1):
             self._pace()
-            response = self.session.request(method, url, timeout=self.timeout, **kwargs)
-            if response.status_code == 401:
-                if reauthenticated:
-                    return response
-                reauthenticated = True
-                self.authenticate(force=True)
-                continue
-            if response.status_code == 429 and attempt < attempts:
-                wait = retry_after_seconds(response.headers.get("Retry-After"))
-                self.sleeper(wait if wait > 0 else min(2 ** (attempt - 1), 30))
-                continue
+            assert self.controller is not None
+            with self.controller.global_lock():
+                permit = self.controller.before_request(
+                    endpoint_class,
+                    verb,
+                    recovery_probe=recovery_probe,
+                    attempt=attempt,
+                    sync_id=sync_id or self.active_sync_id,
+                )
+                try:
+                    response = self.session.request(verb, url, timeout=self.timeout, **kwargs)
+                except Exception as exc:
+                    self.controller.record_response(
+                        permit,
+                        status_code=0,
+                        error_class=type(exc).__name__,
+                    )
+                    if attempt >= attempts:
+                        raise
+                    self.sleeper(min(2 ** (attempt - 1), 30))
+                    continue
+                headers = getattr(response, "headers", {}) or {}
+                request_id = (
+                    headers.get("X-Request-ID")
+                    or headers.get("X-Correlation-ID")
+                    or headers.get("Traceparent")
+                    or ""
+                )
+                self.controller.record_response(
+                    permit,
+                    status_code=int(response.status_code),
+                    retry_after=headers.get("Retry-After"),
+                    request_id=str(request_id),
+                    response_body=getattr(response, "content", b""),
+                )
+            # A 429 is a global state transition, never an in-call retry. A 401
+            # also returns immediately so authentication cannot form a loop.
+            if response.status_code in {401, 403, 429}:
+                return response
             if (
+                verb == "GET"
+                and
                 allow_server_retry
                 and response.status_code in {500, 502, 503, 504}
                 and attempt < attempts
@@ -114,7 +164,7 @@ class ReadOnlyPlatformClient:
         raise PlatformReadError("platform request exhausted bounded retry attempts")
 
     def fetch_alpha(self, alpha_id: str) -> dict[str, Any]:
-        response = self.request("GET", f"{BASE_URL}/alphas/{alpha_id}")
+        response = self.request("GET", f"{BASE_URL}/alphas/{alpha_id}", endpoint_class="alpha_detail")
         if response.status_code != 200:
             raise PlatformReadError(
                 f"read-only alpha detail failed with HTTP {response.status_code}"
@@ -122,6 +172,54 @@ class ReadOnlyPlatformClient:
         payload = response.json()
         if not isinstance(payload, dict):
             raise PlatformReadError("alpha detail response is not an object")
+        return payload
+
+    def list_alphas(self, params: dict[str, object]) -> dict[str, Any]:
+        self.authenticate()
+        endpoint_class = "alpha_count" if int(params.get("limit", 0) or 0) == 0 else "alpha_list"
+        response = self.request(
+            "GET", f"{BASE_URL}/users/self/alphas", params=dict(params), endpoint_class=endpoint_class
+        )
+        if response.status_code != 200:
+            raise PlatformReadError(f"read-only alpha list failed with HTTP {response.status_code}")
+        payload = response.json()
+        if not isinstance(payload, dict):
+            raise PlatformReadError("alpha list response is not an object")
+        return payload
+
+    def count_alphas(self, params: dict[str, object]) -> int:
+        self.authenticate()
+        request_params = dict(params)
+        request_params.update({"limit": 1, "offset": 0})
+        response = self.request(
+            "GET",
+            f"{BASE_URL}/users/self/alphas",
+            params=request_params,
+            endpoint_class="alpha_count",
+        )
+        if response.status_code != 200:
+            raise PlatformReadError(f"read-only alpha count failed with HTTP {response.status_code}")
+        payload = response.json()
+        if not isinstance(payload, dict):
+            raise PlatformReadError("alpha count response is not an object")
+        try:
+            return int(payload["count"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise PlatformReadError("alpha count response has no valid count") from exc
+
+    def fetch_identity(self, *, recovery_probe: bool = False) -> dict[str, Any]:
+        self.authenticate()
+        response = self.request(
+            "GET",
+            f"{BASE_URL}/users/self",
+            endpoint_class="identity",
+            recovery_probe=recovery_probe,
+        )
+        if response.status_code != 200:
+            raise PlatformReadError(f"identity probe failed with HTTP {response.status_code}")
+        payload = response.json()
+        if not isinstance(payload, dict):
+            raise PlatformReadError("identity response is not an object")
         return payload
 
     def fetch_many(self, alpha_ids: Iterable[str]) -> list[dict[str, Any]]:
