@@ -24,13 +24,15 @@ class TestPhaseDConfigFlags(unittest.TestCase):
     def setUp(self):
         self.PipelineConfig = _get_pipeline_config()
 
-    def test_phase2_llm_enabled_defaults_false(self):
+    def test_phase2_llm_enabled_defaults_true(self):
+        # LLM hypothesis generation is now on by default (disable via --no-phase2-llm).
         cfg = self.PipelineConfig(**_CFG_DEFAULTS)
-        self.assertFalse(cfg.phase2_llm_enabled)
+        self.assertTrue(cfg.phase2_llm_enabled)
 
-    def test_phase3_llm_grammar_enabled_defaults_false(self):
+    def test_phase3_llm_grammar_enabled_defaults_true(self):
+        # LLM grammar expression generation is now on by default (disable via --no-phase3-llm).
         cfg = self.PipelineConfig(**_CFG_DEFAULTS)
-        self.assertFalse(cfg.phase3_llm_grammar_enabled)
+        self.assertTrue(cfg.phase3_llm_grammar_enabled)
 
     def test_phase3_diversity_gate_enabled_defaults_false(self):
         cfg = self.PipelineConfig(**_CFG_DEFAULTS)

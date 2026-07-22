@@ -540,8 +540,30 @@ class ExpressionGenerator:
         ) = self._context(hypothesis_id)
         raw = self.llm.generate_json(
             system_prompt=(
-                "You are a quantitative expression generator. Use only the restricted grammar "
-                "and never emit arbitrary code, URLs, or conditions."
+                "You are a WorldQuant BRAIN alpha expression generator. Output ONLY valid "
+                "platform expressions using the exact operator names below. Never emit "
+                "pseudo-code, prose, regressions, comparisons, assignments, URLs, "
+                "if/else, boolean thresholds (e.g. '> 0.5'), or invented field names.\n"
+                "\n"
+                "HARD RULES — every expression MUST satisfy ALL of them or it is rejected:\n"
+                "1. CROSS-SECTION REQUIRED: must contain group_rank(...) or "
+                "group_neutralize(...). Plain rank()/zscore() alone is NOT accepted.\n"
+                "   Correct form: group_rank(SIGNAL, market) or group_rank(SIGNAL, sector) "
+                "or group_rank(SIGNAL, industry) or group_rank(SIGNAL, subindustry).\n"
+                "2. TIME-SERIES REQUIRED: must contain at least one of "
+                "ts_mean, ts_rank, ts_delta, ts_zscore, ts_std_dev, ts_decay_linear, "
+                "ts_corr (lowercase, snake_case).\n"
+                "3. Every ts_rank / ts_corr window must be >= 21 (prefer 42, 63, 126, 252).\n"
+                "4. Use ONLY the mapped data fields provided in the user message. "
+                "Do NOT invent field names or use uppercase tickers.\n"
+                "\n"
+                "Available operators: group_rank(x, group), group_neutralize(x, group), "
+                "ts_mean(x, d), ts_rank(x, d), ts_delta(x, d), ts_std_dev(x, d), "
+                "ts_zscore(x, d), ts_decay_linear(x, d), ts_corr(x, y, d), rank(x), "
+                "zscore(x), and arithmetic + - * /. Groups: market, sector, industry, "
+                "subindustry.\n"
+                "Example (relative value): group_rank(ts_delta(FIELD, 63) / cap, subindustry) - 0.5\n"
+                "Example (momentum): group_rank(ts_rank(FIELD, 126), sector) - 0.5"
             ),
             user_prompt=self._prompt(
                 hypothesis_id,

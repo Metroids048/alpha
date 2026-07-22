@@ -4,11 +4,108 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
 from alpha_mining.common import to_float
+
+# Status constants for prod_corr (never use Boolean or numeric defaults).
+PROD_CORR_PASS = "PASS"
+PROD_CORR_FAIL = "FAIL"
+PROD_CORR_PENDING = "PENDING"
+PROD_CORR_MISSING = "MISSING"
+PROD_CORR_UNKNOWN = "UNKNOWN"
+PROD_CORR_ERROR = "ERROR"
+
+# Matches: "Prod correlation 0.8379 is above cutoff of 0.7 and Sharpe not better by 10.0% or more"
+# Also handles "Production correlation", mixed case, extra whitespace, percent sign optional.
+_PROD_CORR_FAIL_PATTERN = re.compile(
+    r"[Pp]rod(?:uction)?\s+corr(?:elation)?\s+([\d.]+)"
+    r".*?cutoff\s+of\s+([\d.]+)"
+    r"(?:.*?([0-9.]+)\s*%\s+or\s+more)?",
+    re.DOTALL | re.IGNORECASE,
+)
+
+
+@dataclass(frozen=True)
+class ProdCorrDetails:
+    """Structured result of a platform PROD_CORRELATION gate observation.
+
+    status is always one of: PASS / FAIL / PENDING / MISSING / UNKNOWN / ERROR.
+    Never a Boolean, never defaulting to 0 or 'PASS' when data is absent.
+    """
+
+    status: str                          # PASS/FAIL/PENDING/MISSING/UNKNOWN/ERROR
+    prod_correlation: float | None       # observed value, e.g. 0.8379
+    prod_cutoff: float | None            # live cutoff, e.g. 0.7
+    required_sharpe_improvement: float | None  # as fraction, e.g. 0.10 for "10%"
+    raw_message: str
+    observed_at: str | None
+
+
+def parse_prod_corr_details(gate_obs: "GateObservation") -> ProdCorrDetails:
+    """Extract structured Prod Corr details from a GateObservation.
+
+    Uses the gate's result field first (PASS/FAIL/PENDING), then tries to enrich
+    with numeric values from the message text.  Parsing failure → UNKNOWN, not PASS.
+    """
+    gate_name = str(gate_obs.gate_name).upper()
+    if "PROD" not in gate_name or "CORR" not in gate_name:
+        return ProdCorrDetails(
+            status=PROD_CORR_ERROR,
+            prod_correlation=None,
+            prod_cutoff=None,
+            required_sharpe_improvement=None,
+            raw_message=gate_obs.message,
+            observed_at=gate_obs.observed_at,
+        )
+
+    result = str(gate_obs.result or "").upper().strip()
+    # Map platform result to our status enum.
+    if result == "PASS":
+        status = PROD_CORR_PASS
+    elif result in ("FAIL", "FAILED", "REJECTED"):
+        status = PROD_CORR_FAIL
+    elif result == "PENDING":
+        status = PROD_CORR_PENDING
+    elif result in ("MISSING", ""):
+        status = PROD_CORR_MISSING
+    else:
+        status = PROD_CORR_UNKNOWN
+
+    # Try to extract numeric details from the message.
+    message = str(gate_obs.message or "")
+    prod_correlation: float | None = gate_obs.value  # already parsed by check_parser
+    prod_cutoff: float | None = gate_obs.limit       # already parsed by check_parser
+    required_sharpe_improvement: float | None = None
+
+    if message:
+        m = _PROD_CORR_FAIL_PATTERN.search(message)
+        if m:
+            try:
+                prod_correlation = float(m.group(1))
+            except (TypeError, ValueError):
+                pass
+            try:
+                prod_cutoff = float(m.group(2))
+            except (TypeError, ValueError):
+                pass
+            if m.group(3):
+                try:
+                    required_sharpe_improvement = float(m.group(3)) / 100.0
+                except (TypeError, ValueError):
+                    pass
+
+    return ProdCorrDetails(
+        status=status,
+        prod_correlation=prod_correlation,
+        prod_cutoff=prod_cutoff,
+        required_sharpe_improvement=required_sharpe_improvement,
+        raw_message=message,
+        observed_at=gate_obs.observed_at,
+    )
 
 LIMIT_KEYS = ("limit", "threshold", "minimum", "maximum")
 

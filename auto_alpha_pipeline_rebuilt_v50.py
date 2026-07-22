@@ -1536,8 +1536,8 @@ class PipelineConfig:
     simulation_poll_retry_extend_seconds: int = 420
     recheck_heartbeat_every_polls: int = 60  # v50.3: was 5 — 约每 5min 一次心跳（配合 5s poll 间隔）
     recheck_heartbeat_min_seconds: float = 120.0
-    cleanup_poll_only_max_per_run: int = 15  # 每轮最多清理条数，避免阻塞 simulate
-    cleanup_check_max_seconds: float = 45.0  # cleanup 短 check，不等待自相关
+    cleanup_poll_only_max_per_run: int = 100  # 每轮最多清理条数（v50.6: 15→100，加快积压清理）
+    cleanup_check_max_seconds: float = 15.0  # cleanup 短 check，不等待自相关（v50.6: 45→15，快速失败）
     submit_sleep: float = 1.2
     page_sleep: float = 0.15
     pre_simulate_cooldown_seconds: float = 3.0
@@ -1748,9 +1748,9 @@ class PipelineConfig:
     phase4_repair_enabled: bool = False
     submission_observe_enabled: bool = False
     submission_observe_description_limit: int = 20
-    # Phase 2/3: LLM-driven hypothesis→expression generation. Opt-in, aligned with phase4_mutation_enabled.
-    phase2_llm_enabled: bool = False
-    phase3_llm_grammar_enabled: bool = False
+    # Phase 2/3: LLM-driven hypothesis→expression generation. Default on; disable with --no-phase2-llm / --no-phase3-llm.
+    phase2_llm_enabled: bool = True
+    phase3_llm_grammar_enabled: bool = True
     phase3_diversity_gate_enabled: bool = False
     # Phase 5: Submission Judge priority scoring. Opt-in.
     phase5_judge_enabled: bool = False
@@ -4969,6 +4969,21 @@ class WorldQuantAlphaPipeline:
         db_path = str(self.cfg.sqlite_runs_path)
         limit = max(1, int(getattr(self.cfg, "phase23_hypotheses_per_call", 3)))
 
+        # Auto-install seed topics on first run if research_topics table is empty.
+        try:
+            import sqlite3 as _sqlite3
+            SqliteRunLog(db_path).initialize_schema()
+            with _sqlite3.connect(db_path) as _con:
+                _count = _con.execute(
+                    "SELECT COUNT(*) FROM research_topics WHERE active=1"
+                ).fetchone()[0]
+            if _count == 0:
+                from alpha_mining.knowledge.ontology import install_seed_topics
+                _installed = install_seed_topics(db_path)
+                print(f"[phase235] auto-installed {_installed} seed topics (first run)")
+        except Exception as _exc:
+            print(f"[phase235] seed-topic auto-init warning: {_exc}")
+
         try:
             llm = DeepSeekStructuredLLM()
         except (ValueError, Exception) as exc:
@@ -5018,9 +5033,13 @@ class WorldQuantAlphaPipeline:
             print("[phase235] no hypothesis_ids available, skipping LLM expression generation")
             return []
 
+        # ExpressionGenerator calls validator.validate() and factory._quality_gate().
+        # The factory carries the real PreflightValidator on .validator; passing the
+        # factory itself as the validator raises "no attribute 'validate'".
+        expr_validator = getattr(factory, "validator", None) or factory
         try:
             expr_gen = ExpressionGenerator(
-                db_path, llm=llm, validator=factory, factory=factory
+                db_path, llm=llm, validator=expr_validator, factory=factory
             )
         except Exception as exc:
             print(f"[phase235] ExpressionGenerator init failed: {exc}")
@@ -5305,6 +5324,13 @@ class WorldQuantAlphaPipeline:
                 detail = self.fetch_alpha_detail(alpha_id)
                 if not isinstance(detail, dict):
                     outcomes["no_detail"] += 1
+                    # v50.6: alpha不存在/已失效 → 直接标记，不重试
+                    for j, r in enumerate(rows):
+                        if str(r.get("alpha_id") or "").strip() == alpha_id:
+                            rows[j]["queue_status"] = "not_queued:detail_fetch_failed"
+                            rows[j]["check_note"] = "detail_fetch_failed"
+                            fixed += 1
+                            break
                     continue
                 classified = _try_classify_detail_without_poll(detail)
                 check_json: dict | None = None
@@ -5889,6 +5915,56 @@ class WorldQuantAlphaPipeline:
         self._maybe_inject_browser_cookie()
         print(f"[auth] OK user={_mask(self.cfg.username)}")
 
+    def _login_with_credentials(self) -> bool:
+        """Perform a real username/password login against WQ Brain to mint a fresh
+        session cookie. This is the authoritative recovery path when a cookie expires;
+        it does NOT depend on the local .wq_browser_cookie.json file, so the loop stays
+        fully autonomous. Returns True on HTTP 2xx."""
+        username = str(self.cfg.username or "").strip()
+        password = str(self.cfg.password or "")
+        if not username or not password:
+            print("[auth] cannot re-login: WQ_USERNAME/WQ_PASSWORD not configured")
+            return False
+        # Ensure BasicAuth is on the session (it is the credential source WQ Brain
+        # reads on POST /authentication) and clear any stale cookie that would make
+        # the platform skip the credential check.
+        self.sess.auth = HTTPBasicAuth(username, password)
+        try:
+            resp = self._sess_request(
+                "POST",
+                f"{self._BASE}/authentication",
+                timeout=self._timeout(),
+            )
+        except requests.RequestException as exc:
+            print(f"[auth] credential re-login request failed: {_short_err(exc)}")
+            return False
+        if 200 <= resp.status_code < 300:
+            # Persist the freshly minted cookie jar to DPAPI state for child processes.
+            try:
+                from alpha_mining.auth.session_manager import (
+                    _account_fingerprint, _load_state, _new_state, _protect_cookie_rows,
+                    _requests_cookie_rows, _save_state, _utc_now,
+                )
+                state_path = Path(self.cfg.auth_state_file).expanduser().resolve()
+                fingerprint = _account_fingerprint(username)
+                now = _utc_now()
+                try:
+                    state = _load_state(state_path, fingerprint, now)
+                except Exception:
+                    state = _new_state(fingerprint, now)
+                cookie_rows = _requests_cookie_rows(self.sess)
+                if cookie_rows:
+                    state["last_auth_utc"] = now.isoformat().replace("+00:00", "Z")
+                    state["generation"] = int(state.get("generation", 0)) + 1
+                    state["cookie_blob_dpapi_b64"] = _protect_cookie_rows(cookie_rows)
+                    _save_state(state_path, state)
+            except Exception as exc:
+                print(f"[auth] re-login succeeded but state persist failed: {exc}")
+            print(f"[auth] credential re-login OK user={_mask(username)}")
+            return True
+        print(f"[auth] credential re-login returned HTTP {resp.status_code}")
+        return False
+
     def authenticate(self) -> None:
         """Backward-compatible protected authentication entrypoint."""
         self.ensure_authenticated(force=False)
@@ -5921,8 +5997,14 @@ class WorldQuantAlphaPipeline:
                     if reauthenticated or attempt >= last_attempt:
                         raise PermissionError("bounded authentication refresh exhausted after HTTP 401")
                     reauthenticated = True
-                    print(f"[retry] HTTP 401 {method} …/{url.rsplit('/', 1)[-1][:52]}; refreshing session cookie")
-                    self._maybe_inject_browser_cookie(force=True)
+                    tail = url.rsplit('/', 1)[-1][:52]
+                    print(f"[retry] HTTP 401 {method} …/{tail}; re-login with credentials")
+                    # Primary recovery: real username/password login (autonomous, no
+                    # dependency on a possibly-stale browser cookie file). BasicAuth
+                    # stays on the session as an always-present fallback.
+                    if not self._login_with_credentials():
+                        # Secondary: seed from a browser cookie file if one exists.
+                        self._maybe_inject_browser_cookie(force=True)
                     continue
                 if resp.status_code in (429, 500, 502, 503, 504):
                     if attempt == last_attempt:
@@ -9547,6 +9629,23 @@ def parse_args() -> argparse.Namespace:
         metavar="N",
         help="Maximum ready-candidate description drafts per process when --submission-observe is enabled.",
     )
+    p.add_argument(
+        "--no-phase2-llm",
+        action="store_true",
+        help="Disable Phase 2 LLM hypothesis generation (default: enabled).",
+    )
+    p.add_argument(
+        "--no-phase3-llm",
+        action="store_true",
+        help="Disable Phase 3 LLM grammar expression generation (default: enabled).",
+    )
+    p.add_argument(
+        "--phase23-hypotheses",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Max hypotheses to drive LLM expression generation per call (default: 3).",
+    )
     return p.parse_args()
 
 
@@ -9725,6 +9824,12 @@ def main() -> int:
         cfg.ladder_check_enabled = True
     if getattr(args, "exploration_region_share", None) is not None:
         cfg.exploration_region_share = max(0.0, min(1.0, float(args.exploration_region_share)))
+    if getattr(args, "no_phase2_llm", False):
+        cfg.phase2_llm_enabled = False
+    if getattr(args, "no_phase3_llm", False):
+        cfg.phase3_llm_grammar_enabled = False
+    if getattr(args, "phase23_hypotheses", None) is not None:
+        cfg.phase23_hypotheses_per_call = max(1, int(args.phase23_hypotheses))
 
     pipeline = WorldQuantAlphaPipeline(cfg)
     try:
