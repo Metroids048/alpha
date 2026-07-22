@@ -405,6 +405,12 @@ def run(csv_path: str, sleep_between: float, max_poll: float,
 
 
 def main() -> None:
+    from alpha_mining.factory.control import FactoryControl
+
+    state = FactoryControl("research_memory.sqlite").status()
+    if state.hard_stop:
+        print(f"BLOCKED: factory hard stop ({state.reason}); simulate/submit disabled")
+        return
     ap = argparse.ArgumentParser(description="逐条 simulate BRAIN alpha 队列（只提交通过门槛的行）")
     ap.add_argument("--csv",   default="alpha_resim_queue.csv", help="队列CSV路径")
     ap.add_argument("--sleep", type=float, default=3.0, help="每次提交间隔秒数 (默认3s)")

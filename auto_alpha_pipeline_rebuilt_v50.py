@@ -1536,7 +1536,7 @@ class PipelineConfig:
     simulation_poll_retry_extend_seconds: int = 420
     recheck_heartbeat_every_polls: int = 60  # v50.3: was 5 — 约每 5min 一次心跳（配合 5s poll 间隔）
     recheck_heartbeat_min_seconds: float = 120.0
-    cleanup_poll_only_max_per_run: int = 100  # 每轮最多清理条数（v50.6: 15→100，加快积压清理）
+    cleanup_poll_only_max_per_run: int = 20  # bounded legacy compatibility; vNext owns production flow
     cleanup_check_max_seconds: float = 15.0  # cleanup 短 check，不等待自相关（v50.6: 45→15，快速失败）
     submit_sleep: float = 1.2
     page_sleep: float = 0.15
@@ -5294,7 +5294,7 @@ class WorldQuantAlphaPipeline:
         if not stale:
             return
         stale.sort(key=self._feedback_cleanup_priority_key)
-        max_n = max(1, int(getattr(self.cfg, "cleanup_poll_only_max_per_run", 100) or 100))
+        max_n = max(1, int(getattr(self.cfg, "cleanup_poll_only_max_per_run", 20) or 20))
         batch = stale[:max_n]
         defer = len(stale) - len(batch)
         print(
@@ -9654,6 +9654,14 @@ def main() -> int:
     args = parse_args()
     if args.smoke:
         return _run_offline_smoke()
+    from alpha_mining.factory.control import FactoryControl
+
+    legacy_read_only = bool(args.submission_observe or getattr(args, "analyze_recent", None) or args.mode == "preflight")
+    if not legacy_read_only:
+        state = FactoryControl("research_memory.sqlite").status()
+        if state.hard_stop:
+            print(f"[legacy-v50] BLOCKED: vNext factory hard stop ({state.reason})")
+            return 2
     if args.submission_observe and not args.sqlite_runs:
         print("[error] --submission-observe requires --sqlite-runs PATH")
         return 2

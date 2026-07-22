@@ -305,6 +305,12 @@ def force_check_self_correlation_batch(self, alpha_ids: list[str], max_workers: 
 
 
 def main():
+    from alpha_mining.factory.control import FactoryControl
+
+    state = FactoryControl("research_memory.sqlite").status()
+    if state.hard_stop:
+        print(f"BLOCKED: factory hard stop ({state.reason}); no helper scripts will be generated")
+        return
     print("🚀 开始分析Alpha Pipeline问题...\n")
 
     # 1. 加载数据

@@ -107,6 +107,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--log-file", default=LOG_NAME)
     p.add_argument("--state-file", default=STATE_NAME)
     p.add_argument("--auth-state-file", default=AUTH_STATE_NAME)
+    p.add_argument("--database", default="research_memory.sqlite")
     p.add_argument(
         "loop_args",
         nargs=argparse.REMAINDER,
@@ -124,6 +125,16 @@ def main() -> int:
     loop_script = _ROOT / "run_pipeline_loop.py"
     if not loop_script.is_file():
         _log(log_path, f"[supervisor] FATAL missing {loop_script}")
+        return 2
+
+    from alpha_mining.factory.control import FactoryControl
+
+    database = Path(args.database)
+    if not database.is_absolute():
+        database = _ROOT / database
+    factory_state = FactoryControl(database).status()
+    if factory_state.hard_stop:
+        _log(log_path, f"[supervisor] BLOCKED hard_stop=1 reason={factory_state.reason}")
         return 2
 
     loop_args = list(args.loop_args or [])

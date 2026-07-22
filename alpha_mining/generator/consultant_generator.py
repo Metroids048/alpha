@@ -24,7 +24,7 @@ class ConsultantGenerator:
     def __init__(
         self, *, max_per_hypothesis: int = 8, max_same_behavior: int = 2
     ) -> None:
-        self.max_per_hypothesis = min(8, max(1, int(max_per_hypothesis)))
+        self.max_per_hypothesis = min(7, max(1, int(max_per_hypothesis)))
         self.max_same_behavior = max(1, int(max_same_behavior))
         self.policy = MutationPolicy()
 
@@ -47,16 +47,15 @@ class ConsultantGenerator:
         )
         templates = [
             ("baseline", f"group_rank({primary}/cap, subindustry)-0.5"),
-            ("mechanism", f"group_rank(ts_delta({primary},63)/cap, subindustry)-0.5"),
-            ("field_family", f"group_rank({secondary}/cap, industry)-0.5"),
-            ("time_structure", f"ts_rank({primary},126)-0.5"),
-            ("cross_sectional", f"zscore({primary}/cap)"),
+            ("level_to_change", f"group_rank(ts_delta({primary},63)/cap,subindustry)-0.5"),
+            ("change_to_acceleration", f"rank(ts_delta(ts_delta({primary},63),21))"),
+            ("absolute_to_historical_surprise", f"ts_zscore({primary},126)"),
+            ("absolute_to_peer_relative", f"group_rank({primary},industry)-0.5"),
+            ("regime_conditioned", f"trade_when(rank(volume/adv20)>0.5,group_rank({primary}/cap,subindustry)-0.5,-1)"),
             (
-                "low_correlation_hybrid",
+                "low_correlation_parent_hybrid",
                 f"group_rank({primary}/cap,subindustry)-rank(ts_delta(close,5))",
             ),
-            ("exploration", f"rank(ts_delta({secondary},21))"),
-            ("acceleration", f"rank(ts_delta(ts_delta({primary},63),21))"),
         ]
         out: list[ConsultantCandidate] = []
         counts: dict[str, int] = {}

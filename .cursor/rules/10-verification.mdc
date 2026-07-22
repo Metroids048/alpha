@@ -1,0 +1,15 @@
+---
+description: Testing, independent review, retry limits and completion evidence
+alwaysApply: true
+---
+
+# Verification protocol
+
+- For bug fixes, reproduce the failure first when feasible and add a regression test.
+- Never delete, skip, weaken, or rewrite a valid test just to make implementation pass.
+- Run targeted checks first, then every mandatory project check applicable to the change.
+- Verify behavior through actual execution when possible; syntax and code inspection alone are insufficient.
+- Review the final diff against the original request and acceptance criteria.
+- For substantial changes, use a fresh context or read-only subagent to review the diff, requirements, and real verification output.
+- Maximum repair attempts for the same failing check: 3. If the same check fails twice without meaningful progress, reassess or escalate instead of repeating the same approach.
+- Do not declare completion while a mandatory check is failed, skipped, or unknown.

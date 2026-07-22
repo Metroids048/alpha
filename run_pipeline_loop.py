@@ -499,10 +499,11 @@ def parse_args() -> argparse.Namespace:
         default="",
         help="Repo root (default: directory containing this script).",
     )
+    p.add_argument("--database", default="research_memory.sqlite")
     p.add_argument(
         "--pipeline-script",
-        default="auto_alpha_pipeline_rebuilt_v50.py",
-        help="Recorded for logs only; cycle entry uses v50 via run_pipeline_cycle.py.",
+        default="alpha_mining.factory.runtime",
+        help="Recorded for compatibility logs only; cycle entry uses the vNext factory runtime.",
     )
     p.add_argument(
         "passthrough",
@@ -520,6 +521,15 @@ def main() -> int:
         )
         return 2
     root = Path(args.workspace).resolve() if args.workspace else _ROOT
+    from alpha_mining.factory.control import FactoryControl
+
+    database = Path(args.database)
+    if not database.is_absolute():
+        database = root / database
+    factory_state = FactoryControl(database).status()
+    if factory_state.hard_stop:
+        print(f"[loop] BLOCKED hard_stop=1 reason={factory_state.reason}")
+        return 2
     state_path = Path(args.state_file)
     if not state_path.is_absolute():
         state_path = root / state_path

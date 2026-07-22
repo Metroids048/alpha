@@ -240,8 +240,14 @@ def _cmd_correlation_inspect(args: argparse.Namespace) -> int:
 
 
 def _cmd_consultant_generate(args: argparse.Namespace) -> int:
+    from alpha_mining.factory.control import FactoryControl
     from alpha_mining.generator.consultant_generator import ConsultantGenerator
     from alpha_mining.policy.consultant_policy import ConsultantPolicy
+
+    state = FactoryControl(getattr(args, "database", "research_memory.sqlite")).status()
+    if state.hard_stop:
+        print(f"[consultant/generate] BLOCKED: {state.reason}", file=sys.stderr)
+        return 2
 
     policy = ConsultantPolicy.from_file(args.config)
     generator = ConsultantGenerator(
@@ -259,8 +265,14 @@ def _cmd_consultant_generate(args: argparse.Namespace) -> int:
 
 
 def _cmd_consultant_simulate(args: argparse.Namespace) -> int:
+    from alpha_mining.factory.control import FactoryControl
     from alpha_mining.policy.consultant_policy import ConsultantPolicy
     from alpha_mining.simulate.settings_optimizer import SettingsOptimizer
+
+    state = FactoryControl(getattr(args, "database", "research_memory.sqlite")).status()
+    if state.hard_stop:
+        print(f"[consultant/simulate] BLOCKED: {state.reason}", file=sys.stderr)
+        return 2
 
     policy = ConsultantPolicy.from_file(args.config)
     optimizer = SettingsOptimizer(
@@ -318,26 +330,282 @@ def _cmd_submit_dry_run(args: argparse.Namespace) -> int:
 
 
 def _cmd_submit_execute(args: argparse.Namespace) -> int:
+    from alpha_mining.factory.control import FactoryControl
     from alpha_mining.policy.consultant_policy import ConsultantPolicy
+    from alpha_mining.platform.gateway import PlatformGateway
+    from alpha_mining.submitter.delivery import SubmissionDelivery
+    from alpha_mining.submitter.guard import CandidateContext, SubmissionGuard
 
-    _ensure_database(args.database)
+    database = _ensure_database(args.database)
     policy = ConsultantPolicy.from_file(args.config)
-    if not policy.execute_submit or args.confirm != policy.confirmation_phrase:
+    state = FactoryControl(database).status()
+    if state.hard_stop or not state.execute_submit:
+        print(f"[submit/execute] BLOCKED: factory hard stop ({state.reason})", file=sys.stderr)
+        return 2
+    if not args.execute_submit or not policy.execute_submit or args.confirm != policy.confirmation_phrase:
         print(
             "[submit/execute] BLOCKED: execute_submit is disabled or confirmation is invalid",
             file=sys.stderr,
         )
         return 2
-    from alpha_mining.platform.submission_client import LiveSubmissionClient
-    from alpha_mining.submitter.queue import ConsultantSubmitQueue
 
-    client = LiveSubmissionClient(state_path=args.auth_state_file)
-    counts = ConsultantSubmitQueue(
-        args.database,
-        gate_freshness_hours=policy.gate_freshness_hours,
-    ).execute_ready(client, max_items=args.max_submit, execute=True)
+    import sqlite3
+    from datetime import datetime, timedelta, timezone
+
+    # Verify fresh COMPLETE ledger with matching sync
+    with sqlite3.connect(database) as con:
+        sync_row = con.execute(
+            "SELECT sync_id,status,completed_at FROM platform_sync_runs ORDER BY completed_at DESC LIMIT 1"
+        ).fetchone()
+        if not sync_row or str(sync_row[1]) != "COMPLETE":
+            print("[submit/execute] BLOCKED: no COMPLETE platform sync", file=sys.stderr)
+            return 2
+        try:
+            completed = datetime.fromisoformat(str(sync_row[2]).replace("Z", "+00:00"))
+            if completed < datetime.now(timezone.utc) - timedelta(hours=24):
+                print("[submit/execute] BLOCKED: platform sync is stale", file=sys.stderr)
+                return 2
+        except (TypeError, ValueError):
+            print("[submit/execute] BLOCKED: invalid sync timestamp", file=sys.stderr)
+            return 2
+
+        current_sync_id = str(sync_row[0])
+
+        # Get ready candidates with all guards
+        candidates = con.execute(
+            """SELECT q.alpha_id,q.context_json,l.latest_checks_json,l.platform_status,
+                      l.sync_id,d.description_status
+               FROM consultant_submit_queue q
+               JOIN platform_alpha_ledger l ON q.alpha_id=l.alpha_id
+               LEFT JOIN description_backfill_jobs d ON q.alpha_id=d.alpha_id AND d.sync_id=l.sync_id
+               WHERE q.status='READY' AND l.sync_id=?
+               ORDER BY q.created_at,q.queue_id
+               LIMIT ?""",
+            (current_sync_id, max(0, int(args.max_submit))),
+        ).fetchall()
+
+    if not candidates:
+        print(f"[submit/execute] endpoint_calls=0 candidates=0 allowed=0 blocked=0 submitted=0 failed=0")
+        return 0
+
+    gateway = PlatformGateway(
+        state_path=args.auth_state_file,
+        database=database,
+    )
+    delivery = SubmissionDelivery(database, gateway)
+    guard = SubmissionGuard()
+
+    submitted = 0
+    failed = 0
+    blocked = 0
+
+    for alpha_id, context_json, checks_json, platform_status, ledger_sync_id, description_status in candidates:
+        import json
+        try:
+            context_data = json.loads(context_json or "{}")
+            checks = json.loads(checks_json or "[]")
+        except (TypeError, ValueError):
+            blocked += 1
+            continue
+
+        # Build context with fresh ledger and description status
+        context_data["checks"] = checks
+        context_data["platform_status"] = platform_status
+        context_data["ledger_sync_id"] = current_sync_id
+        context_data["candidate_sync_id"] = ledger_sync_id
+        context_data["description_status"] = description_status or ""
+        context_data["execute_submit_enabled"] = True
+
+        # Query write intents for this alpha
+        with sqlite3.connect(database) as con:
+            intent_statuses = [
+                str(row[0]) for row in con.execute(
+                    "SELECT status FROM platform_write_intents WHERE alpha_id=? AND status IN ('PENDING','PROCESSING','UNCERTAIN')",
+                    (alpha_id,),
+                )
+            ]
+        context_data["write_intent_statuses"] = tuple(intent_statuses)
+        context_data["unit_warnings"] = tuple(context_data.get("unit_warnings") or ())
+        context_data["mandatory_checks"] = tuple(context_data.get("mandatory_checks") or ())
+
+        try:
+            context = CandidateContext(**context_data)
+        except TypeError:
+            blocked += 1
+            continue
+
+        decision = guard.evaluate(context)
+        if not decision.allowed:
+            blocked += 1
+            continue
+
+        result = delivery.submit_once(sync_id=current_sync_id, alpha_id=alpha_id, execute=True)
+        if result.status.value == "VERIFIED":
+            submitted += 1
+        elif result.status.value == "FAILED":
+            failed += 1
+        else:
+            blocked += 1
+
+    counts = {
+        "candidates": len(candidates),
+        "submitted": submitted,
+        "failed": failed,
+        "blocked": blocked,
+    }
     print(f"[submit/execute] {json.dumps(counts, sort_keys=True)}")
-    return 0 if counts["failed"] == 0 else 1
+    return 0 if failed == 0 else 1
+
+
+def _cmd_platform_ledger_sync(args: argparse.Namespace) -> int:
+    from alpha_mining.platform.client import ReadOnlyPlatformClient
+    from alpha_mining.platform.ledger import AlphaQueryFilters, PlatformLedgerSynchronizer
+
+    from alpha_mining.platform.reporting import export_request_events, write_ledger_sync_report
+
+    client = ReadOnlyPlatformClient(
+        state_path=args.auth_state_file,
+        min_interval=args.min_interval,
+        database=args.database,
+        lock_path=args.lock_path,
+    )
+    try:
+        result = PlatformLedgerSynchronizer(args.database).sync(
+            client,
+            AlphaQueryFilters(
+                status=args.status,
+                region=args.region,
+                universe=args.universe,
+                delay=args.delay,
+                hidden=args.hidden,
+                alpha_type=args.alpha_type,
+                date_created_gte=args.date_created_gte,
+                date_created_lt=args.date_created_lt,
+            ),
+        )
+        code = 0 if result.status == "COMPLETE" else 1
+        output = result.__dict__
+    except Exception as exc:
+        code = 2
+        output = {"status": "BLOCKED", "error_class": type(exc).__name__}
+    write_ledger_sync_report(args.database, args.report)
+    export_request_events(args.database, args.events_csv)
+    print(json.dumps(output, default=str, sort_keys=True))
+    return code
+
+
+def _cmd_platform_probe(args: argparse.Namespace) -> int:
+    from alpha_mining.platform.client import ReadOnlyPlatformClient
+    from alpha_mining.platform.readiness import run_connectivity_probe
+    from alpha_mining.platform.reporting import export_request_events
+
+    client = ReadOnlyPlatformClient(
+        state_path=args.auth_state_file,
+        min_interval=args.min_interval,
+        max_attempts=1,
+        database=args.database,
+        lock_path=args.lock_path,
+    )
+    result = run_connectivity_probe(
+        client,
+        database=args.database,
+        output_path=args.output,
+    )
+    export_request_events(args.database, args.events_csv)
+    print(json.dumps(result.as_dict(), sort_keys=True))
+    return 0 if result.ready_for_ledger_sync else 2
+
+
+def _cmd_platform_access_status(args: argparse.Namespace) -> int:
+    from dataclasses import asdict
+    from alpha_mining.auth.session_manager import auth_state_metadata
+    from alpha_mining.platform.access import PlatformAccessController
+
+    payload = asdict(PlatformAccessController(args.database, args.lock_path).status())
+    payload.update(auth_state_metadata(args.auth_state_file))
+    print(json.dumps(payload, sort_keys=True))
+    return 0
+
+
+def _cmd_platform_clear_auth(args: argparse.Namespace) -> int:
+    from alpha_mining.auth.session_manager import clear_local_auth_artifacts
+
+    if args.confirm != "CLEAR_STALE_AUTH":
+        print("[platform/auth] BLOCKED: --confirm CLEAR_STALE_AUTH required", file=sys.stderr)
+        return 2
+    state = Path(args.auth_state_file)
+    removed = clear_local_auth_artifacts(
+        [state, Path(str(state) + ".lock"), ".wq_browser_cookie.json", ".wq_browser_cookie.next.json"]
+    )
+    print(json.dumps({"removed_count": len(removed)}, sort_keys=True))
+    return 0
+
+
+def _cmd_platform_recovery_report(args: argparse.Namespace) -> int:
+    from alpha_mining.audit.access_recovery import write_access_recovery_reports
+
+    result = write_access_recovery_reports(
+        args.database,
+        args.output_dir,
+        auth_state_file=args.auth_state_file,
+    )
+    print(json.dumps(result, sort_keys=True))
+    return 0 if result["status"] == "PASS" else 1
+
+
+def _cmd_factory_status(args: argparse.Namespace) -> int:
+    from dataclasses import asdict
+    from alpha_mining.factory.control import FactoryControl
+
+    print(json.dumps(asdict(FactoryControl(args.database).status()), sort_keys=True))
+    return 0
+
+
+def _cmd_factory_stop(args: argparse.Namespace) -> int:
+    from dataclasses import asdict
+    from alpha_mining.factory.control import FactoryControl
+
+    print(json.dumps(asdict(FactoryControl(args.database).stop(args.reason)), sort_keys=True))
+    return 0
+
+
+def _cmd_factory_audit(args: argparse.Namespace) -> int:
+    from alpha_mining.audit.acceptance import run_acceptance_audit
+
+    result = run_acceptance_audit(
+        args.database,
+        args.output_dir,
+        external_blockers=args.external_blocker,
+        verification_summary=args.verification_summary,
+    )
+    print(json.dumps({"status": result.status, "blockers": result.blockers}, sort_keys=True))
+    return 0 if result.status == "PASS" else 1
+
+
+def _cmd_description(args: argparse.Namespace) -> int:
+    from alpha_mining.description.cli import DescriptionCliService
+
+    service = DescriptionCliService(args.database)
+    command = args.description_command
+    if command == "inspect":
+        return service.inspect(args.alpha_id)
+    if command == "generate":
+        return service.generate(args.alpha_id)
+    if command == "validate":
+        return service.validate(args.alpha_id)
+    if command == "dry-run":
+        return service.dry_run(args.alpha_id)
+    if command == "patch":
+        return service.patch(args.alpha_id, args.confirm)
+    if command == "verify":
+        return service.verify(args.alpha_id)
+    if command == "backfill":
+        return service.backfill(
+            dry_run=args.dry_run, execute=args.execute, confirmation=args.confirm
+        )
+    if command == "resume":
+        return service.resume(args.job_id)
+    raise ValueError(f"unsupported description command: {command}")
 
 
 # ─── parser ───────────────────────────────────────────────────────────────────
@@ -416,6 +684,63 @@ def _build_parser() -> argparse.ArgumentParser:
     p_gate_show.add_argument("--output", default="gate_snapshot.json")
     p_gate_show.set_defaults(func=_cmd_gates_show)
 
+    p_platform = sub.add_parser("platform", help="Authoritative platform Alpha ledger.")
+    platform_sub = p_platform.add_subparsers(dest="platform_command", required=True)
+    p_access_status = platform_sub.add_parser("access-status")
+    p_access_status.add_argument("--database", default="research_memory.sqlite")
+    p_access_status.add_argument("--auth-state-file", default=".wq_auth_state.json")
+    p_access_status.add_argument("--lock-path", default="worldquant_api.lock")
+    p_access_status.set_defaults(func=_cmd_platform_access_status)
+    p_clear_auth = platform_sub.add_parser("clear-stale-auth")
+    p_clear_auth.add_argument("--auth-state-file", default=".wq_auth_state.json")
+    p_clear_auth.add_argument("--confirm", default="")
+    p_clear_auth.set_defaults(func=_cmd_platform_clear_auth)
+    p_probe = platform_sub.add_parser("probe")
+    p_probe.add_argument("--database", default="research_memory.sqlite")
+    p_probe.add_argument("--auth-state-file", default=".wq_auth_state.json")
+    p_probe.add_argument("--lock-path", default="worldquant_api.lock")
+    p_probe.add_argument("--min-interval", type=float, default=2.0)
+    p_probe.add_argument("--output", default="platform_readiness.json")
+    p_probe.add_argument("--events-csv", default="platform_request_events.csv")
+    p_probe.set_defaults(func=_cmd_platform_probe)
+    p_recovery_report = platform_sub.add_parser("recovery-report")
+    p_recovery_report.add_argument("--database", default="research_memory.sqlite")
+    p_recovery_report.add_argument("--auth-state-file", default=".wq_auth_state.json")
+    p_recovery_report.add_argument("--output-dir", default=".")
+    p_recovery_report.set_defaults(func=_cmd_platform_recovery_report)
+    p_ledger_sync = platform_sub.add_parser("sync-ledger")
+    p_ledger_sync.add_argument("--database", default="research_memory.sqlite")
+    p_ledger_sync.add_argument("--auth-state-file", default=".wq_auth_state.json")
+    p_ledger_sync.add_argument("--status", default="UNSUBMITTED")
+    p_ledger_sync.add_argument("--region")
+    p_ledger_sync.add_argument("--universe")
+    p_ledger_sync.add_argument("--delay", type=int)
+    p_ledger_sync.add_argument("--hidden", action=argparse.BooleanOptionalAction, default=None)
+    p_ledger_sync.add_argument("--alpha-type")
+    p_ledger_sync.add_argument("--date-created-gte")
+    p_ledger_sync.add_argument("--date-created-lt")
+    p_ledger_sync.add_argument("--lock-path", default="worldquant_api.lock")
+    p_ledger_sync.add_argument("--min-interval", type=float, default=2.0)
+    p_ledger_sync.add_argument("--report", default="platform_ledger_sync_report.json")
+    p_ledger_sync.add_argument("--events-csv", default="platform_request_events.csv")
+    p_ledger_sync.set_defaults(func=_cmd_platform_ledger_sync)
+
+    p_factory = sub.add_parser("factory", help="vNext hard-stop and acceptance controls.")
+    factory_sub = p_factory.add_subparsers(dest="factory_command", required=True)
+    p_factory_status = factory_sub.add_parser("status")
+    p_factory_status.add_argument("--database", default="research_memory.sqlite")
+    p_factory_status.set_defaults(func=_cmd_factory_status)
+    p_factory_stop = factory_sub.add_parser("stop")
+    p_factory_stop.add_argument("--database", default="research_memory.sqlite")
+    p_factory_stop.add_argument("--reason", default="manual_stop")
+    p_factory_stop.set_defaults(func=_cmd_factory_stop)
+    p_factory_audit = factory_sub.add_parser("audit")
+    p_factory_audit.add_argument("--database", default="research_memory.sqlite")
+    p_factory_audit.add_argument("--output-dir", default=".")
+    p_factory_audit.add_argument("--external-blocker", action="append", default=[])
+    p_factory_audit.add_argument("--verification-summary", default="not supplied")
+    p_factory_audit.set_defaults(func=_cmd_factory_audit)
+
     p_legacy = sub.add_parser("legacy", help="Legacy Knowledge Lake.")
     legacy_sub = p_legacy.add_subparsers(dest="legacy_command", required=True)
     p_legacy_import = legacy_sub.add_parser("import")
@@ -462,6 +787,7 @@ def _build_parser() -> argparse.ArgumentParser:
         command_parser.add_argument("--family", default="exploration")
         command_parser.add_argument("--field", action="append", dest="fields")
         command_parser.add_argument("--parent-expression", default="")
+        command_parser.add_argument("--database", default="research_memory.sqlite")
         command_parser.set_defaults(func=handler)
     p_consult_sim = consult_sub.add_parser("simulate")
     p_consult_sim.add_argument(
@@ -472,6 +798,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p_consult_sim.add_argument("--quality-score", type=float, default=0.0)
     p_consult_sim.add_argument("--metric-ratio", type=float, default=0.0)
     p_consult_sim.add_argument("--delay-allowed", action="store_true")
+    p_consult_sim.add_argument("--database", default="research_memory.sqlite")
     p_consult_sim.set_defaults(func=_cmd_consultant_simulate)
 
     p_submit = sub.add_parser("submit", help="Fail-closed Consultant submit queue.")
@@ -486,7 +813,33 @@ def _build_parser() -> argparse.ArgumentParser:
     p_exec.add_argument("--confirm", default="")
     p_exec.add_argument("--auth-state-file", default=".wq_auth_state.json")
     p_exec.add_argument("--max-submit", type=int, default=20)
+    p_exec.add_argument("--execute-submit", action="store_true")
     p_exec.set_defaults(func=_cmd_submit_execute)
+
+    p_description = sub.add_parser(
+        "description", help="Fail-closed local-first alpha description operations."
+    )
+    description_sub = p_description.add_subparsers(
+        dest="description_command", required=True
+    )
+    for name in ("inspect", "generate", "validate", "dry-run", "patch", "verify"):
+        command_parser = description_sub.add_parser(name)
+        command_parser.add_argument("--database", default="research_memory.sqlite")
+        command_parser.add_argument("--alpha-id", required=True)
+        if name == "patch":
+            command_parser.add_argument("--confirm", default="")
+        command_parser.set_defaults(func=_cmd_description)
+    p_description_backfill = description_sub.add_parser("backfill")
+    p_description_backfill.add_argument("--database", default="research_memory.sqlite")
+    mode = p_description_backfill.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--dry-run", action="store_true")
+    mode.add_argument("--execute", action="store_true")
+    p_description_backfill.add_argument("--confirm", default="")
+    p_description_backfill.set_defaults(func=_cmd_description)
+    p_description_resume = description_sub.add_parser("resume")
+    p_description_resume.add_argument("--database", default="research_memory.sqlite")
+    p_description_resume.add_argument("--job-id", required=True)
+    p_description_resume.set_defaults(func=_cmd_description)
 
     return parser
 

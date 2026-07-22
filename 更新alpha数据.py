@@ -360,6 +360,11 @@ def _write_csv_atomic(path: Path, fieldnames: list[str], rows: list[dict[str, An
 
 
 def main() -> int:
+    print(
+        "[blocked] legacy CSV platform sync is disabled; use "
+        "python -m alpha_mining platform sync-ledger"
+    )
+    return 2
     p = argparse.ArgumentParser(description="Sync WQ platform alphas into local CSV ledgers")
     p.add_argument("--workers", type=int, default=8, help="Parallel detail fetch workers")
     p.add_argument("--target-count", type=int, default=26165, help="Expected platform simulate count")

@@ -26,6 +26,10 @@ def _passing_context():
         quality_buffer_pass=True,
         local_correlation_status="PASS",
         metrics={"sharpe": 1.4, "self_correlation": 0.5},
+        ledger_status="COMPLETE",
+        ledger_synced_at=datetime.now(timezone.utc).isoformat(),
+        ledger_sync_id="sync-1",
+        candidate_sync_id="sync-1",
     )
 
 
@@ -324,7 +328,7 @@ def test_async_batch_deduplicates_identical_simulations(tmp_path: Path) -> None:
     assert claim_simulation_payloads(str(database), [payload]) == []
 
 
-def test_platform_client_obeys_retry_after_and_bounds_401_refresh() -> None:
+def test_platform_client_opens_circuit_on_429_and_does_not_reauthenticate_401(tmp_path: Path) -> None:
     from alpha_mining.platform.client import ReadOnlyPlatformClient
 
     class Response:
@@ -344,17 +348,27 @@ def test_platform_client_obeys_retry_after_and_bounds_401_refresh() -> None:
 
     waits: list[float] = []
     client = ReadOnlyPlatformClient(
-        min_interval=0, max_attempts=3, sleeper=waits.append
+        min_interval=0,
+        max_attempts=3,
+        sleeper=waits.append,
+        database=tmp_path / "events.sqlite",
+        lock_path=tmp_path / "api.lock",
     )
     client.session = Session([Response(429, "7"), Response(200)])
-    assert client.request("GET", "https://example.test/read").status_code == 200
-    assert 7.0 in waits
+    assert client.request("GET", "https://example.test/read").status_code == 429
+    assert client.session.calls == 1
+    assert waits == []
 
     auth_calls: list[bool] = []
-    client.session = Session([Response(401), Response(401)])
-    client.authenticate = lambda *, force=False: auth_calls.append(force)  # type: ignore[method-assign]
-    assert client.request("GET", "https://example.test/read").status_code == 401
-    assert auth_calls == [True]
+    second = ReadOnlyPlatformClient(
+        min_interval=0,
+        database=tmp_path / "auth.sqlite",
+        lock_path=tmp_path / "auth.lock",
+    )
+    second.session = Session([Response(401)])
+    second.authenticate = lambda *, force=False: auth_calls.append(force)  # type: ignore[method-assign]
+    assert second.request("GET", "https://example.test/read").status_code == 401
+    assert auth_calls == []
 
 
 def test_check_polling_reauthenticates_only_once_on_401(monkeypatch) -> None:

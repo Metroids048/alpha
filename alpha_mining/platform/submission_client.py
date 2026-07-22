@@ -24,6 +24,7 @@ class LiveSubmissionClient:
             "POST",
             f"{BASE_URL}/alphas/{alpha_id}/submit",
             allow_server_retry=False,
+            endpoint_class="submit",
         )
         if response.status_code not in {200, 201}:
             raise PlatformReadError(f"submit failed with HTTP {response.status_code}")
