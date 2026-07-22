@@ -52,9 +52,24 @@ class SubmissionGuard:
         self_status = by_name.get("SELF_CORRELATION", "MISSING")
         if self_status != PASS:
             reasons.append(f"SELF_CORRELATION_{self_status}")
-        for correlation_name in ("PROD_CORRELATION", "PRODUCTION_CORRELATION"):
-            if correlation_name in by_name and by_name[correlation_name] != PASS:
-                reasons.append(f"{correlation_name}_{by_name[correlation_name]}")
+        # PROD_CORRELATION and PRODUCTION_CORRELATION are synonyms for the same gate.
+        # Check if EITHER name is present; if both are absent, treat as MISSING.
+        prod_corr_status = by_name.get("PROD_CORRELATION")
+        production_corr_status = by_name.get("PRODUCTION_CORRELATION")
+
+        if prod_corr_status is not None:
+            effective_status = prod_corr_status
+            effective_name = "PROD_CORRELATION"
+        elif production_corr_status is not None:
+            effective_status = production_corr_status
+            effective_name = "PRODUCTION_CORRELATION"
+        else:
+            # Neither variant is present in the response → treat as MISSING (fail-closed).
+            effective_status = "MISSING"
+            effective_name = "PROD_CORRELATION"
+
+        if effective_status != PASS:
+            reasons.append(f"{effective_name}_{effective_status}")
         for required, name in (
             (context.competition_required, "MATCHES_COMPETITION"),
             (context.theme_required, "MATCHES_THEME"),

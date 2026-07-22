@@ -27,15 +27,21 @@ class ConsultantPolicy:
     confirmation_phrase: str = "I_UNDERSTAND_REAL_SUBMISSION"
     reward_weights: dict[str, float] = field(
         default_factory=lambda: {
-            "platform_pass": 4.0,
-            "quality_buffer": 2.0,
-            "novelty": 1.5,
-            "robustness": 1.5,
+            "platform_pass":    4.0,
+            "quality_buffer":   2.0,
+            "novelty":          1.5,
+            "robustness":       1.5,
             "sub_universe_margin": 1.0,
+            # Prod Corr signals — must dominate ordinary Sharpe/Fitness failures.
+            # PASS is worth +8 (double platform_pass); FAIL is -10 (strong cluster suppression).
+            # PENDING/MISSING/UNKNOWN give a small nudge toward obtaining a real observation.
+            "prod_corr_pass":   8.0,
+            "prod_corr_fail":  -10.0,
+            "prod_corr_unknown": -2.0,
             "simulation_cost": -1.0,
-            "duplicate": -2.0,
-            "unit_failure": -2.0,
-            "concentration": -2.0,
+            "duplicate":       -2.0,
+            "unit_failure":    -2.0,
+            "concentration":   -2.0,
         }
     )
 

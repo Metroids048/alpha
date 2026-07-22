@@ -16,8 +16,11 @@ package-lock.json
 *.swp
 *.swo
 
-# Environment & secrets
+# Environment & secrets — 仅留本机，不随仓库迁移（账号密码 / API Key 同级）
+# 模板见 .env.example；本机复制为 .env 后填写真实值
 .env
+.env.*
+!.env.example
 *.env.local
 
 # Large data outputs (keep structure, ignore data)

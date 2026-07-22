@@ -101,6 +101,29 @@ CREATE TABLE IF NOT EXISTS simulation_requests (
 );
 """,
     ),
+    (
+        4,
+        """
+CREATE TABLE IF NOT EXISTS prod_correlation_observations (
+ id INTEGER PRIMARY KEY,
+ alpha_id TEXT NOT NULL,
+ expression_id TEXT NOT NULL DEFAULT '',
+ behavior_cluster_id TEXT,
+ prod_correlation REAL,
+ prod_cutoff REAL,
+ required_sharpe_improvement REAL,
+ status TEXT NOT NULL,
+ failure_message TEXT,
+ raw_payload_hash TEXT NOT NULL DEFAULT '',
+ observed_at TEXT NOT NULL,
+ source TEXT NOT NULL DEFAULT 'platform_payload',
+ UNIQUE(alpha_id, raw_payload_hash)
+);
+CREATE INDEX IF NOT EXISTS idx_prod_corr_alpha ON prod_correlation_observations(alpha_id);
+CREATE INDEX IF NOT EXISTS idx_prod_corr_cluster ON prod_correlation_observations(behavior_cluster_id);
+CREATE INDEX IF NOT EXISTS idx_prod_corr_status ON prod_correlation_observations(status, observed_at);
+""",
+    ),
 )
 
 

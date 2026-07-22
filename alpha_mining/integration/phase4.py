@@ -11,6 +11,7 @@ from typing import Any, Callable, Iterable
 
 from alpha_mining.filter.repair import RepairEngine, persist_repair
 from alpha_mining.mutate.tree_mutation import MutationEngine, persist_mutation
+from alpha_mining.scheduler.cluster_crowding import ClusterFreezeRegistry
 from alpha_mining.storage.sqlite_store import SqliteRunLog
 
 
@@ -104,8 +105,18 @@ class Phase4ResearchMemoryBridge:
         *,
         validate: Callable[[str], tuple[bool, str]],
         existing_expressions: Iterable[str] = (),
+        freeze_registry: ClusterFreezeRegistry | None = None,
     ) -> list[dict[str, Any]]:
-        """Create valid, deduplicated L5 children from already eligible near-pass records."""
+        """Create valid, deduplicated L5 children from already eligible near-pass records.
+
+        Args:
+            records: Candidate parent records.
+            validate: Callable that checks whether an expression parses correctly.
+            existing_expressions: Already-seen expressions to deduplicate against.
+            freeze_registry: If provided, parents whose behavior cluster is frozen
+                are silently skipped.  Parents with an explicit prod_corr_status of
+                'FAIL' are also skipped regardless of freeze state.
+        """
         records = list(records)
         seen = {
             _normalized_expression(expression) for expression in existing_expressions
@@ -121,6 +132,24 @@ class Phase4ResearchMemoryBridge:
             parent_expression = str(record.get("expression") or "").strip()
             if not parent_expression or record.get("eligible") is False:
                 continue
+
+            # Skip parents with a definitive Prod Corr FAIL — they should not
+            # propagate through parameter/window/settings mutations.  Only
+            # mechanism-level rewrites (handled outside this function) are allowed.
+            prod_corr_status = str(record.get("prod_corr_status") or "").upper()
+            if prod_corr_status == "FAIL":
+                continue
+
+            # Skip parents belonging to a frozen behavior cluster.
+            if freeze_registry is not None:
+                cluster_key = str(
+                    record.get("behavior_cluster_id")
+                    or record.get("behavior_signature")
+                    or ""
+                )
+                if cluster_key and freeze_registry.is_frozen(cluster_key):
+                    continue
+
             parent_id = _upsert_expression(
                 self.db,
                 parent_expression,
