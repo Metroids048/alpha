@@ -80385,3 +80385,808 @@ PermissionError: bounded authentication refresh exhausted after HTTP 401
 [auth] OK user=pe***@gmail.com
 [paths] failure_reasons+metrics -> C:\Users\Windows11\Desktop\alpha\alpha_submission_feedback.csv | checkpoint -> C:\Users\Windows11\Desktop\alpha\alpha_pipeline_checkpoint.csv | script=C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py | version=v50.7 (v41 flow + v42 fine-fill; do not use v45)
 [cleanup] poll_only stale=617 run=100 defer=517
+[cleanup] done fixed=100/100 elapsed=276s outcomes={'no_detail': 100} defer=517
+[recheck] pre-batch skipped (--no-prebatch-recheck)
+[history] similarity_pool +generated_csv token_rows=1107 (kept 5% of 22148 unique — recent=0 mid=0/0 old=1107/22148)
+[novelty] index -> alpha_novelty_index.json structures=1113
+[history] similarity_pool reservoir toxic=3 weak=290 near=2307 passed=0 generated=2214 self_corr_risk=421
+[history] family_pass_proxy (Sharpe>=1.24 Fitness>=1.0) near_pass_variant:0.963, arch_quality:0.333, arch_hybrid_delta_pv:0.020, arch_hybrid_z_pv:0.020, arch_level_liquid:0.005, alpha_models_template:0.000
+[history] family_quality_risk alpha_models_template:bad=0.21/hard=0.14, template:bad=0.21/hard=0.14, arch_hybrid_delta_pv:bad=0.00/hard=0.17, arch_quality:bad=0.00/hard=0.08, arch_level_liquid:bad=0.00/hard=0.00, other:bad=0.00/hard=0.00
+[history] hopeful_jsonl near_pass seeds +346
+[history] registry_seen=151 registry_skeletons=26 similarity_tiers toxic=3 weak=290 near_pass=2307 passed=0 self_corr_risk=421 (ingest {'weak_fail': 290, 'near_pass': 2307, 'toxic': 3}) tried=150 payloads=244 failed=150 passed=0 near_pass_seeds=64 feedback_blocked_ops=0 feedback_unknown_vars=0
+[diversity] history fast_signal=0(0%) slow_signal=151(100%) total=151 fast_penalty=OFF
+[retry] HTTP 401 GET …/data-sets; re-login with credentials
+[auth] credential re-login returned HTTP 401
+[auth] seeded DPAPI state from .wq_browser_cookie.json
+[retry] HTTP 429 x1 GET …/data-sets sleep=12.0s
+[fatal] bounded authentication refresh exhausted after HTTP 401
+Traceback (most recent call last):
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9836, in main
+    result = pipeline.run()
+             ^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9210, in run
+    return self.run_full()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 8575, in run_full
+    candidates, _ = self.generate_candidates()
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 7318, in generate_candidates
+    fields_df = self.top_fields(self.fetch_datafields())
+                                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6264, in fetch_datafields
+    for did in self._dataset_ids():
+               ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6200, in _dataset_ids
+    resp = self._retry("GET", url, params={
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 5998, in _retry
+    raise PermissionError("bounded authentication refresh exhausted after HTTP 401")
+PermissionError: bounded authentication refresh exhausted after HTTP 401
+
+--- 2026-07-22T00:50:21Z cycle_2/simulate ---
+[network] HTTPS proxy=http://127.0.0.1:7892
+[batch] policy floor=60 target_pass_rate>=5% near_pass_share>=35% arch_explore_cap<=15% quality_topup=near_pass+pass_fundamental+template_only diversity_mode=quality_diverse soft_cap=60 safety_cap=60
+[auth] OK user=pe***@gmail.com
+[paths] failure_reasons+metrics -> C:\Users\Windows11\Desktop\alpha\alpha_submission_feedback.csv | checkpoint -> C:\Users\Windows11\Desktop\alpha\alpha_pipeline_checkpoint.csv | script=C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py | version=v50.7 (v41 flow + v42 fine-fill; do not use v45)
+[cleanup] poll_only stale=617 run=100 defer=517
+[cleanup] done fixed=100/100 elapsed=259s outcomes={'no_detail': 100} defer=517
+[recheck] pre-batch skipped (--no-prebatch-recheck)
+[history] similarity_pool +generated_csv token_rows=1107 (kept 5% of 22148 unique — recent=0 mid=0/0 old=1107/22148)
+[novelty] index -> alpha_novelty_index.json structures=1113
+[history] similarity_pool reservoir toxic=3 weak=290 near=2307 passed=0 generated=2214 self_corr_risk=421
+[history] family_pass_proxy (Sharpe>=1.24 Fitness>=1.0) near_pass_variant:0.963, arch_quality:0.333, arch_hybrid_z_pv:0.020, arch_hybrid_delta_pv:0.020, arch_level_liquid:0.005, alpha_models_template:0.000
+[history] family_quality_risk alpha_models_template:bad=0.21/hard=0.14, template:bad=0.21/hard=0.14, arch_hybrid_delta_pv:bad=0.00/hard=0.17, arch_quality:bad=0.00/hard=0.08, arch_level_liquid:bad=0.00/hard=0.00, other:bad=0.00/hard=0.00
+[history] hopeful_jsonl near_pass seeds +346
+[history] registry_seen=151 registry_skeletons=26 similarity_tiers toxic=3 weak=290 near_pass=2307 passed=0 self_corr_risk=421 (ingest {'weak_fail': 290, 'near_pass': 2307, 'toxic': 3}) tried=150 payloads=244 failed=150 passed=0 near_pass_seeds=64 feedback_blocked_ops=0 feedback_unknown_vars=0
+[diversity] history fast_signal=0(0%) slow_signal=151(100%) total=151 fast_penalty=OFF
+[retry] HTTP 429 x1 GET …/data-sets sleep=12.0s
+[cooldown] consecutive 429=3; sleep=90s
+[retry] HTTP 429 x2 GET …/data-sets sleep=12.0s
+[retry] HTTP 429 x2 GET …/data-sets sleep=38.4s
+[cooldown] consecutive 429=3; sleep=90s
+[retry] HTTP 429 x1 GET …/data-sets sleep=76.8s
+[retry] HTTP 429 x1 GET …/data-sets sleep=90.0s
+[retry] HTTP 429 x1 GET …/data-sets sleep=90.0s
+[datasets] WARN fetch failed (429 Client Error: Too Many Requests for url: https://api.worldquantbrain.com/data-sets?instrumentType=EQUITY&region=USA&delay=1&universe=...); using stale disk_cache n=8
+[cooldown] consecutive 429=3; sleep=90s
+[retry] HTTP 429 x1 GET …/data-fields sleep=90.0s
+[retry] HTTP 429 x1 GET …/data-fields sleep=90.0s
+[retry] HTTP 401 GET …/data-fields; re-login with credentials
+[auth] credential re-login returned HTTP 401
+[auth] seeded DPAPI state from .wq_browser_cookie.json
+[fatal] bounded authentication refresh exhausted after HTTP 401
+Traceback (most recent call last):
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9836, in main
+    result = pipeline.run()
+             ^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9210, in run
+    return self.run_full()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 8575, in run_full
+    candidates, _ = self.generate_candidates()
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 7318, in generate_candidates
+    fields_df = self.top_fields(self.fetch_datafields())
+                                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6275, in fetch_datafields
+    first = self._retry("GET", base, params=params).json()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 5998, in _retry
+    raise PermissionError("bounded authentication refresh exhausted after HTTP 401")
+PermissionError: bounded authentication refresh exhausted after HTTP 401
+
+--- 2026-07-22T01:12:20Z cycle_3/simulate ---
+[network] HTTPS proxy=http://127.0.0.1:7892
+[batch] policy floor=60 target_pass_rate>=5% near_pass_share>=35% arch_explore_cap<=15% quality_topup=near_pass+pass_fundamental+template_only diversity_mode=quality_diverse soft_cap=60 safety_cap=60
+[auth] OK user=pe***@gmail.com
+[paths] failure_reasons+metrics -> C:\Users\Windows11\Desktop\alpha\alpha_submission_feedback.csv | checkpoint -> C:\Users\Windows11\Desktop\alpha\alpha_pipeline_checkpoint.csv | script=C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py | version=v50.7 (v41 flow + v42 fine-fill; do not use v45)
+[cleanup] poll_only stale=617 run=100 defer=517
+[cleanup] done fixed=100/100 elapsed=290s outcomes={'no_detail': 100} defer=517
+[recheck] pre-batch skipped (--no-prebatch-recheck)
+[history] similarity_pool +generated_csv token_rows=1107 (kept 5% of 22148 unique — recent=0 mid=0/0 old=1107/22148)
+[novelty] index -> alpha_novelty_index.json structures=1113
+[history] similarity_pool reservoir toxic=3 weak=290 near=2307 passed=0 generated=2214 self_corr_risk=421
+[history] family_pass_proxy (Sharpe>=1.24 Fitness>=1.0) near_pass_variant:0.963, arch_quality:0.333, arch_hybrid_z_pv:0.020, arch_hybrid_delta_pv:0.020, arch_level_liquid:0.005, other:0.000
+[history] family_quality_risk template:bad=0.21/hard=0.14, alpha_models_template:bad=0.21/hard=0.14, arch_hybrid_delta_pv:bad=0.00/hard=0.17, arch_quality:bad=0.00/hard=0.08, other:bad=0.00/hard=0.00, arch_level_liquid:bad=0.00/hard=0.00
+[history] hopeful_jsonl near_pass seeds +346
+[history] registry_seen=151 registry_skeletons=26 similarity_tiers toxic=3 weak=290 near_pass=2307 passed=0 self_corr_risk=421 (ingest {'weak_fail': 290, 'near_pass': 2307, 'toxic': 3}) tried=150 payloads=244 failed=150 passed=0 near_pass_seeds=64 feedback_blocked_ops=0 feedback_unknown_vars=0
+[diversity] history fast_signal=0(0%) slow_signal=151(100%) total=151 fast_penalty=OFF
+[retry] HTTP 401 GET …/data-sets; re-login with credentials
+[auth] credential re-login returned HTTP 401
+[auth] seeded DPAPI state from .wq_browser_cookie.json
+[retry] HTTP 429 x1 GET …/data-sets sleep=12.0s
+[cooldown] consecutive 429=3; sleep=90s
+[retry] HTTP 429 x2 GET …/data-sets sleep=20.0s
+[retry] HTTP 429 x1 GET …/data-sets sleep=19.2s
+[retry] HTTP 429 x1 GET …/data-sets sleep=38.4s
+[cooldown] consecutive 429=3; sleep=90s
+[retry] HTTP 429 x1 GET …/data-sets sleep=76.8s
+[fatal] bounded authentication refresh exhausted after HTTP 401
+Traceback (most recent call last):
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9836, in main
+    result = pipeline.run()
+             ^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9210, in run
+    return self.run_full()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 8575, in run_full
+    candidates, _ = self.generate_candidates()
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 7318, in generate_candidates
+    fields_df = self.top_fields(self.fetch_datafields())
+                                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6264, in fetch_datafields
+    for did in self._dataset_ids():
+               ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6200, in _dataset_ids
+    resp = self._retry("GET", url, params={
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 5998, in _retry
+    raise PermissionError("bounded authentication refresh exhausted after HTTP 401")
+PermissionError: bounded authentication refresh exhausted after HTTP 401
+
+--- 2026-07-22T01:27:18Z cycle_4/simulate ---
+[network] HTTPS proxy=http://127.0.0.1:7892
+[batch] policy floor=60 target_pass_rate>=5% near_pass_share>=35% arch_explore_cap<=15% quality_topup=near_pass+pass_fundamental+template_only diversity_mode=quality_diverse soft_cap=60 safety_cap=60
+[auth] OK user=pe***@gmail.com
+[paths] failure_reasons+metrics -> C:\Users\Windows11\Desktop\alpha\alpha_submission_feedback.csv | checkpoint -> C:\Users\Windows11\Desktop\alpha\alpha_pipeline_checkpoint.csv | script=C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py | version=v50.7 (v41 flow + v42 fine-fill; do not use v45)
+[cleanup] poll_only stale=617 run=100 defer=517
+[cleanup] done fixed=100/100 elapsed=264s outcomes={'no_detail': 100} defer=517
+[recheck] pre-batch skipped (--no-prebatch-recheck)
+[history] similarity_pool +generated_csv token_rows=1107 (kept 5% of 22148 unique — recent=0 mid=0/0 old=1107/22148)
+[novelty] index -> alpha_novelty_index.json structures=1113
+[history] similarity_pool reservoir toxic=3 weak=290 near=2307 passed=0 generated=2214 self_corr_risk=421
+[history] family_pass_proxy (Sharpe>=1.24 Fitness>=1.0) near_pass_variant:0.963, arch_quality:0.333, arch_hybrid_delta_pv:0.020, arch_hybrid_z_pv:0.020, arch_level_liquid:0.005, other:0.000
+[history] family_quality_risk alpha_models_template:bad=0.21/hard=0.14, template:bad=0.21/hard=0.14, arch_hybrid_delta_pv:bad=0.00/hard=0.17, arch_quality:bad=0.00/hard=0.08, arch_level_liquid:bad=0.00/hard=0.00, other:bad=0.00/hard=0.00
+[history] hopeful_jsonl near_pass seeds +346
+[history] registry_seen=151 registry_skeletons=26 similarity_tiers toxic=3 weak=290 near_pass=2307 passed=0 self_corr_risk=421 (ingest {'weak_fail': 290, 'near_pass': 2307, 'toxic': 3}) tried=150 payloads=244 failed=150 passed=0 near_pass_seeds=64 feedback_blocked_ops=0 feedback_unknown_vars=0
+[diversity] history fast_signal=0(0%) slow_signal=151(100%) total=151 fast_penalty=OFF
+[retry] HTTP 429 x1 GET …/data-sets sleep=12.0s
+[retry] HTTP 401 GET …/data-sets; re-login with credentials
+[auth] credential re-login returned HTTP 401
+[auth] seeded DPAPI state from .wq_browser_cookie.json
+[cooldown] consecutive 429=3; sleep=90s
+[retry] HTTP 429 x2 GET …/data-sets sleep=12.0s
+[fatal] bounded authentication refresh exhausted after HTTP 401
+Traceback (most recent call last):
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9836, in main
+    result = pipeline.run()
+             ^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9210, in run
+    return self.run_full()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 8575, in run_full
+    candidates, _ = self.generate_candidates()
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 7318, in generate_candidates
+    fields_df = self.top_fields(self.fetch_datafields())
+                                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6264, in fetch_datafields
+    for did in self._dataset_ids():
+               ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6200, in _dataset_ids
+    resp = self._retry("GET", url, params={
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 5998, in _retry
+    raise PermissionError("bounded authentication refresh exhausted after HTTP 401")
+PermissionError: bounded authentication refresh exhausted after HTTP 401
+
+--- 2026-07-22T01:38:00Z cycle_5/simulate ---
+[network] HTTPS proxy=http://127.0.0.1:7892
+[batch] policy floor=60 target_pass_rate>=5% near_pass_share>=35% arch_explore_cap<=15% quality_topup=near_pass+pass_fundamental+template_only diversity_mode=quality_diverse soft_cap=60 safety_cap=60
+[auth] OK user=pe***@gmail.com
+[paths] failure_reasons+metrics -> C:\Users\Windows11\Desktop\alpha\alpha_submission_feedback.csv | checkpoint -> C:\Users\Windows11\Desktop\alpha\alpha_pipeline_checkpoint.csv | script=C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py | version=v50.7 (v41 flow + v42 fine-fill; do not use v45)
+[cleanup] poll_only stale=617 run=100 defer=517
+[cleanup] done fixed=100/100 elapsed=279s outcomes={'no_detail': 100} defer=517
+[recheck] pre-batch skipped (--no-prebatch-recheck)
+[history] similarity_pool +generated_csv token_rows=1107 (kept 5% of 22148 unique — recent=0 mid=0/0 old=1107/22148)
+[novelty] index -> alpha_novelty_index.json structures=1113
+[history] similarity_pool reservoir toxic=3 weak=290 near=2307 passed=0 generated=2214 self_corr_risk=421
+[history] family_pass_proxy (Sharpe>=1.24 Fitness>=1.0) near_pass_variant:0.963, arch_quality:0.333, arch_hybrid_delta_pv:0.020, arch_hybrid_z_pv:0.020, arch_level_liquid:0.005, alpha_models_template:0.000
+[history] family_quality_risk alpha_models_template:bad=0.21/hard=0.14, template:bad=0.21/hard=0.14, arch_hybrid_delta_pv:bad=0.00/hard=0.17, arch_quality:bad=0.00/hard=0.08, arch_hybrid_z_pv:bad=0.00/hard=0.00, other:bad=0.00/hard=0.00
+[history] hopeful_jsonl near_pass seeds +346
+[history] registry_seen=151 registry_skeletons=26 similarity_tiers toxic=3 weak=290 near_pass=2307 passed=0 self_corr_risk=421 (ingest {'weak_fail': 290, 'near_pass': 2307, 'toxic': 3}) tried=150 payloads=244 failed=150 passed=0 near_pass_seeds=64 feedback_blocked_ops=0 feedback_unknown_vars=0
+[diversity] history fast_signal=0(0%) slow_signal=151(100%) total=151 fast_penalty=OFF
+[retry] HTTP 429 x1 GET …/data-sets sleep=12.0s
+[retry] HTTP 401 GET …/data-sets; re-login with credentials
+[auth] credential re-login returned HTTP 401
+[auth] seeded DPAPI state from .wq_browser_cookie.json
+[fatal] bounded authentication refresh exhausted after HTTP 401
+Traceback (most recent call last):
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9836, in main
+    result = pipeline.run()
+             ^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9210, in run
+    return self.run_full()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 8575, in run_full
+    candidates, _ = self.generate_candidates()
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 7318, in generate_candidates
+    fields_df = self.top_fields(self.fetch_datafields())
+                                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6264, in fetch_datafields
+    for did in self._dataset_ids():
+               ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6200, in _dataset_ids
+    resp = self._retry("GET", url, params={
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 5998, in _retry
+    raise PermissionError("bounded authentication refresh exhausted after HTTP 401")
+PermissionError: bounded authentication refresh exhausted after HTTP 401
+
+--- 2026-07-22T01:47:04Z cycle_6/simulate ---
+[network] HTTPS proxy=http://127.0.0.1:7892
+[batch] policy floor=60 target_pass_rate>=5% near_pass_share>=35% arch_explore_cap<=15% quality_topup=near_pass+pass_fundamental+template_only diversity_mode=quality_diverse soft_cap=60 safety_cap=60
+[auth] OK user=pe***@gmail.com
+[paths] failure_reasons+metrics -> C:\Users\Windows11\Desktop\alpha\alpha_submission_feedback.csv | checkpoint -> C:\Users\Windows11\Desktop\alpha\alpha_pipeline_checkpoint.csv | script=C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py | version=v50.7 (v41 flow + v42 fine-fill; do not use v45)
+[cleanup] poll_only stale=617 run=100 defer=517
+[cleanup] done fixed=100/100 elapsed=268s outcomes={'no_detail': 100} defer=517
+[recheck] pre-batch skipped (--no-prebatch-recheck)
+[history] similarity_pool +generated_csv token_rows=1107 (kept 5% of 22148 unique — recent=0 mid=0/0 old=1107/22148)
+[novelty] index -> alpha_novelty_index.json structures=1113
+[history] similarity_pool reservoir toxic=3 weak=290 near=2307 passed=0 generated=2214 self_corr_risk=421
+[history] family_pass_proxy (Sharpe>=1.24 Fitness>=1.0) near_pass_variant:0.963, arch_quality:0.333, arch_hybrid_z_pv:0.020, arch_hybrid_delta_pv:0.020, arch_level_liquid:0.005, alpha_models_template:0.000
+[history] family_quality_risk alpha_models_template:bad=0.21/hard=0.14, template:bad=0.21/hard=0.14, arch_hybrid_delta_pv:bad=0.00/hard=0.17, arch_quality:bad=0.00/hard=0.08, arch_hybrid_z_pv:bad=0.00/hard=0.00, arch_level_liquid:bad=0.00/hard=0.00
+[history] hopeful_jsonl near_pass seeds +346
+[history] registry_seen=151 registry_skeletons=26 similarity_tiers toxic=3 weak=290 near_pass=2307 passed=0 self_corr_risk=421 (ingest {'weak_fail': 290, 'near_pass': 2307, 'toxic': 3}) tried=150 payloads=244 failed=150 passed=0 near_pass_seeds=64 feedback_blocked_ops=0 feedback_unknown_vars=0
+[diversity] history fast_signal=0(0%) slow_signal=151(100%) total=151 fast_penalty=OFF
+[retry] HTTP 429 x1 GET …/data-sets sleep=18.0s
+[retry] HTTP 429 x1 GET …/data-sets sleep=12.0s
+[cooldown] consecutive 429=3; sleep=90s
+[retry] HTTP 429 x1 GET …/data-sets sleep=12.0s
+[retry] HTTP 429 x2 GET …/data-sets sleep=38.4s
+[cooldown] consecutive 429=3; sleep=90s
+[retry] HTTP 429 x1 GET …/data-sets sleep=76.8s
+[retry] HTTP 429 x1 GET …/data-sets sleep=90.0s
+[retry] HTTP 429 x1 GET …/data-sets sleep=90.0s
+[datasets] WARN fetch failed (429 Client Error: Too Many Requests for url: https://api.worldquantbrain.com/data-sets?instrumentType=EQUITY&region=USA&delay=1&universe=...); using stale disk_cache n=8
+[cooldown] consecutive 429=3; sleep=90s
+[retry] HTTP 429 x1 GET …/data-fields sleep=90.0s
+[retry] HTTP 429 x1 GET …/data-fields sleep=90.0s
+[retry] HTTP 429 x1 GET …/data-fields sleep=90.0s
+[cooldown] consecutive 429=3; sleep=90s
+[retry] HTTP 429 x1 GET …/data-fields sleep=90.0s
+[retry] HTTP 429 x1 GET …/data-fields sleep=90.0s
+[retry] HTTP 429 x1 GET …/data-fields sleep=90.0s
+[cooldown] consecutive 429=3; sleep=90s
+[retry] HTTP 429 x1 GET …/data-fields sleep=90.0s
+[retry] HTTP 429 x1 GET …/data-fields sleep=90.0s
+[fatal] bounded authentication refresh exhausted after HTTP 401
+Traceback (most recent call last):
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9836, in main
+    result = pipeline.run()
+             ^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9210, in run
+    return self.run_full()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 8575, in run_full
+    candidates, _ = self.generate_candidates()
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 7318, in generate_candidates
+    fields_df = self.top_fields(self.fetch_datafields())
+                                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6275, in fetch_datafields
+    first = self._retry("GET", base, params=params).json()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 5998, in _retry
+    raise PermissionError("bounded authentication refresh exhausted after HTTP 401")
+PermissionError: bounded authentication refresh exhausted after HTTP 401
+
+--- 2026-07-22T02:21:25Z cycle_7/simulate ---
+[network] HTTPS proxy=http://127.0.0.1:7892
+[batch] policy floor=60 target_pass_rate>=5% near_pass_share>=35% arch_explore_cap<=15% quality_topup=near_pass+pass_fundamental+template_only diversity_mode=quality_diverse soft_cap=60 safety_cap=60
+[auth] seeded DPAPI state from .wq_browser_cookie.json
+[auth] OK user=pe***@gmail.com
+[paths] failure_reasons+metrics -> C:\Users\Windows11\Desktop\alpha\alpha_submission_feedback.csv | checkpoint -> C:\Users\Windows11\Desktop\alpha\alpha_pipeline_checkpoint.csv | script=C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py | version=v50.7 (v41 flow + v42 fine-fill; do not use v45)
+[cleanup] poll_only stale=617 run=100 defer=517
+[cleanup] wall budget reached 300s; fixed=89/100 defer=528
+[cleanup] done fixed=89/100 elapsed=302s outcomes={'no_detail': 89} defer=517
+[recheck] pre-batch skipped (--no-prebatch-recheck)
+[history] similarity_pool +generated_csv token_rows=1107 (kept 5% of 22148 unique — recent=0 mid=0/0 old=1107/22148)
+[novelty] index -> alpha_novelty_index.json structures=1113
+[history] similarity_pool reservoir toxic=3 weak=290 near=2307 passed=0 generated=2214 self_corr_risk=421
+[history] family_pass_proxy (Sharpe>=1.24 Fitness>=1.0) near_pass_variant:0.963, arch_quality:0.333, arch_hybrid_z_pv:0.020, arch_hybrid_delta_pv:0.020, arch_level_liquid:0.005, alpha_models_template:0.000
+[history] family_quality_risk alpha_models_template:bad=0.21/hard=0.14, template:bad=0.21/hard=0.14, arch_hybrid_delta_pv:bad=0.00/hard=0.17, arch_quality:bad=0.00/hard=0.08, other:bad=0.00/hard=0.00, arch_hybrid_z_pv:bad=0.00/hard=0.00
+[history] hopeful_jsonl near_pass seeds +346
+[history] registry_seen=151 registry_skeletons=26 similarity_tiers toxic=3 weak=290 near_pass=2307 passed=0 self_corr_risk=421 (ingest {'weak_fail': 290, 'near_pass': 2307, 'toxic': 3}) tried=150 payloads=244 failed=150 passed=0 near_pass_seeds=64 feedback_blocked_ops=0 feedback_unknown_vars=0
+[diversity] history fast_signal=0(0%) slow_signal=151(100%) total=151 fast_penalty=OFF
+[retry] HTTP 429 x1 GET …/data-sets sleep=24.0s
+[retry] HTTP 429 x1 GET …/data-sets sleep=12.0s
+[retry] HTTP 401 GET …/data-sets; re-login with credentials
+[auth] credential re-login returned HTTP 401
+[auth] seeded DPAPI state from .wq_browser_cookie.json
+[cooldown] consecutive 429=3; sleep=90s
+[retry] HTTP 429 x1 GET …/data-sets sleep=12.0s
+[fatal] bounded authentication refresh exhausted after HTTP 401
+Traceback (most recent call last):
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9836, in main
+    result = pipeline.run()
+             ^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9210, in run
+    return self.run_full()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 8575, in run_full
+    candidates, _ = self.generate_candidates()
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 7318, in generate_candidates
+    fields_df = self.top_fields(self.fetch_datafields())
+                                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6264, in fetch_datafields
+    for did in self._dataset_ids():
+               ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6200, in _dataset_ids
+    resp = self._retry("GET", url, params={
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 5998, in _retry
+    raise PermissionError("bounded authentication refresh exhausted after HTTP 401")
+PermissionError: bounded authentication refresh exhausted after HTTP 401
+
+--- 2026-07-22T02:33:18Z cycle_8/simulate ---
+[network] HTTPS proxy=http://127.0.0.1:7892
+[batch] policy floor=60 target_pass_rate>=5% near_pass_share>=35% arch_explore_cap<=15% quality_topup=near_pass+pass_fundamental+template_only diversity_mode=quality_diverse soft_cap=60 safety_cap=60
+[auth] OK user=pe***@gmail.com
+[paths] failure_reasons+metrics -> C:\Users\Windows11\Desktop\alpha\alpha_submission_feedback.csv | checkpoint -> C:\Users\Windows11\Desktop\alpha\alpha_pipeline_checkpoint.csv | script=C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py | version=v50.7 (v41 flow + v42 fine-fill; do not use v45)
+[cleanup] poll_only stale=617 run=100 defer=517
+[cleanup] wall budget reached 300s; fixed=99/100 defer=518
+[cleanup] done fixed=99/100 elapsed=302s outcomes={'no_detail': 99} defer=517
+[recheck] pre-batch skipped (--no-prebatch-recheck)
+[history] similarity_pool +generated_csv token_rows=1107 (kept 5% of 22148 unique — recent=0 mid=0/0 old=1107/22148)
+[novelty] index -> alpha_novelty_index.json structures=1113
+[history] similarity_pool reservoir toxic=3 weak=290 near=2307 passed=0 generated=2214 self_corr_risk=421
+[history] family_pass_proxy (Sharpe>=1.24 Fitness>=1.0) near_pass_variant:0.963, arch_quality:0.333, arch_hybrid_delta_pv:0.020, arch_hybrid_z_pv:0.020, arch_level_liquid:0.005, template:0.000
+[history] family_quality_risk template:bad=0.21/hard=0.14, alpha_models_template:bad=0.21/hard=0.14, arch_hybrid_delta_pv:bad=0.00/hard=0.17, arch_quality:bad=0.00/hard=0.08, arch_level_liquid:bad=0.00/hard=0.00, other:bad=0.00/hard=0.00
+[history] hopeful_jsonl near_pass seeds +346
+[history] registry_seen=151 registry_skeletons=26 similarity_tiers toxic=3 weak=290 near_pass=2307 passed=0 self_corr_risk=421 (ingest {'weak_fail': 290, 'near_pass': 2307, 'toxic': 3}) tried=150 payloads=244 failed=150 passed=0 near_pass_seeds=64 feedback_blocked_ops=0 feedback_unknown_vars=0
+[diversity] history fast_signal=0(0%) slow_signal=151(100%) total=151 fast_penalty=OFF
+[retry] HTTP 401 GET …/data-sets; re-login with credentials
+[auth] credential re-login returned HTTP 401
+[auth] seeded DPAPI state from .wq_browser_cookie.json
+[fatal] bounded authentication refresh exhausted after HTTP 401
+Traceback (most recent call last):
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9836, in main
+    result = pipeline.run()
+             ^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9210, in run
+    return self.run_full()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 8575, in run_full
+    candidates, _ = self.generate_candidates()
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 7318, in generate_candidates
+    fields_df = self.top_fields(self.fetch_datafields())
+                                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6264, in fetch_datafields
+    for did in self._dataset_ids():
+               ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6200, in _dataset_ids
+    resp = self._retry("GET", url, params={
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 5998, in _retry
+    raise PermissionError("bounded authentication refresh exhausted after HTTP 401")
+PermissionError: bounded authentication refresh exhausted after HTTP 401
+
+--- 2026-07-22T02:42:30Z cycle_9/simulate ---
+[network] HTTPS proxy=http://127.0.0.1:7892
+[batch] policy floor=60 target_pass_rate>=5% near_pass_share>=35% arch_explore_cap<=15% quality_topup=near_pass+pass_fundamental+template_only diversity_mode=quality_diverse soft_cap=60 safety_cap=60
+[auth] OK user=pe***@gmail.com
+[paths] failure_reasons+metrics -> C:\Users\Windows11\Desktop\alpha\alpha_submission_feedback.csv | checkpoint -> C:\Users\Windows11\Desktop\alpha\alpha_pipeline_checkpoint.csv | script=C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py | version=v50.7 (v41 flow + v42 fine-fill; do not use v45)
+[cleanup] poll_only stale=617 run=100 defer=517
+[cleanup] wall budget reached 300s; fixed=92/100 defer=525
+[cleanup] done fixed=92/100 elapsed=302s outcomes={'no_detail': 92} defer=517
+[recheck] pre-batch skipped (--no-prebatch-recheck)
+[history] similarity_pool +generated_csv token_rows=1107 (kept 5% of 22148 unique — recent=0 mid=0/0 old=1107/22148)
+[novelty] index -> alpha_novelty_index.json structures=1113
+[history] similarity_pool reservoir toxic=3 weak=290 near=2307 passed=0 generated=2214 self_corr_risk=421
+[history] family_pass_proxy (Sharpe>=1.24 Fitness>=1.0) near_pass_variant:0.963, arch_quality:0.333, arch_hybrid_delta_pv:0.020, arch_hybrid_z_pv:0.020, arch_level_liquid:0.005, alpha_models_template:0.000
+[history] family_quality_risk alpha_models_template:bad=0.21/hard=0.14, template:bad=0.21/hard=0.14, arch_hybrid_delta_pv:bad=0.00/hard=0.17, arch_quality:bad=0.00/hard=0.08, near_pass_variant:bad=0.00/hard=0.00, arch_level_liquid:bad=0.00/hard=0.00
+[history] hopeful_jsonl near_pass seeds +346
+[history] registry_seen=151 registry_skeletons=26 similarity_tiers toxic=3 weak=290 near_pass=2307 passed=0 self_corr_risk=421 (ingest {'weak_fail': 290, 'near_pass': 2307, 'toxic': 3}) tried=150 payloads=244 failed=150 passed=0 near_pass_seeds=64 feedback_blocked_ops=0 feedback_unknown_vars=0
+[diversity] history fast_signal=0(0%) slow_signal=151(100%) total=151 fast_penalty=OFF
+[retry] HTTP 429 x1 GET …/data-sets sleep=19.0s
+[retry] HTTP 401 GET …/data-sets; re-login with credentials
+[auth] credential re-login returned HTTP 401
+[auth] seeded DPAPI state from .wq_browser_cookie.json
+[retry] HTTP 429 x1 GET …/data-sets sleep=12.0s
+[cooldown] consecutive 429=3; sleep=90s
+[retry] HTTP 429 x1 GET …/data-sets sleep=12.0s
+[fatal] bounded authentication refresh exhausted after HTTP 401
+Traceback (most recent call last):
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9836, in main
+    result = pipeline.run()
+             ^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9210, in run
+    return self.run_full()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 8575, in run_full
+    candidates, _ = self.generate_candidates()
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 7318, in generate_candidates
+    fields_df = self.top_fields(self.fetch_datafields())
+                                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6264, in fetch_datafields
+    for did in self._dataset_ids():
+               ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6200, in _dataset_ids
+    resp = self._retry("GET", url, params={
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 5998, in _retry
+    raise PermissionError("bounded authentication refresh exhausted after HTTP 401")
+PermissionError: bounded authentication refresh exhausted after HTTP 401
+
+--- 2026-07-22T02:54:01Z cycle_10/simulate ---
+[network] HTTPS proxy=http://127.0.0.1:7892
+[batch] policy floor=60 target_pass_rate>=5% near_pass_share>=35% arch_explore_cap<=15% quality_topup=near_pass+pass_fundamental+template_only diversity_mode=quality_diverse soft_cap=60 safety_cap=60
+[auth] OK user=pe***@gmail.com
+[paths] failure_reasons+metrics -> C:\Users\Windows11\Desktop\alpha\alpha_submission_feedback.csv | checkpoint -> C:\Users\Windows11\Desktop\alpha\alpha_pipeline_checkpoint.csv | script=C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py | version=v50.7 (v41 flow + v42 fine-fill; do not use v45)
+[cleanup] poll_only stale=617 run=100 defer=517
+[cleanup] wall budget reached 300s; fixed=93/100 defer=524
+[cleanup] done fixed=93/100 elapsed=301s outcomes={'no_detail': 93} defer=517
+[recheck] pre-batch skipped (--no-prebatch-recheck)
+[history] similarity_pool +generated_csv token_rows=1107 (kept 5% of 22148 unique — recent=0 mid=0/0 old=1107/22148)
+[novelty] index -> alpha_novelty_index.json structures=1113
+[history] similarity_pool reservoir toxic=3 weak=290 near=2307 passed=0 generated=2214 self_corr_risk=421
+[history] family_pass_proxy (Sharpe>=1.24 Fitness>=1.0) near_pass_variant:0.963, arch_quality:0.333, arch_hybrid_delta_pv:0.020, arch_hybrid_z_pv:0.020, arch_level_liquid:0.005, template:0.000
+[history] family_quality_risk template:bad=0.21/hard=0.14, alpha_models_template:bad=0.21/hard=0.14, arch_hybrid_delta_pv:bad=0.00/hard=0.17, arch_quality:bad=0.00/hard=0.08, arch_level_liquid:bad=0.00/hard=0.00, arch_hybrid_z_pv:bad=0.00/hard=0.00
+[history] hopeful_jsonl near_pass seeds +346
+[history] registry_seen=151 registry_skeletons=26 similarity_tiers toxic=3 weak=290 near_pass=2307 passed=0 self_corr_risk=421 (ingest {'weak_fail': 290, 'near_pass': 2307, 'toxic': 3}) tried=150 payloads=244 failed=150 passed=0 near_pass_seeds=64 feedback_blocked_ops=0 feedback_unknown_vars=0
+[diversity] history fast_signal=0(0%) slow_signal=151(100%) total=151 fast_penalty=OFF
+[retry] HTTP 429 x1 GET …/data-sets sleep=12.0s
+[cooldown] consecutive 429=3; sleep=90s
+[retry] HTTP 429 x2 GET …/data-sets sleep=25.0s
+[retry] HTTP 429 x1 GET …/data-sets sleep=28.0s
+[retry] HTTP 401 GET …/data-sets; re-login with credentials
+[auth] credential re-login returned HTTP 401
+[auth] seeded DPAPI state from .wq_browser_cookie.json
+[retry] HTTP 429 x1 GET …/data-sets sleep=38.4s
+[cooldown] consecutive 429=3; sleep=90s
+[retry] HTTP 429 x1 GET …/data-sets sleep=76.8s
+[retry] HTTP 429 x1 GET …/data-sets sleep=90.0s
+[fatal] bounded authentication refresh exhausted after HTTP 401
+Traceback (most recent call last):
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9836, in main
+    result = pipeline.run()
+             ^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9210, in run
+    return self.run_full()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 8575, in run_full
+    candidates, _ = self.generate_candidates()
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 7318, in generate_candidates
+    fields_df = self.top_fields(self.fetch_datafields())
+                                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6264, in fetch_datafields
+    for did in self._dataset_ids():
+               ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6200, in _dataset_ids
+    resp = self._retry("GET", url, params={
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 5998, in _retry
+    raise PermissionError("bounded authentication refresh exhausted after HTTP 401")
+PermissionError: bounded authentication refresh exhausted after HTTP 401
+
+--- 2026-07-22T04:09:51Z cycle_1/simulate ---
+[network] HTTPS proxy=http://127.0.0.1:7892
+[batch] policy floor=60 target_pass_rate>=5% near_pass_share>=35% arch_explore_cap<=15% quality_topup=near_pass+pass_fundamental+template_only diversity_mode=quality_diverse soft_cap=60 safety_cap=60
+[auth] seeded DPAPI state from .wq_browser_cookie.json
+[auth] OK user=pe***@gmail.com
+[paths] failure_reasons+metrics -> C:\Users\Windows11\Desktop\alpha\alpha_submission_feedback.csv | checkpoint -> C:\Users\Windows11\Desktop\alpha\alpha_pipeline_checkpoint.csv | script=C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py | version=v50.7 (v41 flow + v42 fine-fill; do not use v45)
+[cleanup] poll_only stale=617 run=100 defer=517
+
+--- 2026-07-22T04:11:07Z cycle_1/simulate ---
+[network] HTTPS proxy=http://127.0.0.1:7892
+[batch] policy floor=60 target_pass_rate>=5% near_pass_share>=35% arch_explore_cap<=15% quality_topup=near_pass+pass_fundamental+template_only diversity_mode=quality_diverse soft_cap=60 safety_cap=60
+[auth] OK user=pe***@gmail.com
+[paths] failure_reasons+metrics -> C:\Users\Windows11\Desktop\alpha\alpha_submission_feedback.csv | checkpoint -> C:\Users\Windows11\Desktop\alpha\alpha_pipeline_checkpoint.csv | script=C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py | version=v50.7 (v41 flow + v42 fine-fill; do not use v45)
+[cleanup] poll_only stale=617 run=100 defer=517
+[cleanup] wall budget reached 300s; fixed=91/100 defer=526
+[cleanup] done fixed=91/100 elapsed=301s outcomes={'no_detail': 91} defer=517
+[recheck] pre-batch skipped (--no-prebatch-recheck)
+[history] similarity_pool +generated_csv token_rows=1107 (kept 5% of 22148 unique — recent=0 mid=0/0 old=1107/22148)
+[novelty] index -> alpha_novelty_index.json structures=1113
+[history] similarity_pool reservoir toxic=3 weak=290 near=2307 passed=0 generated=2214 self_corr_risk=421
+[history] family_pass_proxy (Sharpe>=1.24 Fitness>=1.0) near_pass_variant:0.963, arch_quality:0.333, arch_hybrid_z_pv:0.020, arch_hybrid_delta_pv:0.020, arch_level_liquid:0.005, other:0.000
+[history] family_quality_risk alpha_models_template:bad=0.21/hard=0.14, template:bad=0.21/hard=0.14, arch_hybrid_delta_pv:bad=0.00/hard=0.17, arch_quality:bad=0.00/hard=0.08, other:bad=0.00/hard=0.00, near_pass_variant:bad=0.00/hard=0.00
+[history] hopeful_jsonl near_pass seeds +346
+[history] registry_seen=151 registry_skeletons=26 similarity_tiers toxic=3 weak=290 near_pass=2307 passed=0 self_corr_risk=421 (ingest {'weak_fail': 290, 'near_pass': 2307, 'toxic': 3}) tried=150 payloads=244 failed=150 passed=0 near_pass_seeds=64 feedback_blocked_ops=0 feedback_unknown_vars=0
+[diversity] history fast_signal=0(0%) slow_signal=151(100%) total=151 fast_penalty=OFF
+[retry] HTTP 429 x1 GET …/data-sets sleep=12.0s
+[cooldown] consecutive 429=3; sleep=90s
+[retry] HTTP 429 x2 GET …/data-sets sleep=22.0s
+[retry] HTTP 429 x1 GET …/data-sets sleep=19.2s
+[retry] HTTP 429 x1 GET …/data-sets sleep=38.4s
+[retry] HTTP 401 GET …/data-sets; re-login with credentials
+[auth] credential re-login returned HTTP 401
+[auth] seeded DPAPI state from .wq_browser_cookie.json
+[cooldown] consecutive 429=3; sleep=90s
+[retry] HTTP 429 x1 GET …/data-sets sleep=76.8s
+[fatal] bounded authentication refresh exhausted after HTTP 401
+Traceback (most recent call last):
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9844, in main
+    result = pipeline.run()
+             ^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9218, in run
+    return self.run_full()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 8583, in run_full
+    candidates, _ = self.generate_candidates()
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 7326, in generate_candidates
+    fields_df = self.top_fields(self.fetch_datafields())
+                                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6272, in fetch_datafields
+    for did in self._dataset_ids():
+               ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6208, in _dataset_ids
+    resp = self._retry("GET", url, params={
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6006, in _retry
+    raise PermissionError("bounded authentication refresh exhausted after HTTP 401")
+PermissionError: bounded authentication refresh exhausted after HTTP 401
+
+--- 2026-07-22T04:26:21Z cycle_2/simulate ---
+[network] HTTPS proxy=http://127.0.0.1:7892
+[batch] policy floor=60 target_pass_rate>=5% near_pass_share>=35% arch_explore_cap<=15% quality_topup=near_pass+pass_fundamental+template_only diversity_mode=quality_diverse soft_cap=60 safety_cap=60
+[auth] OK user=pe***@gmail.com
+[paths] failure_reasons+metrics -> C:\Users\Windows11\Desktop\alpha\alpha_submission_feedback.csv | checkpoint -> C:\Users\Windows11\Desktop\alpha\alpha_pipeline_checkpoint.csv | script=C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py | version=v50.7 (v41 flow + v42 fine-fill; do not use v45)
+[cleanup] poll_only stale=617 run=100 defer=517
+[cleanup] wall budget reached 300s; fixed=95/100 defer=522
+[cleanup] done fixed=95/100 elapsed=301s outcomes={'no_detail': 95} defer=517
+[recheck] pre-batch skipped (--no-prebatch-recheck)
+[history] similarity_pool +generated_csv token_rows=1107 (kept 5% of 22148 unique — recent=0 mid=0/0 old=1107/22148)
+[novelty] index -> alpha_novelty_index.json structures=1113
+[history] similarity_pool reservoir toxic=3 weak=290 near=2307 passed=0 generated=2214 self_corr_risk=421
+[history] family_pass_proxy (Sharpe>=1.24 Fitness>=1.0) near_pass_variant:0.963, arch_quality:0.333, arch_hybrid_delta_pv:0.020, arch_hybrid_z_pv:0.020, arch_level_liquid:0.005, template:0.000
+[history] family_quality_risk template:bad=0.21/hard=0.14, alpha_models_template:bad=0.21/hard=0.14, arch_hybrid_delta_pv:bad=0.00/hard=0.17, arch_quality:bad=0.00/hard=0.08, near_pass_variant:bad=0.00/hard=0.00, arch_level_liquid:bad=0.00/hard=0.00
+[history] hopeful_jsonl near_pass seeds +346
+[history] registry_seen=151 registry_skeletons=26 similarity_tiers toxic=3 weak=290 near_pass=2307 passed=0 self_corr_risk=421 (ingest {'weak_fail': 290, 'near_pass': 2307, 'toxic': 3}) tried=150 payloads=244 failed=150 passed=0 near_pass_seeds=64 feedback_blocked_ops=0 feedback_unknown_vars=0
+[diversity] history fast_signal=0(0%) slow_signal=151(100%) total=151 fast_penalty=OFF
+[retry] HTTP 429 x1 GET …/data-sets sleep=12.0s
+[retry] HTTP 401 GET …/data-sets; re-login with credentials
+[auth] credential re-login returned HTTP 401
+[auth] seeded DPAPI state from .wq_browser_cookie.json
+[fatal] bounded authentication refresh exhausted after HTTP 401
+Traceback (most recent call last):
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9844, in main
+    result = pipeline.run()
+             ^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9218, in run
+    return self.run_full()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 8583, in run_full
+    candidates, _ = self.generate_candidates()
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 7326, in generate_candidates
+    fields_df = self.top_fields(self.fetch_datafields())
+                                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6272, in fetch_datafields
+    for did in self._dataset_ids():
+               ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6208, in _dataset_ids
+    resp = self._retry("GET", url, params={
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6006, in _retry
+    raise PermissionError("bounded authentication refresh exhausted after HTTP 401")
+PermissionError: bounded authentication refresh exhausted after HTTP 401
+
+--- 2026-07-22T04:36:03Z cycle_3/simulate ---
+[network] HTTPS proxy=http://127.0.0.1:7892
+[batch] policy floor=60 target_pass_rate>=5% near_pass_share>=35% arch_explore_cap<=15% quality_topup=near_pass+pass_fundamental+template_only diversity_mode=quality_diverse soft_cap=60 safety_cap=60
+[auth] OK user=pe***@gmail.com
+[paths] failure_reasons+metrics -> C:\Users\Windows11\Desktop\alpha\alpha_submission_feedback.csv | checkpoint -> C:\Users\Windows11\Desktop\alpha\alpha_pipeline_checkpoint.csv | script=C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py | version=v50.7 (v41 flow + v42 fine-fill; do not use v45)
+[cleanup] poll_only stale=617 run=100 defer=517
+[cleanup] wall budget reached 300s; fixed=93/100 defer=524
+[cleanup] done fixed=93/100 elapsed=302s outcomes={'no_detail': 93} defer=517
+[recheck] pre-batch skipped (--no-prebatch-recheck)
+[history] similarity_pool +generated_csv token_rows=1107 (kept 5% of 22148 unique — recent=0 mid=0/0 old=1107/22148)
+[novelty] index -> alpha_novelty_index.json structures=1113
+[history] similarity_pool reservoir toxic=3 weak=290 near=2307 passed=0 generated=2214 self_corr_risk=421
+[history] family_pass_proxy (Sharpe>=1.24 Fitness>=1.0) near_pass_variant:0.963, arch_quality:0.333, arch_hybrid_z_pv:0.020, arch_hybrid_delta_pv:0.020, arch_level_liquid:0.005, alpha_models_template:0.000
+[history] family_quality_risk alpha_models_template:bad=0.21/hard=0.14, template:bad=0.21/hard=0.14, arch_hybrid_delta_pv:bad=0.00/hard=0.17, arch_quality:bad=0.00/hard=0.08, arch_level_liquid:bad=0.00/hard=0.00, near_pass_variant:bad=0.00/hard=0.00
+[history] hopeful_jsonl near_pass seeds +346
+[history] registry_seen=151 registry_skeletons=26 similarity_tiers toxic=3 weak=290 near_pass=2307 passed=0 self_corr_risk=421 (ingest {'weak_fail': 290, 'near_pass': 2307, 'toxic': 3}) tried=150 payloads=244 failed=150 passed=0 near_pass_seeds=64 feedback_blocked_ops=0 feedback_unknown_vars=0
+[diversity] history fast_signal=0(0%) slow_signal=151(100%) total=151 fast_penalty=OFF
+[retry] HTTP 429 x1 GET …/data-sets sleep=12.0s
+[retry] HTTP 401 GET …/data-sets; re-login with credentials
+[auth] credential re-login returned HTTP 401
+[auth] seeded DPAPI state from .wq_browser_cookie.json
+[fatal] bounded authentication refresh exhausted after HTTP 401
+Traceback (most recent call last):
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9844, in main
+    result = pipeline.run()
+             ^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9218, in run
+    return self.run_full()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 8583, in run_full
+    candidates, _ = self.generate_candidates()
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 7326, in generate_candidates
+    fields_df = self.top_fields(self.fetch_datafields())
+                                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6272, in fetch_datafields
+    for did in self._dataset_ids():
+               ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6208, in _dataset_ids
+    resp = self._retry("GET", url, params={
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6006, in _retry
+    raise PermissionError("bounded authentication refresh exhausted after HTTP 401")
+PermissionError: bounded authentication refresh exhausted after HTTP 401
+
+--- 2026-07-22T04:45:24Z cycle_4/simulate ---
+[network] HTTPS proxy=http://127.0.0.1:7892
+[batch] policy floor=60 target_pass_rate>=5% near_pass_share>=35% arch_explore_cap<=15% quality_topup=near_pass+pass_fundamental+template_only diversity_mode=quality_diverse soft_cap=60 safety_cap=60
+[auth] OK user=pe***@gmail.com
+[paths] failure_reasons+metrics -> C:\Users\Windows11\Desktop\alpha\alpha_submission_feedback.csv | checkpoint -> C:\Users\Windows11\Desktop\alpha\alpha_pipeline_checkpoint.csv | script=C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py | version=v50.7 (v41 flow + v42 fine-fill; do not use v45)
+[cleanup] poll_only stale=617 run=100 defer=517
+[cleanup] done fixed=100/100 elapsed=257s outcomes={'no_detail': 100} defer=517
+[recheck] pre-batch skipped (--no-prebatch-recheck)
+[history] similarity_pool +generated_csv token_rows=1107 (kept 5% of 22148 unique — recent=0 mid=0/0 old=1107/22148)
+[novelty] index -> alpha_novelty_index.json structures=1113
+[history] similarity_pool reservoir toxic=3 weak=290 near=2307 passed=0 generated=2214 self_corr_risk=421
+[history] family_pass_proxy (Sharpe>=1.24 Fitness>=1.0) near_pass_variant:0.963, arch_quality:0.333, arch_hybrid_delta_pv:0.020, arch_hybrid_z_pv:0.020, arch_level_liquid:0.005, alpha_models_template:0.000
+[history] family_quality_risk alpha_models_template:bad=0.21/hard=0.14, template:bad=0.21/hard=0.14, arch_hybrid_delta_pv:bad=0.00/hard=0.17, arch_quality:bad=0.00/hard=0.08, arch_level_liquid:bad=0.00/hard=0.00, near_pass_variant:bad=0.00/hard=0.00
+[history] hopeful_jsonl near_pass seeds +346
+[history] registry_seen=151 registry_skeletons=26 similarity_tiers toxic=3 weak=290 near_pass=2307 passed=0 self_corr_risk=421 (ingest {'weak_fail': 290, 'near_pass': 2307, 'toxic': 3}) tried=150 payloads=244 failed=150 passed=0 near_pass_seeds=64 feedback_blocked_ops=0 feedback_unknown_vars=0
+[diversity] history fast_signal=0(0%) slow_signal=151(100%) total=151 fast_penalty=OFF
+[retry] HTTP 429 x1 GET …/data-sets sleep=12.0s
+[retry] HTTP 401 GET …/data-sets; re-login with credentials
+[auth] credential re-login returned HTTP 401
+[auth] seeded DPAPI state from .wq_browser_cookie.json
+[fatal] bounded authentication refresh exhausted after HTTP 401
+Traceback (most recent call last):
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9844, in main
+    result = pipeline.run()
+             ^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9218, in run
+    return self.run_full()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 8583, in run_full
+    candidates, _ = self.generate_candidates()
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 7326, in generate_candidates
+    fields_df = self.top_fields(self.fetch_datafields())
+                                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6272, in fetch_datafields
+    for did in self._dataset_ids():
+               ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6208, in _dataset_ids
+    resp = self._retry("GET", url, params={
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6006, in _retry
+    raise PermissionError("bounded authentication refresh exhausted after HTTP 401")
+PermissionError: bounded authentication refresh exhausted after HTTP 401
+
+--- 2026-07-22T04:54:16Z cycle_5/simulate ---
+[network] HTTPS proxy=http://127.0.0.1:7892
+[batch] policy floor=60 target_pass_rate>=5% near_pass_share>=35% arch_explore_cap<=15% quality_topup=near_pass+pass_fundamental+template_only diversity_mode=quality_diverse soft_cap=60 safety_cap=60
+[auth] OK user=pe***@gmail.com
+[paths] failure_reasons+metrics -> C:\Users\Windows11\Desktop\alpha\alpha_submission_feedback.csv | checkpoint -> C:\Users\Windows11\Desktop\alpha\alpha_pipeline_checkpoint.csv | script=C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py | version=v50.7 (v41 flow + v42 fine-fill; do not use v45)
+[cleanup] poll_only stale=617 run=100 defer=517
+[cleanup] done fixed=100/100 elapsed=260s outcomes={'no_detail': 100} defer=517
+[recheck] pre-batch skipped (--no-prebatch-recheck)
+[history] similarity_pool +generated_csv token_rows=1107 (kept 5% of 22148 unique — recent=0 mid=0/0 old=1107/22148)
+[novelty] index -> alpha_novelty_index.json structures=1113
+[history] similarity_pool reservoir toxic=3 weak=290 near=2307 passed=0 generated=2214 self_corr_risk=421
+[history] family_pass_proxy (Sharpe>=1.24 Fitness>=1.0) near_pass_variant:0.963, arch_quality:0.333, arch_hybrid_delta_pv:0.020, arch_hybrid_z_pv:0.020, arch_level_liquid:0.005, other:0.000
+[history] family_quality_risk template:bad=0.21/hard=0.14, alpha_models_template:bad=0.21/hard=0.14, arch_hybrid_delta_pv:bad=0.00/hard=0.17, arch_quality:bad=0.00/hard=0.08, other:bad=0.00/hard=0.00, arch_level_liquid:bad=0.00/hard=0.00
+[history] hopeful_jsonl near_pass seeds +346
+[history] registry_seen=151 registry_skeletons=26 similarity_tiers toxic=3 weak=290 near_pass=2307 passed=0 self_corr_risk=421 (ingest {'weak_fail': 290, 'near_pass': 2307, 'toxic': 3}) tried=150 payloads=244 failed=150 passed=0 near_pass_seeds=64 feedback_blocked_ops=0 feedback_unknown_vars=0
+[diversity] history fast_signal=0(0%) slow_signal=151(100%) total=151 fast_penalty=OFF
+[retry] HTTP 429 x1 GET …/data-sets sleep=16.0s
+[retry] HTTP 429 x1 GET …/data-sets sleep=12.0s
+[retry] HTTP 401 GET …/data-sets; re-login with credentials
+[auth] credential re-login returned HTTP 401
+[auth] seeded DPAPI state from .wq_browser_cookie.json
+[fatal] bounded authentication refresh exhausted after HTTP 401
+Traceback (most recent call last):
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9844, in main
+    result = pipeline.run()
+             ^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 9218, in run
+    return self.run_full()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 8583, in run_full
+    candidates, _ = self.generate_candidates()
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 7326, in generate_candidates
+    fields_df = self.top_fields(self.fetch_datafields())
+                                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6272, in fetch_datafields
+    for did in self._dataset_ids():
+               ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6208, in _dataset_ids
+    resp = self._retry("GET", url, params={
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py", line 6006, in _retry
+    raise PermissionError("bounded authentication refresh exhausted after HTTP 401")
+PermissionError: bounded authentication refresh exhausted after HTTP 401
+
+--- 2026-07-22T05:03:15Z cycle_6/simulate ---
+[network] HTTPS proxy=http://127.0.0.1:7892
+[batch] policy floor=60 target_pass_rate>=5% near_pass_share>=35% arch_explore_cap<=15% quality_topup=near_pass+pass_fundamental+template_only diversity_mode=quality_diverse soft_cap=60 safety_cap=60
+[auth] OK user=pe***@gmail.com
+[paths] failure_reasons+metrics -> C:\Users\Windows11\Desktop\alpha\alpha_submission_feedback.csv | checkpoint -> C:\Users\Windows11\Desktop\alpha\alpha_pipeline_checkpoint.csv | script=C:\Users\Windows11\Desktop\alpha\auto_alpha_pipeline_rebuilt_v50.py | version=v50.7 (v41 flow + v42 fine-fill; do not use v45)
+[cleanup] poll_only stale=617 run=100 defer=517
+[cleanup] wall budget reached 300s; fixed=97/100 defer=520
+[cleanup] done fixed=97/100 elapsed=302s outcomes={'no_detail': 97} defer=517
+[recheck] pre-batch skipped (--no-prebatch-recheck)
+[history] similarity_pool +generated_csv token_rows=1107 (kept 5% of 22148 unique — recent=0 mid=0/0 old=1107/22148)
+[novelty] index -> alpha_novelty_index.json structures=1113
+[history] similarity_pool reservoir toxic=3 weak=290 near=2307 passed=0 generated=2214 self_corr_risk=421
+[history] family_pass_proxy (Sharpe>=1.24 Fitness>=1.0) near_pass_variant:0.963, arch_quality:0.333, arch_hybrid_z_pv:0.020, arch_hybrid_delta_pv:0.020, arch_level_liquid:0.005, other:0.000
+[history] family_quality_risk alpha_models_template:bad=0.21/hard=0.14, template:bad=0.21/hard=0.14, arch_hybrid_delta_pv:bad=0.00/hard=0.17, arch_quality:bad=0.00/hard=0.08, other:bad=0.00/hard=0.00, arch_hybrid_z_pv:bad=0.00/hard=0.00
+[history] hopeful_jsonl near_pass seeds +346
+[history] registry_seen=151 registry_skeletons=26 similarity_tiers toxic=3 weak=290 near_pass=2307 passed=0 self_corr_risk=421 (ingest {'weak_fail': 290, 'near_pass': 2307, 'toxic': 3}) tried=150 payloads=244 failed=150 passed=0 near_pass_seeds=64 feedback_blocked_ops=0 feedback_unknown_vars=0
+[diversity] history fast_signal=0(0%) slow_signal=151(100%) total=151 fast_penalty=OFF
+[retry] HTTP 401 GET …/data-sets; re-login with credentials
+[auth] credential re-login returned HTTP 401
+[auth] seeded DPAPI state from .wq_browser_cookie.json
+[retry] HTTP 429 x1 GET …/data-sets sleep=12.0s
+[cooldown] consecutive 429=3; sleep=90s
+[retry] HTTP 429 x2 GET …/data-sets sleep=12.0s
+[retry] HTTP 429 x2 GET …/data-sets sleep=38.4s
+[cooldown] consecutive 429=3; sleep=90s
+[retry] HTTP 429 x1 GET …/data-sets sleep=76.8s
+[retry] HTTP 429 x1 GET …/data-sets sleep=90.0s
+[datasets] WARN fetch failed (429 Client Error: Too Many Requests for url: https://api.worldquantbrain.com/data-sets?instrumentType=EQUITY&region=USA&delay=1&universe=...); using stale disk_cache n=8
+[retry] HTTP 401 GET …/data-fields; re-login with credentials
+[auth] credential re-login returned HTTP 401
+[auth] seeded DPAPI state from .wq_browser_cookie.json
+[retry] HTTP 429 x1 GET …/data-fields sleep=90.0s
+[cooldown] consecutive 429=3; sleep=90s
+[retry] HTTP 429 x1 GET …/data-fields sleep=90.0s
+[retry] HTTP 429 x1 GET …/data-fields sleep=90.0s
+[retry] HTTP 429 x1 GET …/data-fields sleep=90.0s
+[cooldown] consecutive 429=3; sleep=90s
+[retry] HTTP 429 x1 GET …/data-fields sleep=90.0s
+[retry] HTTP 429 x1 GET …/data-fields sleep=90.0s
+[retry] HTTP 429 x1 GET …/data-fields sleep=90.0s
+[fields] WARN fundamental6: HTTP 429; sleep=90s then skip dataset
+
+--- 2026-07-23T03:44:27Z cycle_1/simulate ---
+[factory] {"baseline_pass": 0, "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+
+--- 2026-07-23T03:46:27Z cycle_2/simulate ---
+[factory] {"baseline_pass": 0, "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+
+--- 2026-07-23T03:48:28Z cycle_3/simulate ---
+[factory] {"baseline_pass": 0, "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+
+--- 2026-07-23T03:50:28Z cycle_4/simulate ---
+[factory] {"baseline_pass": 0, "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+
+--- 2026-07-23T03:52:29Z cycle_5/simulate ---
+[factory] {"baseline_pass": 0, "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+
+--- 2026-07-23T03:54:29Z cycle_6/simulate ---
+[factory] {"baseline_pass": 0, "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+
+--- 2026-07-23T03:56:29Z cycle_7/simulate ---
+[factory] {"baseline_pass": 0, "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+
+--- 2026-07-23T03:58:30Z cycle_8/simulate ---
+[factory] {"baseline_pass": 0, "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+
+--- 2026-07-23T04:00:30Z cycle_9/simulate ---
+[factory] {"baseline_pass": 0, "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+
+--- 2026-07-23T04:02:30Z cycle_10/simulate ---
+[factory] {"baseline_pass": 0, "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+
+--- 2026-07-23T04:04:31Z cycle_11/simulate ---
+[factory] {"baseline_pass": 0, "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+
+--- 2026-07-23T04:06:31Z cycle_12/simulate ---
+[factory] {"baseline_pass": 0, "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+
+--- 2026-07-23T04:08:32Z cycle_13/simulate ---
+[factory] {"baseline_pass": 0, "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+
+--- 2026-07-23T04:10:32Z cycle_14/simulate ---
+[factory] {"baseline_pass": 0, "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+
+--- 2026-07-23T04:12:32Z cycle_15/simulate ---
+[factory] {"baseline_pass": 0, "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}

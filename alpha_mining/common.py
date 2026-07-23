@@ -7,7 +7,36 @@ import os
 import re
 import subprocess
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
+
+
+def load_workspace_env(path: str | Path | None = None) -> Path | None:
+    """Load repo-root ``.env`` into ``os.environ`` (stdlib; no python-dotenv).
+
+    ``WQ_USERNAME`` / ``WQ_PASSWORD`` always override empty-or-stale process values
+    so CLI entry points match the legacy v50 runner behavior.
+    """
+    env_path = Path(path) if path is not None else Path(__file__).resolve().parents[1] / ".env"
+    if not env_path.is_file():
+        return None
+    for raw in env_path.read_text(encoding="utf-8-sig", errors="ignore").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[7:].strip()
+        if "=" not in line:
+            continue
+        key, _, val = line.partition("=")
+        key, val = key.strip(), val.strip()
+        if len(val) >= 2 and val[0] == val[-1] and val[0] in "\"'":
+            val = val[1:-1]
+        if key and val:
+            os.environ.setdefault(key, val)
+            if key in ("WQ_USERNAME", "WQ_PASSWORD"):
+                os.environ[key] = val
+    return env_path
 
 
 def subprocess_no_window_kwargs() -> dict[str, Any]:

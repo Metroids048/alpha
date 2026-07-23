@@ -315,6 +315,37 @@ def test_factory_hard_stop_blocks_generation(tmp_path: Path) -> None:
     assert control.can_generate() is False
 
 
+def test_factory_release_requires_ledger_freeze_and_confirmation(tmp_path: Path) -> None:
+    import sqlite3
+
+    from alpha_mining.factory.control import FactoryControl
+
+    database = tmp_path / "factory-release.sqlite"
+    control = FactoryControl(database)
+    try:
+        control.release("RELEASE_FACTORY_HARD_STOP")
+        raise AssertionError("expected PermissionError without ledger")
+    except PermissionError as exc:
+        assert "ledger_sync_id" in str(exc)
+
+    with sqlite3.connect(database) as con:
+        con.execute(
+            """UPDATE factory_control SET ledger_sync_id='sync-1',cluster_freeze_complete=1,
+               hard_stop=1,reason='acceptance_pilot_pending' WHERE singleton=1"""
+        )
+    try:
+        control.release("WRONG")
+        raise AssertionError("expected PermissionError for bad confirmation")
+    except PermissionError as exc:
+        assert "confirmation" in str(exc)
+
+    state = control.release("RELEASE_FACTORY_HARD_STOP", reason="test_release")
+    assert state.hard_stop is False
+    assert state.reason == "test_release"
+    assert state.execute_submit is False
+    assert control.can_generate() is True
+
+
 def test_cycle_entry_uses_vnext_factory_runtime() -> None:
     source = (Path(__file__).parents[1] / "run_pipeline_cycle.py").read_text(encoding="utf-8")
     assert "alpha_mining.factory.runtime" in source
