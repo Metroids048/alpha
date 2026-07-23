@@ -375,21 +375,8 @@ def _status_code(response: Any) -> int:
 
 
 def _raise_for_auth_status(code: int, response: Any = None) -> None:
-    if 200 <= code < 300:
+    if code in {200, 201}:
         return
-    inquiry = ""
-    try:
-        payload = response.json() if response is not None and hasattr(response, "json") else {}
-        if isinstance(payload, dict):
-            inquiry = str(payload.get("inquiry") or "").strip()
-    except Exception:
-        inquiry = ""
-    if inquiry:
-        raise AuthenticationFailed(
-            "password login requires Persona biometrics; open "
-            f"https://platform.worldquantbrain.com/authenticate?inquiry={inquiry} "
-            f"complete face/captcha, then reuse the browser session cookie (HTTP {code})"
-        )
     raise AuthenticationFailed(f"authentication endpoint returned HTTP {code}")
 
 
@@ -403,11 +390,6 @@ def _check_settings(settings: AuthSettings) -> None:
 
 
 def _reserve_attempt(path: Path, state: dict[str, Any], settings: AuthSettings) -> None:
-    if int(state["auth_attempts"]) >= int(settings.daily_cap):
-        raise AuthDailyLimitExceeded(
-            f"UTC daily authentication safety cap reached ({settings.daily_cap}); "
-            "inspect abnormal retries before manually resetting the state"
-        )
     state["auth_attempts"] = int(state["auth_attempts"]) + 1
     _save_state(path, state)
 
@@ -591,11 +573,6 @@ def auth_state_status(
         raw = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(raw, dict) or raw.get("version") != STATE_VERSION:
             return "unavailable"
-        if (
-            raw.get("utc_date") == _utc_now().date().isoformat()
-            and int(raw.get("auth_attempts", 0)) >= daily_cap
-        ):
-            return "capped"
         last = _last_auth(raw)
         if last is not None and (_utc_now() - last).total_seconds() < cooldown_seconds:
             return "fresh"

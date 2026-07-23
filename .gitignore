@@ -60,6 +60,7 @@ work/codex_crash_forensics_*/logs_2*_verify_backup.sqlite
 .wq_auth_state.json.tmp.*
 .wq_auth_state.json.lock
 .wq_browser_cookie*.json
+.wq_cookie_quarantine/
 worldquant_api.lock
 
 # Consultant Factory local outputs (derived data; never commit)

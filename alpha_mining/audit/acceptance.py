@@ -531,7 +531,8 @@ def run_acceptance_audit(
         ).fetchone()
         if sync_id:
             con.execute(
-                "UPDATE factory_control SET ledger_sync_id=?,cluster_freeze_complete=1,hard_stop=1,"
+                "UPDATE factory_control SET ledger_sync_id=?,cluster_freeze_complete=1,"
+                "readiness_state='acceptance_pilot_pending',readiness_reason='acceptance_pilot_pending',"
                 "reason='acceptance_pilot_pending',execute_submit=0,updated_at=? WHERE singleton=1",
                 (sync_id, datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")),
             )

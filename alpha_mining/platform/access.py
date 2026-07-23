@@ -206,10 +206,8 @@ class PlatformAccessController:
             ).fetchone()
             if row is None:
                 raise CircuitOpen("platform access state is missing")
-            state, until_text, recoveries, maximum = str(row[0]), row[1], int(row[2]), int(row[3])
+            state, until_text, recoveries, _maximum = str(row[0]), row[1], int(row[2]), int(row[3])
             until = _parse_time(until_text)
-            if state == "MANUAL_INTERVENTION":
-                raise CircuitOpen("manual platform access recovery is required")
             if state == "HALF_OPEN":
                 raise CircuitOpen("a single recovery probe is already in flight")
             if state == "RATE_LIMITED":
@@ -219,12 +217,6 @@ class PlatformAccessController:
                     raise CircuitOpen("rate-limit interval expired; only one explicit read probe is allowed")
                 if method.upper() != "GET":
                     raise CircuitOpen("rate-limit recovery probe must be a GET")
-                if recoveries >= maximum:
-                    con.execute(
-                        "UPDATE platform_access_state SET state='MANUAL_INTERVENTION',reason='max_auto_recoveries_exceeded',updated_at=? WHERE singleton=1",
-                        (_iso(now),),
-                    )
-                    raise CircuitOpen("maximum automatic recovery probes exceeded")
                 con.execute(
                     "UPDATE platform_access_state SET state='HALF_OPEN',recovery_attempts=recovery_attempts+1,"
                     "reason='single_recovery_probe',updated_at=? WHERE singleton=1",
@@ -286,12 +278,11 @@ class PlatformAccessController:
             fields = ["last_request_id=?", "last_session_id=?", "updated_at=?"]
             values: list[object] = [str(request_id or ""), permit.auth_session_id, _iso(now)]
             if code == 429:
-                manual = state.state == "HALF_OPEN" and state.recovery_attempts >= state.max_auto_recoveries
                 fields.extend(["state=?", "opened_at=?", "retry_after_until=?", "last_429=?", "reason=?"])
                 values.extend([
-                    "MANUAL_INTERVENTION" if manual else "RATE_LIMITED",
+                    "RATE_LIMITED",
                     _iso(now), _iso(until), _iso(now),
-                    "max_auto_recoveries_exceeded" if manual else "http_429",
+                    "http_429",
                 ])
             elif code == 401:
                 fields.extend(["last_401=?", "reason=?"])
@@ -306,4 +297,3 @@ class PlatformAccessController:
                 values.append(_iso(now))
             values.append(1)
             con.execute(f"UPDATE platform_access_state SET {','.join(fields)} WHERE singleton=?", values)
-

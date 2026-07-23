@@ -283,7 +283,8 @@ class PlatformLedgerSynchronizer:
                         ),
                     )
                 con.execute(
-                    "UPDATE factory_control SET ledger_sync_id=?,cluster_freeze_complete=0,hard_stop=1,"
+                    "UPDATE factory_control SET ledger_sync_id=?,cluster_freeze_complete=0,"
+                    "readiness_state='cluster_freeze_required',readiness_reason='cluster_freeze_required',"
                     "reason='cluster_freeze_required',execute_submit=0,updated_at=? WHERE singleton=1",
                     (sync_id, synced_at),
                 )

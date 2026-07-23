@@ -89,7 +89,7 @@ def test_only_one_probe_is_allowed_after_retry_after(tmp_path: Path) -> None:
     assert controller.status().state == "CLOSED"
 
 
-def test_failed_recovery_probes_eventually_require_manual_action(tmp_path: Path) -> None:
+def test_failed_recovery_probes_remain_rate_limited_and_auto_recoverable(tmp_path: Path) -> None:
     from alpha_mining.platform.access import CircuitOpen, PlatformAccessController
 
     clock = MutableClock()
@@ -107,9 +107,11 @@ def test_failed_recovery_probes_eventually_require_manual_action(tmp_path: Path)
         clock.value += timedelta(seconds=3)
         probe = controller.before_request("identity", "GET", recovery_probe=True)
         controller.record_response(probe, status_code=429, retry_after=None)
-    assert controller.status().state == "MANUAL_INTERVENTION"
-    with pytest.raises(CircuitOpen):
-        controller.before_request("identity", "GET", recovery_probe=True)
+    state = controller.status()
+    assert state.state == "RATE_LIMITED"
+    assert state.reason == "http_429"
+    clock.value += timedelta(seconds=3)
+    controller.before_request("identity", "GET", recovery_probe=True)
 
 
 def test_platform_request_events_never_store_credentials_or_headers(tmp_path: Path) -> None:
@@ -262,13 +264,86 @@ def test_shared_client_never_replays_429_or_write_requests(tmp_path: Path) -> No
     assert write_session.calls == 1
 
 
-def test_shared_client_does_not_loop_authentication_after_401(tmp_path: Path) -> None:
+def test_shared_client_keeps_get_server_retries_within_configured_limit(tmp_path: Path) -> None:
     from alpha_mining.platform.client import ReadOnlyPlatformClient
 
     class Response:
-        status_code = 401
+        def __init__(self, status: int) -> None:
+            self.status_code = status
+            self.headers: dict[str, str] = {}
+            self.content = b"{}"
+            self.url = "https://example.test/read"
+            self.history: list[object] = []
+
+    class Session:
+        def __init__(self) -> None:
+            self.calls = 0
+            self.responses = [Response(500), Response(500), Response(500), Response(200)]
+
+        def request(self, *_args, **_kwargs):
+            response = self.responses[self.calls]
+            self.calls += 1
+            return response
+
+    client = ReadOnlyPlatformClient(
+        database=tmp_path / "events.sqlite",
+        lock_path=tmp_path / "worldquant_api.lock",
+        min_interval=0,
+        max_attempts=3,
+        sleeper=lambda _seconds: None,
+    )
+    session = Session()
+    client.session = session
+
+    response = client.request("GET", "https://example.test/read", endpoint_class="alpha_list")
+
+    assert response.status_code == 500
+    assert session.calls == 3
+
+
+def test_shared_client_reauthenticates_once_and_replays_after_401(tmp_path: Path) -> None:
+    from alpha_mining.platform.client import ReadOnlyPlatformClient
+
+    class Response:
+        def __init__(self, status_code: int) -> None:
+            self.status_code = status_code
+            self.headers: dict[str, str] = {}
+            self.content = b"{}"
+
+    class Session:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def request(self, *_args, **_kwargs):
+            self.calls += 1
+            return Response(401 if self.calls == 1 else 200)
+
+    client = ReadOnlyPlatformClient(
+        database=tmp_path / "events.sqlite",
+        lock_path=tmp_path / "worldquant_api.lock",
+        min_interval=0,
+    )
+    session = Session()
+    client.session = session
+    auth_calls: list[bool] = []
+    client.authenticate = lambda *, force=False: auth_calls.append(force)  # type: ignore[method-assign]
+    assert client.request("GET", "https://example.test/read", endpoint_class="identity").status_code == 200
+    assert session.calls == 2
+    assert auth_calls == [True]
+
+
+def test_shared_client_does_not_reauthenticate_for_non_auth_403(tmp_path: Path) -> None:
+    from alpha_mining.platform.client import ReadOnlyPlatformClient
+
+    class Response:
+        status_code = 403
         headers: dict[str, str] = {}
-        content = b"{}"
+        content = b'{"detail":"forbidden"}'
+        url = "https://api.worldquantbrain.com/alphas/forbidden"
+        history: list[object] = []
+
+        def json(self):
+            return {"detail": "forbidden"}
 
     class Session:
         calls = 0
@@ -286,9 +361,174 @@ def test_shared_client_does_not_loop_authentication_after_401(tmp_path: Path) ->
     client.session = session
     auth_calls: list[bool] = []
     client.authenticate = lambda *, force=False: auth_calls.append(force)  # type: ignore[method-assign]
-    assert client.request("GET", "https://example.test/read", endpoint_class="identity").status_code == 401
+
+    response = client.request("GET", "https://example.test/read", endpoint_class="identity")
+
+    assert response.status_code == 403
     assert session.calls == 1
     assert auth_calls == []
+
+
+def test_shared_client_does_not_reauthenticate_for_unrelated_403_redirect(tmp_path: Path) -> None:
+    from alpha_mining.platform.client import ReadOnlyPlatformClient
+
+    class Redirect:
+        status_code = 302
+        headers = {"Location": "/other"}
+        url = "https://example.test/other"
+
+    class Response:
+        status_code = 403
+        headers: dict[str, str] = {}
+        content = b"{}"
+        url = "https://example.test/read"
+        history = [Redirect()]
+
+    class Session:
+        calls = 0
+
+        def request(self, *_args, **_kwargs):
+            self.calls += 1
+            return Response()
+
+    client = ReadOnlyPlatformClient(
+        database=tmp_path / "events.sqlite",
+        lock_path=tmp_path / "worldquant_api.lock",
+        min_interval=0,
+    )
+    session = Session()
+    client.session = session
+    auth_calls: list[bool] = []
+    client.authenticate = lambda *, force=False: auth_calls.append(force)  # type: ignore[method-assign]
+
+    assert client.request("GET", "https://example.test/read", endpoint_class="identity").status_code == 403
+    assert session.calls == 1
+    assert auth_calls == []
+
+
+def test_password_auth_uses_basic_auth_post_without_body(tmp_path: Path, monkeypatch) -> None:
+    from requests.auth import HTTPBasicAuth
+    from alpha_mining.platform.client import ReadOnlyPlatformClient
+
+    client = ReadOnlyPlatformClient(
+        state_path=tmp_path / "state.json",
+        database=tmp_path / "events.sqlite",
+        lock_path=tmp_path / "worldquant_api.lock",
+        min_interval=0,
+    )
+    monkeypatch.setenv("WQ_USERNAME", "user@example.test")
+    monkeypatch.setenv("WQ_PASSWORD", "test-password")
+    captured: dict = {}
+
+    def fake_request(method, url, **kwargs):
+        captured.update(method=method, url=url, kwargs=kwargs)
+        return type(
+            "Response",
+            (),
+            {"status_code": 201, "headers": {}, "content": b"{}"},
+        )()
+
+    client.request = fake_request  # type: ignore[method-assign]
+    monkeypatch.setattr(
+        "alpha_mining.platform.client.ensure_authenticated",
+        lambda session, login, username, settings, force=False: login(),
+    )
+
+    client.authenticate(force=True)
+
+    assert captured["method"] == "POST"
+    assert captured["url"].endswith("/authentication")
+    assert isinstance(captured["kwargs"]["auth"], HTTPBasicAuth)
+    assert "json" not in captured["kwargs"] and "data" not in captured["kwargs"]
+    assert client.session.headers["Origin"] == "https://platform.worldquantbrain.com"
+    assert "application/json" in client.session.headers["Accept"]
+
+
+def test_no_cookie_cache_performs_password_login_and_persists_internal_session(
+    tmp_path: Path, monkeypatch
+) -> None:
+    from alpha_mining.platform.client import BASE_URL, ReadOnlyPlatformClient
+
+    monkeypatch.setenv("WQ_USERNAME", "user@example.test")
+    monkeypatch.setenv("WQ_PASSWORD", "test-password")
+    client = ReadOnlyPlatformClient(
+        state_path=tmp_path / "missing-auth-state.json",
+        database=tmp_path / "events.sqlite",
+        lock_path=tmp_path / "worldquant_api.lock",
+        min_interval=0,
+    )
+    calls: list[tuple[str, str]] = []
+
+    def fake_request(method: str, url: str, **_kwargs):
+        calls.append((method, url))
+        client.session.cookies.set("session", "internal-test-cookie")
+        return type(
+            "Response",
+            (),
+            {"status_code": 201, "headers": {}, "content": b"{}", "url": url, "history": []},
+        )()
+
+    monkeypatch.setattr(client.session, "request", fake_request)
+
+    client.authenticate()
+
+    assert calls == [("POST", f"{BASE_URL}/authentication")]
+    assert (tmp_path / "missing-auth-state.json").is_file()
+    assert "internal-test-cookie" not in (tmp_path / "missing-auth-state.json").read_text(
+        encoding="utf-8"
+    )
+
+
+def test_expired_cookie_401_relogs_with_password_and_recovers_original_request(
+    tmp_path: Path, monkeypatch
+) -> None:
+    from alpha_mining.platform.client import BASE_URL, ReadOnlyPlatformClient
+
+    monkeypatch.setenv("WQ_USERNAME", "user@example.test")
+    monkeypatch.setenv("WQ_PASSWORD", "test-password")
+    client = ReadOnlyPlatformClient(
+        state_path=tmp_path / "auth-state.json",
+        database=tmp_path / "events.sqlite",
+        lock_path=tmp_path / "worldquant_api.lock",
+        min_interval=0,
+    )
+    calls: list[tuple[str, str]] = []
+    get_count = 0
+
+    def fake_request(method: str, url: str, **_kwargs):
+        nonlocal get_count
+        calls.append((method, url))
+        if method == "POST":
+            client.session.cookies.set("session", f"generation-{len(calls)}")
+            status = 201
+        else:
+            get_count += 1
+            status = 401 if get_count == 1 else 200
+        return type(
+            "Response",
+            (),
+            {
+                "status_code": status,
+                "headers": {},
+                "content": b"{}",
+                "url": url,
+                "history": [],
+                "json": lambda self: {},
+            },
+        )()
+
+    monkeypatch.setattr(client.session, "request", fake_request)
+    client.authenticate(force=True)
+
+    response = client.request("GET", f"{BASE_URL}/users/self/alphas", endpoint_class="alpha_list")
+
+    assert response.status_code == 200
+    assert calls == [
+        ("POST", f"{BASE_URL}/authentication"),
+        ("GET", f"{BASE_URL}/users/self/alphas"),
+        ("POST", f"{BASE_URL}/authentication"),
+        ("GET", f"{BASE_URL}/users/self/alphas"),
+    ]
 
 
 def test_clear_local_auth_artifacts_deletes_only_explicit_targets(tmp_path: Path) -> None:

@@ -328,7 +328,7 @@ def test_async_batch_deduplicates_identical_simulations(tmp_path: Path) -> None:
     assert claim_simulation_payloads(str(database), [payload]) == []
 
 
-def test_platform_client_opens_circuit_on_429_and_does_not_reauthenticate_401(tmp_path: Path) -> None:
+def test_platform_client_opens_circuit_on_429_and_reauthenticates_401_once(tmp_path: Path) -> None:
     from alpha_mining.platform.client import ReadOnlyPlatformClient
 
     class Response:
@@ -365,10 +365,10 @@ def test_platform_client_opens_circuit_on_429_and_does_not_reauthenticate_401(tm
         database=tmp_path / "auth.sqlite",
         lock_path=tmp_path / "auth.lock",
     )
-    second.session = Session([Response(401)])
+    second.session = Session([Response(401), Response(200)])
     second.authenticate = lambda *, force=False: auth_calls.append(force)  # type: ignore[method-assign]
-    assert second.request("GET", "https://example.test/read").status_code == 401
-    assert auth_calls == []
+    assert second.request("GET", "https://example.test/read").status_code == 200
+    assert auth_calls == [True]
 
 
 def test_check_polling_reauthenticates_only_once_on_401(monkeypatch) -> None:
