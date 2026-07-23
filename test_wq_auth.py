@@ -1,52 +1,49 @@
 #!/usr/bin/env python
-"""Test WQ authentication with current credentials."""
+"""Manual WorldQuant authentication probe; never runs during pytest import."""
+
+from __future__ import annotations
+
 import os
-import requests
 from pathlib import Path
 
-# Load .env
-env_file = Path(".env")
-if env_file.exists():
-    for line in env_file.read_text().splitlines():
-        if line.strip() and not line.startswith("#") and "=" in line:
-            key, val = line.split("=", 1)
-            os.environ[key.strip()] = val.strip()
+import requests
+from requests.auth import HTTPBasicAuth
 
-username = os.environ.get("WQ_USERNAME", "").strip()
-password = os.environ.get("WQ_PASSWORD", "")
-proxy = os.environ.get("HTTPS_PROXY", "http://127.0.0.1:7892")
 
-if not username or not password:
-    print("❌ WQ_USERNAME or WQ_PASSWORD not set in .env")
-    exit(1)
+def main() -> int:
+    from alpha_mining.common import load_workspace_env
 
-print(f"Testing authentication for {username[:3]}***@{username.split('@')[1] if '@' in username else '?'}")
-print(f"Using proxy: {proxy}")
+    load_workspace_env(Path(__file__).resolve().parent / ".env")
+    username = os.environ.get("WQ_USERNAME", "").strip()
+    password = os.environ.get("WQ_PASSWORD", "")
+    proxy = os.environ.get("HTTPS_PROXY", "http://127.0.0.1:7892")
+    if not username or not password:
+        print("WQ_USERNAME or WQ_PASSWORD is not configured in .env")
+        return 1
 
-try:
-    resp = requests.post(
-        "https://api.worldquantbrain.com/authentication",
-        auth=(username, password),
-        proxies={"https": proxy},
-        timeout=30,
+    session = requests.Session()
+    session.auth = HTTPBasicAuth(username, password)
+    session.headers.update(
+        {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "application/json, */*",
+            "Content-Type": "application/json",
+            "Origin": "https://platform.worldquantbrain.com",
+        }
     )
-    print(f"\nHTTP {resp.status_code}")
+    if proxy:
+        session.proxies["https"] = proxy
+    try:
+        response = session.post(
+            "https://api.worldquantbrain.com/authentication",
+            timeout=(15, 60),
+        )
+    except requests.RequestException as exc:
+        print(f"Authentication request failed: {type(exc).__name__}")
+        return 1
+    print(f"Authentication HTTP {response.status_code}")
+    return 0 if response.status_code in {200, 201} else 1
 
-    if resp.status_code == 200:
-        print("✅ Authentication successful!")
-        print(f"   Set-Cookie headers: {len([h for h in resp.headers if h.lower()=='set-cookie'])}")
-    elif resp.status_code == 401:
-        print("❌ Authentication failed (401 Unauthorized)")
-        print("   Possible reasons:")
-        print("   - Password expired/changed")
-        print("   - Account locked due to too many failed attempts")
-        print("   - WQ changed auth mechanism")
-        print("\n   → Try logging in via browser first to verify account status")
-    elif resp.status_code == 429:
-        print("⚠️  Rate limited (429 Too Many Requests)")
-        print("   → Wait 1-24 hours before retrying")
-    else:
-        print(f"⚠️  Unexpected response: {resp.status_code}")
-        print(f"   Body: {resp.text[:200]}")
-except Exception as e:
-    print(f"❌ Request failed: {e}")
+
+if __name__ == "__main__":
+    raise SystemExit(main())

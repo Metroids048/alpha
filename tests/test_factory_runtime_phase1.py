@@ -110,6 +110,19 @@ def test_authoritative_runtime_has_no_legacy_v50_delegation() -> None:
     assert "FactoryOrchestrator" in source
 
 
+def test_runtime_classifies_recoverable_failures_without_stopping_loop() -> None:
+    import sqlite3
+
+    import requests
+
+    from alpha_mining.factory.runtime import recovery_exit_code
+
+    assert recovery_exit_code(sqlite3.OperationalError("database is locked")) == 6
+    assert recovery_exit_code(PermissionError("authentication refresh exhausted after HTTP 401")) == 4
+    assert recovery_exit_code(requests.Timeout("temporary timeout")) == 3
+    assert recovery_exit_code(RuntimeError("unexpected worker failure")) == 7
+
+
 def test_factory_write_access_defaults_off_and_requires_confirmation(tmp_path: Path) -> None:
     import pytest
     from alpha_mining.factory.control import FactoryControl

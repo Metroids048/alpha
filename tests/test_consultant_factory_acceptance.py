@@ -48,6 +48,11 @@ def test_platform_count_matches_full_pagination(tmp_path: Path) -> None:
     )
     assert result.status == "COMPLETE"
     assert result.declared_count == result.unique_alpha_ids == 3
+    from alpha_mining.factory.control import FactoryControl
+
+    state = FactoryControl(tmp_path / "ledger.sqlite").status()
+    assert state.hard_stop is False
+    assert state.readiness_state == "cluster_freeze_required"
 
 
 def test_count_and_list_use_same_filters(tmp_path: Path) -> None:
@@ -307,11 +312,11 @@ def test_submit_blocks_when_platform_ledger_identity_is_missing() -> None:
     assert "PLATFORM_LEDGER_SYNC_MISSING" in decision.reasons
 
 
-def test_factory_hard_stop_blocks_generation(tmp_path: Path) -> None:
+def test_factory_readiness_blocks_generation_without_hard_stop(tmp_path: Path) -> None:
     from alpha_mining.factory.control import FactoryControl
 
     control = FactoryControl(tmp_path / "factory.sqlite")
-    assert control.status().hard_stop is True
+    assert control.status().hard_stop is False
     assert control.can_generate() is False
 
 
@@ -384,6 +389,11 @@ def test_acceptance_report_writes_required_artifacts(tmp_path: Path) -> None:
     migrate(db)
     result = run_acceptance_audit(db, tmp_path)
     assert result.status == "BLOCKED"
+    from alpha_mining.factory.control import FactoryControl
+
+    state = FactoryControl(db).status()
+    assert state.hard_stop is False
+    assert state.readiness_state in {"acceptance_pilot_pending", "acceptance_audit_required"}
     for name in (
         "CURRENT_MAIN_ACCEPTANCE_AUDIT.md",
         "CONSULTANT_FACTORY_FINAL_ACCEPTANCE.md",

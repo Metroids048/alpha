@@ -17,7 +17,6 @@ import requests
 from yarl import URL
 
 from alpha_mining.auth.session_manager import (
-    AuthDailyLimitExceeded,
     AuthSettings,
     AuthStateError,
     AuthenticationFailed,
@@ -121,7 +120,7 @@ def test_twenty_mixed_sync_async_calls_share_one_real_login(
     assert handler.calls == 1
 
 
-def test_daily_cap_rejects_third_forced_login(tmp_path: Path, auth_server) -> None:
+def test_daily_cap_is_diagnostic_and_does_not_block_forced_relogin(tmp_path: Path, auth_server) -> None:
     url, handler = auth_server
     settings = _settings(tmp_path, daily_cap=2, max_attempts=1)
     session = requests.Session()
@@ -140,18 +139,17 @@ def test_daily_cap_rejects_third_forced_login(tmp_path: Path, auth_server) -> No
         settings,
         force=True,
     )
-    with pytest.raises(AuthDailyLimitExceeded, match="UTC.*2"):
-        ensure_authenticated(
-            session,
-            lambda: session.post(url, timeout=3),
-            "cap@example.test",
-            settings,
-            force=True,
-        )
+    ensure_authenticated(
+        session,
+        lambda: session.post(url, timeout=3),
+        "cap@example.test",
+        settings,
+        force=True,
+    )
 
-    assert handler.calls == 2
+    assert handler.calls == 3
     state = json.loads(Path(settings.state_path).read_text(encoding="utf-8"))
-    assert state["auth_attempts"] == 2
+    assert state["auth_attempts"] == 3
     assert set(state) == {
         "version",
         "account_fingerprint",
@@ -186,6 +184,18 @@ def test_5xx_retries_once_but_4xx_never_retries(tmp_path: Path, auth_server) -> 
             second_settings,
         )
     assert handler.calls == 3
+
+
+def test_password_auth_accepts_only_200_or_201(tmp_path: Path) -> None:
+    settings = _settings(tmp_path, max_attempts=1)
+
+    class Response:
+        status_code = 204
+
+    with pytest.raises(AuthenticationFailed, match="HTTP 204"):
+        ensure_authenticated(
+            requests.Session(), lambda: Response(), "status@example.test", settings
+        )
 
 
 def test_corrupt_state_fails_closed_without_login(tmp_path: Path) -> None:
@@ -462,14 +472,13 @@ def test_utc_day_change_resets_attempt_counter(
         settings,
         force=True,
     )
-    with pytest.raises(AuthDailyLimitExceeded):
-        ensure_authenticated(
-            first_session,
-            lambda: first_session.post(url, timeout=3),
-            "utc@example.test",
-            settings,
-            force=True,
-        )
+    ensure_authenticated(
+        first_session,
+        lambda: first_session.post(url, timeout=3),
+        "utc@example.test",
+        settings,
+        force=True,
+    )
 
     monkeypatch.setattr(
         session_manager, "_utc_now", lambda: day_one + timedelta(minutes=2)
@@ -492,7 +501,7 @@ def test_utc_day_change_resets_attempt_counter(
     state = json.loads(Path(settings.state_path).read_text(encoding="utf-8"))
     assert state["utc_date"] == "2026-07-18"
     assert state["auth_attempts"] == 1
-    assert handler.calls == 2
+    assert handler.calls == 3
 
 
 def test_dpapi_blob_tampering_fails_closed(tmp_path: Path, auth_server) -> None:

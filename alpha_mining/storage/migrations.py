@@ -298,6 +298,44 @@ ALTER TABLE description_backfill_jobs ADD COLUMN description_facts_json TEXT NOT
 ALTER TABLE description_backfill_jobs ADD COLUMN validation_errors_json TEXT NOT NULL DEFAULT '[]';
 """,
     ),
+    (
+        11,
+        """
+ALTER TABLE factory_control ADD COLUMN stop_kind TEXT NOT NULL DEFAULT '';
+ALTER TABLE factory_control ADD COLUMN readiness_state TEXT NOT NULL DEFAULT '';
+ALTER TABLE factory_control ADD COLUMN readiness_reason TEXT NOT NULL DEFAULT '';
+CREATE TABLE IF NOT EXISTS loop_health (
+ singleton INTEGER PRIMARY KEY CHECK(singleton=1), current_cycle INTEGER NOT NULL DEFAULT 0,
+ consecutive_cycle_failures INTEGER NOT NULL DEFAULT 0, last_success_at TEXT,
+ last_failure_at TEXT, last_failure_category TEXT NOT NULL DEFAULT '',
+ last_exception TEXT NOT NULL DEFAULT '', recovery_attempts INTEGER NOT NULL DEFAULT 0,
+ updated_at TEXT NOT NULL
+);
+INSERT OR IGNORE INTO loop_health(singleton,updated_at) VALUES(1,CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS loop_incidents (
+ incident_id INTEGER PRIMARY KEY AUTOINCREMENT, cycle INTEGER NOT NULL, task_id TEXT NOT NULL DEFAULT '',
+ input_id TEXT NOT NULL DEFAULT '', category TEXT NOT NULL, rc INTEGER NOT NULL,
+ consecutive_cycle_failures INTEGER NOT NULL DEFAULT 0, retry_after_seconds REAL,
+ detail TEXT NOT NULL DEFAULT '', traceback_text TEXT NOT NULL DEFAULT '', occurred_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_loop_incidents_cycle ON loop_incidents(cycle,occurred_at);
+CREATE INDEX IF NOT EXISTS idx_loop_incidents_category ON loop_incidents(category,occurred_at);
+UPDATE factory_control
+SET hard_stop=0, stop_kind='', readiness_state=reason, readiness_reason=reason
+WHERE hard_stop=1 AND reason IN (
+ 'acceptance_audit_required','cluster_freeze_required','acceptance_pilot_pending',
+ 'ledger_stale','ledger_sync_required','PLATFORM_LEDGER_NOT_COMPLETE'
+);
+UPDATE factory_control
+SET stop_kind='manual'
+WHERE hard_stop=1 AND stop_kind='';
+UPDATE platform_access_state
+SET state='RATE_LIMITED', reason='legacy_rate_limit_recoverable'
+WHERE state='MANUAL_INTERVENTION' AND reason IN (
+ 'max_auto_recoveries_exceeded','manual platform access recovery is required'
+);
+""",
+    ),
 )
 
 

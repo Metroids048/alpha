@@ -134,6 +134,32 @@ class WaitForNetworkTests(unittest.TestCase):
         self.assertEqual(slept, [60, 120])  # escalating backoff
         self.assertIs(state["network_unreachable"], False)
 
+    def test_explicit_stop_interrupts_network_wait(self) -> None:
+        stopped = False
+        orig_reach = LOOP._tcp_reachable
+        orig_save = LOOP._save_state
+        LOOP._tcp_reachable = lambda *a, **k: False  # type: ignore[assignment]
+        LOOP._save_state = lambda p, s: None  # type: ignore[assignment]
+
+        def sleeper(_seconds: float) -> None:
+            nonlocal stopped
+            stopped = True
+
+        try:
+            reachable = LOOP._wait_for_network(
+                ["--https-proxy", "http://127.0.0.1:7892"],
+                {},
+                Path("x.json"),
+                initial=60,
+                env={},
+                sleeper=sleeper,
+                stop_requested=lambda: stopped,
+            )
+        finally:
+            LOOP._tcp_reachable = orig_reach  # type: ignore[assignment]
+            LOOP._save_state = orig_save  # type: ignore[assignment]
+        self.assertFalse(reachable)
+
 
 class V50ClassificationTests(unittest.TestCase):
     def test_proxy_down_is_transient(self) -> None:

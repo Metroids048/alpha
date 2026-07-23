@@ -4,9 +4,55 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
+import sqlite3
+import traceback
 from typing import Sequence
 
 from .control import FactoryControl
+
+
+def recovery_exit_code(exc: BaseException) -> int:
+    from alpha_mining.auth.session_manager import (
+        AuthDailyLimitExceeded,
+        AuthenticationFailed,
+        AuthStateError,
+    )
+    from alpha_mining.platform.access import CircuitOpen
+
+    if isinstance(exc, CircuitOpen):
+        return 5
+    if isinstance(exc, sqlite3.OperationalError) and "locked" in str(exc).lower():
+        return 6
+    if isinstance(exc, (AuthenticationFailed, AuthDailyLimitExceeded, AuthStateError)):
+        return 4
+    message = str(exc).lower()
+    if isinstance(exc, PermissionError) and any(
+        token in message for token in ("authentication", "http 401", "session expired")
+    ):
+        return 4
+    try:
+        import requests
+
+        if isinstance(exc, requests.RequestException):
+            return 3
+    except ImportError:
+        pass
+    if isinstance(exc, (ConnectionError, TimeoutError)):
+        return 3
+    return 7
+
+
+def _sanitize_diagnostic(text: str) -> str:
+    return re.sub(
+        r"(?i)\b(password|passwd|token|cookie|authorization)\s*[:=]\s*[^\s,;]+",
+        lambda match: f"{match.group(1)}=[REDACTED]",
+        text,
+    )
+
+
+def _sanitized_traceback() -> str:
+    return _sanitize_diagnostic(traceback.format_exc())
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -22,7 +68,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     args, _unknown = parser.parse_known_args(argv)
     control = FactoryControl(args.database)
     state = control.status()
-    if args.mode not in {"preflight", "audit", "status"} and state.hard_stop:
+    if (
+        args.mode not in {"preflight", "audit", "status"}
+        and state.hard_stop
+        and state.stop_kind in {"manual", "security", "data_integrity"}
+    ):
         print(f"[factory] BLOCKED hard_stop=1 reason={state.reason}")
         return 2
     if args.mode in {"preflight", "audit", "status"}:
@@ -57,9 +107,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
     except CircuitOpen as exc:
         print(f"[factory] RATE_LIMITED: {exc}")
-        return 4
+        return 5
     except Exception as exc:
-        print(f"[factory] platform cycle failed: {type(exc).__name__}: {exc}")
+        detail = _sanitize_diagnostic(f"{type(exc).__name__}: {exc}")
+        print(f"[factory] platform cycle failed: {detail}")
+        print(_sanitized_traceback(), end="")
         # Check if the error is due to 429 by inspecting access state
         import sqlite3
         from pathlib import Path
@@ -70,10 +122,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 ).fetchone()
                 if access_state and str(access_state[0]) in {"RATE_LIMITED", "MANUAL_INTERVENTION"}:
                     print("[factory] RATE_LIMITED state detected after exception")
-                    return 4
+                    return 5
         except Exception:
             pass
-        return 3
+        return recovery_exit_code(exc)
     print(f"[factory] {json.dumps(summary.__dict__, sort_keys=True)}")
     return 0 if summary.failed == 0 else 1
 

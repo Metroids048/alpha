@@ -4,13 +4,22 @@
 from __future__ import annotations
 
 import argparse
+from collections import deque
 import json
 import os
+import re
+import signal
+import sqlite3
 import subprocess
 import sys
+import threading
 import time
+import traceback
+from dataclasses import dataclass, replace
+from datetime import datetime, timezone
+from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 _ROOT = Path(__file__).resolve().parent
 if str(_ROOT) not in sys.path:
@@ -22,10 +31,163 @@ HOPEFUL_JSONL = "hopeful_alphas.jsonl"
 SUBMISSION_JSONL = "submission_results.jsonl"
 CYCLE_SCRIPT = "run_pipeline_cycle.py"
 
-# Keep in sync with auto_alpha_pipeline_rebuilt_v50.AUTH_FATAL_EXIT_CODE.
-# On this exit code the loop stops immediately and writes a sentinel file.
-AUTH_FATAL_EXIT_CODE = 4
-SENTINEL_FILENAME = "pipeline_loop_blocked.flag"
+
+class RecoveryCategory(str, Enum):
+    SUCCESS = "SUCCESS"
+    RECOVERABLE_CYCLE_FAILURE = "RECOVERABLE_CYCLE_FAILURE"
+    NETWORK_ERROR = "NETWORK_ERROR"
+    AUTH_ERROR = "AUTH_ERROR"
+    RATE_LIMITED = "RATE_LIMITED"
+    DATABASE_LOCKED = "DATABASE_LOCKED"
+    CHILD_PROCESS_CRASH = "CHILD_PROCESS_CRASH"
+    UNKNOWN_RUNTIME_ERROR = "UNKNOWN_RUNTIME_ERROR"
+
+
+@dataclass(frozen=True)
+class CycleOutcome:
+    cycle: int
+    rc: int
+    category: RecoveryCategory
+    consecutive_failures: int = 0
+    task_id: str = ""
+    input_id: str = ""
+    retry_after_seconds: float | None = None
+    traceback_text: str = ""
+    detail: str = ""
+    elapsed_seconds: float = 0.0
+
+
+@dataclass(frozen=True)
+class ChildProcessResult:
+    rc: int
+    output_tail: str = ""
+
+
+def _sanitize_diagnostic(value: str) -> str:
+    text = str(value or "")
+    text = re.sub(
+        r"(?i)\b(password|passwd|token|cookie|authorization)\s*[:=]\s*[^\s,;]+",
+        lambda match: f"{match.group(1)}=[REDACTED]",
+        text,
+    )
+    return re.sub(r"(?i)\bBearer\s+[^\s,;]+", "Bearer [REDACTED]", text)
+
+
+def _outcome_from_child_result(
+    *, cycle: int, task_id: str, result: ChildProcessResult
+) -> CycleOutcome:
+    outcome = _outcome_from_rc(cycle, result.rc)
+    tail = _sanitize_diagnostic(result.output_tail)
+    if result.rc in {1} and "traceback (most recent call last)" in tail.lower():
+        outcome = replace(outcome, category=RecoveryCategory.CHILD_PROCESS_CRASH)
+    return replace(
+        outcome,
+        task_id=str(task_id),
+        traceback_text=tail if "traceback" in tail.lower() else "",
+        detail=tail[-4000:] if result.rc != 0 else "",
+    )
+
+
+def _outcome_from_rc(cycle: int, rc: int) -> CycleOutcome:
+    categories = {
+        0: RecoveryCategory.SUCCESS,
+        1: RecoveryCategory.RECOVERABLE_CYCLE_FAILURE,
+        3: RecoveryCategory.NETWORK_ERROR,
+        4: RecoveryCategory.AUTH_ERROR,
+        5: RecoveryCategory.RATE_LIMITED,
+        6: RecoveryCategory.DATABASE_LOCKED,
+    }
+    category = (
+        RecoveryCategory.CHILD_PROCESS_CRASH
+        if int(rc) < 0
+        else categories.get(int(rc), RecoveryCategory.UNKNOWN_RUNTIME_ERROR)
+    )
+    return CycleOutcome(cycle=int(cycle), rc=int(rc), category=category)
+
+
+def _recovery_delay(
+    outcome: CycleOutcome, *, consecutive_failures: int, inter_cycle_sleep: float
+) -> float:
+    if outcome.retry_after_seconds is not None:
+        return max(0.0, float(outcome.retry_after_seconds))
+    base = max(0.0, float(inter_cycle_sleep))
+    if outcome.category is RecoveryCategory.SUCCESS:
+        return base
+    exponent = min(max(0, int(consecutive_failures) - 1), 6)
+    return min(900.0, max(1.0, base) * (2**exponent))
+
+
+def run_forever(
+    *,
+    cycle_runner: Callable[[int], int | CycleOutcome],
+    stop_requested: Callable[[], bool],
+    sleeper: Callable[[float], None] = time.sleep,
+    clock: Callable[[], float] = time.monotonic,
+    on_outcome: Callable[[CycleOutcome], None] | None = None,
+    inter_cycle_sleep: float = 120.0,
+    start_cycle: int = 1,
+) -> int:
+    """Run recoverable cycles until an explicit stop request is observed."""
+
+    cycle = max(1, int(start_cycle))
+    consecutive_failures = 0
+
+    def should_stop() -> bool:
+        try:
+            return bool(stop_requested())
+        except Exception as exc:
+            detail = _sanitize_diagnostic(f"{type(exc).__name__}: {exc}")
+            print(f"[loop] warn stop probe failed: {detail}")
+            return False
+
+    while not should_stop():
+        started_at = 0.0
+        try:
+            started_at = float(clock())
+            raw = cycle_runner(cycle)
+            outcome = (
+                raw
+                if isinstance(raw, CycleOutcome)
+                else _outcome_from_rc(cycle, int(raw))
+            )
+        except Exception as exc:
+            outcome = CycleOutcome(
+                cycle=cycle,
+                rc=1,
+                category=RecoveryCategory.UNKNOWN_RUNTIME_ERROR,
+                traceback_text=_sanitize_diagnostic(traceback.format_exc()),
+                detail=_sanitize_diagnostic(f"{type(exc).__name__}: {exc}"),
+            )
+        if outcome.category is RecoveryCategory.SUCCESS:
+            consecutive_failures = 0
+        else:
+            consecutive_failures += 1
+        try:
+            elapsed_seconds = max(0.0, float(clock()) - started_at)
+        except Exception:
+            elapsed_seconds = 0.0
+        outcome = replace(
+            outcome,
+            consecutive_failures=consecutive_failures,
+            elapsed_seconds=elapsed_seconds,
+        )
+        if on_outcome is not None:
+            try:
+                on_outcome(outcome)
+            except Exception as exc:
+                detail = _sanitize_diagnostic(f"{type(exc).__name__}: {exc}")
+                print(f"[loop] warn outcome persistence failed: {detail}")
+        cycle += 1
+        if should_stop():
+            break
+        sleeper(
+            _recovery_delay(
+                outcome,
+                consecutive_failures=consecutive_failures,
+                inter_cycle_sleep=inter_cycle_sleep,
+            )
+        )
+    return 0
 
 
 def _utc() -> str:
@@ -52,16 +214,32 @@ def _save_state(path: Path, state: dict[str, Any]) -> None:
     path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def _persisted_retry_after_seconds(
+    database: Path, *, now: datetime | None = None
+) -> float | None:
+    current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    try:
+        with sqlite3.connect(database) as con:
+            row = con.execute(
+                "SELECT state,retry_after_until FROM platform_access_state WHERE singleton=1"
+            ).fetchone()
+    except sqlite3.Error:
+        return None
+    if not row or str(row[0]) != "RATE_LIMITED" or not row[1]:
+        return None
+    try:
+        deadline = datetime.fromisoformat(str(row[1]).replace("Z", "+00:00"))
+        if deadline.tzinfo is None:
+            deadline = deadline.replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+    return max(0.0, (deadline.astimezone(timezone.utc) - current).total_seconds())
+
+
 # Exit code emitted by the cycle subprocess (auto_alpha_pipeline_rebuilt_v50.NETWORK_EXIT_CODE)
 # when the API/proxy is unreachable. Kept in sync as a literal to avoid importing the
 # heavy pipeline module just to read one constant.
 NETWORK_EXIT_CODE = 3
-
-
-def _write_sentinel(root: Path, reason: str) -> None:
-    path = root / SENTINEL_FILENAME
-    path.write_text(f"{_utc()} {reason}\n", encoding="utf-8")
-    print(f"[loop] BLOCKED sentinel written -> {path}")
 
 
 def _parse_host_port(proxy: str) -> tuple[str, int] | None:
@@ -115,7 +293,9 @@ def _wait_for_network(
     cap: int = 900,
     timeout: float = 3.0,
     env: dict[str, str] | None = None,
-) -> None:
+    sleeper: Callable[[float], object] | None = None,
+    stop_requested: Callable[[], bool] = lambda: False,
+) -> bool:
     """Block until the configured proxy is reachable (pause-and-wait, auto-resume).
 
     No proxy configured → no cheap reachability target, so this is a no-op (the
@@ -124,12 +304,15 @@ def _wait_for_network(
     """
     ep = _proxy_endpoint(passthrough, env=env)
     if ep is None:
-        return
+        return True
     host, port = ep
+    sleep = sleeper or time.sleep
     wait = max(1, int(initial))
     waited_total = 0
     was_down = False
     while not _tcp_reachable(host, port, timeout=timeout):
+        if stop_requested():
+            return False
         was_down = True
         print(f"[loop] network unreachable proxy={host}:{port}; waiting {wait}s")
         state.update(
@@ -140,13 +323,16 @@ def _wait_for_network(
             }
         )
         _save_state(state_path, state)
-        time.sleep(wait)
+        sleep(wait)
         waited_total += wait
+        if stop_requested():
+            return False
         wait = min(int(cap), wait * 2)
     if was_down:
         print(f"[loop] network restored proxy={host}:{port} after ~{waited_total}s")
     state.update({"network_unreachable": False, "last_network_ok_utc": _utc()})
     _save_state(state_path, state)
+    return True
 
 
 def _build_cycle_cmd(
@@ -260,7 +446,7 @@ def _should_run_submit_drain(args: argparse.Namespace) -> bool:
 
 def _run_subprocess(
     cmd: list[str], *, cwd: Path, label: str, log_path: Path | None = None
-) -> int:
+) -> ChildProcessResult:
     """Run child process with live stdout (no popup window on Windows).
 
     Previously used capture_output=True, which hid all v50 progress until exit.
@@ -296,10 +482,12 @@ def _run_subprocess(
         log_file.write(f"\n--- {_utc()} {label} ---\n")
         log_file.flush()
 
+    output_tail: deque[str] = deque(maxlen=80)
     proc = subprocess.Popen(cmd, **popen_kwargs)
     try:
         assert proc.stdout is not None
         for line in proc.stdout:
+            output_tail.append(line)
             sys.stdout.write(line)
             if not line.endswith("\n"):
                 sys.stdout.write("\n")
@@ -313,7 +501,7 @@ def _run_subprocess(
 
     rc = int(proc.wait())
     print(f"[loop] {label} exit_code={rc}")
-    return rc
+    return ChildProcessResult(rc=rc, output_tail="".join(output_tail))
 
 
 def _count_ready(
@@ -352,9 +540,6 @@ def parse_args() -> argparse.Namespace:
         ],
         default="diverse_exploration",
         help="Pipeline strategy preset forwarded to every cycle.",
-    )
-    p.add_argument(
-        "--max-cycles", type=int, default=0, help="Stop after N cycles (0 = infinite)."
     )
     p.add_argument(
         "--resume-from-cycle", type=int, default=1, help="First cycle number to run."
@@ -476,15 +661,6 @@ def parse_args() -> argparse.Namespace:
         help="Pass --dry-run-submit to pipeline.",
     )
     p.add_argument("--max-queue-similarity", type=float, default=0.72)
-    p.add_argument(
-        "--max-consecutive-failures",
-        type=int,
-        default=10,
-        help=(
-            "Stop and write a sentinel file after this many consecutive non-network "
-            "simulate failures (default: 10, 0 = disabled)."
-        ),
-    )
     p.add_argument("--state-file", default=STATE_FILENAME)
     p.add_argument(
         "--log-file",
@@ -513,6 +689,147 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
+def _run_pipeline_cycle_once(
+    *,
+    args: argparse.Namespace,
+    cycle: int,
+    root: Path,
+    cycle_script: Path,
+    passthrough: list[str],
+    state: dict[str, Any],
+    state_path: Path,
+    log_path: Path | None,
+    batch_size: int,
+    run_submit_drain: bool,
+    stop_requested: Callable[[], bool],
+    network_sleeper: Callable[[float], object] = time.sleep,
+) -> CycleOutcome:
+    t0 = time.time()
+    print(f"[loop] ===== cycle {cycle} =====")
+
+    if bool(getattr(args, "network_gate", True)):
+        network_ready = _wait_for_network(
+            passthrough,
+            state,
+            state_path,
+            initial=int(args.network_wait_initial_seconds),
+            cap=int(args.network_wait_cap_seconds),
+            timeout=float(args.network_check_timeout),
+            sleeper=network_sleeper,
+            stop_requested=stop_requested,
+        )
+        if not network_ready:
+            return CycleOutcome(
+                cycle=cycle,
+                rc=0,
+                category=RecoveryCategory.SUCCESS,
+                task_id=f"cycle_{cycle}/network_wait",
+                detail="explicit stop requested during network wait",
+            )
+
+    sim_cmd = _build_cycle_cmd(
+        cycle_script=cycle_script,
+        mode="full",
+        batch_size=batch_size,
+        resilient=bool(args.resilient_async),
+        passthrough=passthrough,
+    )
+    sim_result = _run_subprocess(
+        sim_cmd, cwd=root, label=f"cycle_{cycle}/simulate", log_path=log_path
+    )
+    sim_rc = sim_result.rc
+    elapsed = time.time() - t0
+    print(f"[loop] cycle {cycle} simulate finished in {elapsed / 3600:.1f}h rc={sim_rc}")
+
+    recheck_rc = 0
+    if _should_run_recheck_cycle(args, cycle):
+        recheck_passthrough = [x for x in passthrough if x != "--no-prebatch-recheck"]
+        recheck_extra = _build_recheck_extra_args(args)
+        print(
+            f"[loop] periodic recheck: max_items={int(args.recheck_max_items)} "
+            f"wall={float(args.recheck_wall_budget_seconds):.0f}s "
+            f"per_alpha={float(args.recheck_quick_timeout_seconds):.0f}s"
+        )
+        recheck_cmd = _build_cycle_cmd(
+            cycle_script=cycle_script,
+            mode="recheck",
+            batch_size=None,
+            resilient=False,
+            passthrough=recheck_passthrough,
+            recheck_extra=recheck_extra,
+        )
+        recheck_result = _run_subprocess(
+            recheck_cmd,
+            cwd=root,
+            label=f"cycle_{cycle}/recheck",
+            log_path=log_path,
+        )
+        recheck_rc = recheck_result.rc
+        if recheck_rc != 0:
+            print(f"[loop] warn recheck exit={recheck_rc}; continuing loop")
+
+    submit_rounds = 0
+    submit_rc = 0
+    if run_submit_drain:
+        while submit_rounds < int(args.max_submit_rounds):
+            ready = _count_ready(
+                root,
+                max_queue_similarity=float(args.max_queue_similarity),
+            )
+            if ready <= 0:
+                print(f"[loop] cycle {cycle} submit queue empty (ready=0)")
+                break
+            submit_rounds += 1
+            print(f"[loop] cycle {cycle} submit round {submit_rounds} ready={ready}")
+            sub_cmd = _build_cycle_cmd(
+                cycle_script=cycle_script,
+                mode="submit",
+                batch_size=None,
+                resilient=False,
+                passthrough=passthrough,
+            )
+            submit_result = _run_subprocess(
+                sub_cmd,
+                cwd=root,
+                label=f"cycle_{cycle}/submit_{submit_rounds}",
+                log_path=log_path,
+            )
+            submit_rc = submit_result.rc
+            if submit_rc != 0:
+                print(f"[loop] warn submit exit={submit_rc}; rechecking queue")
+            ready_after = _count_ready(
+                root,
+                max_queue_similarity=float(args.max_queue_similarity),
+            )
+            if ready_after <= 0:
+                break
+            time.sleep(max(5, int(args.submit_sleep)))
+
+    elapsed = time.time() - t0
+    state.update(
+        {
+            "last_cycle": cycle,
+            "last_utc": _utc(),
+            "last_sim_exit": sim_rc,
+            "last_recheck_exit": recheck_rc,
+            "last_submit_exit": submit_rc,
+            "last_submit_rounds": submit_rounds,
+            "batch_size": batch_size,
+            "elapsed_seconds": round(elapsed, 1),
+        }
+    )
+    _save_state(state_path, state)
+    print(
+        f"[loop] cycle {cycle} done elapsed={elapsed:.0f}s "
+        f"sim_rc={sim_rc} submit_rounds={submit_rounds}"
+    )
+    return _outcome_from_child_result(
+        cycle=cycle,
+        task_id=f"cycle_{cycle}/simulate",
+        result=sim_result,
+    )
+
+
 def main() -> int:
     from alpha_mining.common import load_workspace_env
 
@@ -529,7 +846,8 @@ def main() -> int:
     database = Path(args.database)
     if not database.is_absolute():
         database = root / database
-    factory_state = FactoryControl(database).status()
+    control = FactoryControl(database)
+    factory_state = control.status()
     if factory_state.hard_stop:
         print(f"[loop] BLOCKED hard_stop=1 reason={factory_state.reason}")
         return 2
@@ -550,223 +868,115 @@ def main() -> int:
     run_submit_drain = _should_run_submit_drain(args)
 
     state = _load_state(state_path)
-    cycle = max(1, int(args.resume_from_cycle))
-    max_cycles = int(args.max_cycles)
     batch_size = max(1, int(args.batch_size))
-    max_consecutive = int(getattr(args, "max_consecutive_failures", 10) or 0)
-    consecutive_failures = 0
 
     print(
-        f"[loop] start workspace={root} batch_size={batch_size} max_cycles={max_cycles or 'inf'} "
+        f"[loop] start workspace={root} batch_size={batch_size} cycles=unbounded "
         f"resilient={args.resilient_async} submit_drain={run_submit_drain}"
     )
     if log_path is not None:
         print(f"[loop] log_file={log_path}")
 
-    try:
-        while True:
-            if max_cycles > 0 and cycle > max_cycles:
-                print(f"[loop] reached max_cycles={max_cycles}")
-                break
+    stop_event = threading.Event()
+    signal_number = 0
 
-            t0 = time.time()
-            print(f"[loop] ===== cycle {cycle} =====")
+    def request_stop(signum: int, _frame: object) -> None:
+        nonlocal signal_number
+        signal_number = int(signum)
+        stop_event.set()
 
-            if bool(getattr(args, "network_gate", True)):
-                _wait_for_network(
-                    passthrough,
-                    state,
-                    state_path,
-                    initial=int(args.network_wait_initial_seconds),
-                    cap=int(args.network_wait_cap_seconds),
-                    timeout=float(args.network_check_timeout),
-                )
+    for name in ("SIGINT", "SIGTERM"):
+        sig = getattr(signal, name, None)
+        if sig is not None:
+            signal.signal(sig, request_stop)
 
-            sim_cmd = _build_cycle_cmd(
-                cycle_script=cycle_script,
-                mode="full",
-                batch_size=batch_size,
-                resilient=bool(args.resilient_async),
-                passthrough=passthrough,
+    def stop_requested() -> bool:
+        if stop_event.is_set():
+            return True
+        try:
+            current = control.status()
+            return bool(
+                current.hard_stop
+                and current.stop_kind in {"manual", "security", "data_integrity"}
             )
-            sim_rc = _run_subprocess(
-                sim_cmd, cwd=root, label=f"cycle_{cycle}/simulate", log_path=log_path
+        except (OSError, RuntimeError):
+            return False
+
+    def cycle_runner(cycle: int) -> CycleOutcome:
+        outcome = _run_pipeline_cycle_once(
+            args=args,
+            cycle=cycle,
+            root=root,
+            cycle_script=cycle_script,
+            passthrough=passthrough,
+            state=state,
+            state_path=state_path,
+            log_path=log_path,
+            batch_size=batch_size,
+            run_submit_drain=run_submit_drain,
+            stop_requested=stop_requested,
+            network_sleeper=stop_event.wait,
+        )
+        if outcome.category is RecoveryCategory.RATE_LIMITED:
+            outcome = replace(
+                outcome,
+                retry_after_seconds=_persisted_retry_after_seconds(database),
             )
-            elapsed = time.time() - t0
-            print(
-                f"[loop] cycle {cycle} simulate finished in {elapsed / 3600:.1f}h rc={sim_rc}"
-            )
+        return outcome
 
-            if sim_rc == NETWORK_EXIT_CODE:
-                # API/proxy was unreachable — not a real cycle. Do NOT advance the
-                # cycle counter; pause for connectivity and retry the same cycle.
-                consecutive_failures = 0
-                state.update(
-                    {
-                        "last_failure_utc": _utc(),
-                        "last_failure_kind": "network_unreachable",
-                        "last_failure_exit": sim_rc,
-                        "next_cycle": cycle,
-                        "consecutive_failures": 0,
-                    }
-                )
-                _save_state(state_path, state)
-                print(
-                    f"[loop] cycle {cycle} hit network failure (rc={sim_rc}); "
-                    f"pausing for connectivity (cycle not advanced)"
-                )
-                if bool(getattr(args, "network_gate", True)):
-                    _wait_for_network(
-                        passthrough,
-                        state,
-                        state_path,
-                        initial=int(args.network_wait_initial_seconds),
-                        cap=int(args.network_wait_cap_seconds),
-                        timeout=float(args.network_check_timeout),
-                    )
-                else:
-                    time.sleep(max(60, int(args.inter_cycle_sleep)))
-                continue
-
-            recheck_rc = 0
-            if _should_run_recheck_cycle(args, cycle):
-                recheck_passthrough = [
-                    x for x in passthrough if x != "--no-prebatch-recheck"
-                ]
-                recheck_extra = _build_recheck_extra_args(args)
-                print(
-                    f"[loop] periodic recheck: max_items={int(args.recheck_max_items)} "
-                    f"wall={float(args.recheck_wall_budget_seconds):.0f}s "
-                    f"per_alpha={float(args.recheck_quick_timeout_seconds):.0f}s"
-                )
-                recheck_cmd = _build_cycle_cmd(
-                    cycle_script=cycle_script,
-                    mode="recheck",
-                    batch_size=None,
-                    resilient=False,
-                    passthrough=recheck_passthrough,
-                    recheck_extra=recheck_extra,
-                )
-                recheck_rc = _run_subprocess(
-                    recheck_cmd,
-                    cwd=root,
-                    label=f"cycle_{cycle}/recheck",
-                    log_path=log_path,
-                )
-                if recheck_rc != 0:
-                    print(f"[loop] warn recheck exit={recheck_rc}; continuing loop")
-
-            submit_rounds = 0
-            submit_rc = 0
-            if run_submit_drain:
-                while submit_rounds < int(args.max_submit_rounds):
-                    ready = _count_ready(
-                        root,
-                        max_queue_similarity=float(args.max_queue_similarity),
-                    )
-                    if ready <= 0:
-                        print(f"[loop] cycle {cycle} submit queue empty (ready=0)")
-                        break
-                    submit_rounds += 1
-                    print(
-                        f"[loop] cycle {cycle} submit round {submit_rounds} ready={ready}"
-                    )
-                    sub_cmd = _build_cycle_cmd(
-                        cycle_script=cycle_script,
-                        mode="submit",
-                        batch_size=None,
-                        resilient=False,
-                        passthrough=passthrough,
-                    )
-                    submit_rc = _run_subprocess(
-                        sub_cmd,
-                        cwd=root,
-                        label=f"cycle_{cycle}/submit_{submit_rounds}",
-                        log_path=log_path,
-                    )
-                    if submit_rc != 0:
-                        print(f"[loop] warn submit exit={submit_rc}; rechecking queue")
-                    ready_after = _count_ready(
-                        root,
-                        max_queue_similarity=float(args.max_queue_similarity),
-                    )
-                    if ready_after <= 0:
-                        break
-                    time.sleep(max(5, int(args.submit_sleep)))
-
-            elapsed = time.time() - t0
-            state.update(
-                {
-                    "last_cycle": cycle,
-                    "last_utc": _utc(),
-                    "last_sim_exit": sim_rc,
-                    "last_recheck_exit": recheck_rc,
-                    "last_submit_exit": submit_rc,
-                    "last_submit_rounds": submit_rounds,
-                    "batch_size": batch_size,
-                    "elapsed_seconds": round(elapsed, 1),
-                }
-            )
-            _save_state(state_path, state)
-            print(
-                f"[loop] cycle {cycle} done elapsed={elapsed:.0f}s sim_rc={sim_rc} submit_rounds={submit_rounds}"
-            )
-
-            if sim_rc == AUTH_FATAL_EXIT_CODE:
-                reason = f"auth_fatal rc={sim_rc} cycle={cycle} — check credentials / auth state"
-                state.update(
-                    {
-                        "last_failure_utc": _utc(),
-                        "last_failure_kind": "auth_fatal",
-                        "last_failure_exit": sim_rc,
-                        "next_cycle": cycle,
-                    }
-                )
-                _save_state(state_path, state)
-                _write_sentinel(root, reason)
-                print(f"[loop] STOP: {reason}")
-                return 1
-            elif sim_rc != 0:
-                consecutive_failures += 1
-                state.update(
-                    {
-                        "last_failure_utc": _utc(),
-                        "last_failure_kind": "recoverable_child_failure",
-                        "last_failure_exit": sim_rc,
-                        "next_cycle": cycle + 1,
-                        "consecutive_failures": consecutive_failures,
-                    }
-                )
-                _save_state(state_path, state)
-                if max_consecutive > 0 and consecutive_failures >= max_consecutive:
-                    reason = (
-                        f"consecutive_failures={consecutive_failures} reached max={max_consecutive} "
-                        f"(last rc={sim_rc} cycle={cycle})"
-                    )
-                    _write_sentinel(root, reason)
-                    print(f"[loop] STOP: {reason}")
-                    return 1
-                print(
-                    f"[loop] simulate failed (rc={sim_rc}) consecutive={consecutive_failures}; "
-                    f"backing off, then continuing with cycle {cycle + 1}"
-                )
-                time.sleep(max(60, int(args.inter_cycle_sleep)))
-            else:
-                consecutive_failures = 0
-
-            cycle += 1
-            if max_cycles > 0 and cycle > max_cycles:
-                break
-            time.sleep(max(0, int(args.inter_cycle_sleep)))
-
-    except KeyboardInterrupt:
-        print("[loop] interrupted")
-        state["interrupted_at"] = _utc()
+    def record_outcome(outcome: CycleOutcome) -> None:
+        state.update(
+            {
+                "consecutive_cycle_failures": outcome.consecutive_failures,
+                "last_outcome_category": outcome.category.value,
+                "last_exception": outcome.detail,
+                "last_traceback": outcome.traceback_text,
+                "next_cycle": outcome.cycle + 1,
+            }
+        )
+        if outcome.category is RecoveryCategory.SUCCESS:
+            state["last_success_at"] = _utc()
+        else:
+            state["last_failure_at"] = _utc()
+            state["last_failure_category"] = outcome.category.value
         _save_state(state_path, state)
-        return 130
+        try:
+            control.record_cycle_outcome(
+                cycle=outcome.cycle,
+                category=outcome.category.value,
+                rc=outcome.rc,
+                consecutive_failures=outcome.consecutive_failures,
+                task_id=outcome.task_id,
+                input_id=outcome.input_id,
+                retry_after_seconds=outcome.retry_after_seconds,
+                detail=outcome.detail,
+                traceback_text=outcome.traceback_text,
+            )
+        except Exception as exc:
+            print(f"[loop] warn incident persistence failed: {type(exc).__name__}: {exc}")
 
-    print("[loop] finished")
-    return 0
+    try:
+        result = run_forever(
+            cycle_runner=cycle_runner,
+            stop_requested=stop_requested,
+            sleeper=stop_event.wait,
+            on_outcome=record_outcome,
+            inter_cycle_sleep=max(0, int(args.inter_cycle_sleep)),
+            start_cycle=max(1, int(args.resume_from_cycle)),
+        )
+    except KeyboardInterrupt:
+        signal_number = int(getattr(signal, "SIGINT", 2))
+        stop_event.set()
+        result = 0
+
+    state["stopped_at"] = _utc()
+    state["stop_signal"] = signal_number
+    _save_state(state_path, state)
+    if signal_number:
+        print(f"[loop] stopped by signal={signal_number}")
+        return 130 if signal_number == int(getattr(signal, "SIGINT", 2)) else 0
+    print("[loop] stopped by factory control")
+    return result
 
 
 if __name__ == "__main__":

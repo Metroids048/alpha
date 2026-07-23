@@ -11,11 +11,18 @@ from pathlib import Path
 from typing import Any, Callable, Iterable
 
 import requests
+from requests.auth import HTTPBasicAuth
 
 from alpha_mining.auth.session_manager import AuthSettings, ensure_authenticated
 from alpha_mining.platform.access import PlatformAccessController
 
 BASE_URL = "https://api.worldquantbrain.com"
+SESSION_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "Accept": "application/json, */*",
+    "Content-Type": "application/json",
+    "Origin": "https://platform.worldquantbrain.com",
+}
 
 
 class PlatformReadError(RuntimeError):
@@ -38,6 +45,36 @@ def retry_after_seconds(value: object) -> float:
             return 0.0
 
 
+def _response_requires_reauthentication(response: Any) -> bool:
+    status = int(getattr(response, "status_code", 0) or 0)
+    if status == 401:
+        return True
+    if status != 403:
+        url = str(getattr(response, "url", "") or "").lower()
+        return "/authentication" in url or "/login" in url
+    url = str(getattr(response, "url", "") or "").lower()
+    history = getattr(response, "history", ()) or ()
+    if "/authentication" in url or "/login" in url:
+        return True
+    for item in history:
+        if int(getattr(item, "status_code", 0) or 0) not in {301, 302, 303, 307, 308}:
+            continue
+        redirect_text = " ".join(
+            (
+                str(getattr(item, "url", "") or ""),
+                str((getattr(item, "headers", {}) or {}).get("Location", "")),
+            )
+        ).lower()
+        if "/authentication" in redirect_text or "/login" in redirect_text:
+            return True
+    try:
+        payload = response.json()
+    except Exception:
+        payload = {}
+    text = str(payload).lower()
+    return any(token in text for token in ("session expired", "not authenticated", "authentication required"))
+
+
 @dataclass
 class ReadOnlyPlatformClient:
     state_path: str | Path = ".wq_auth_state.json"
@@ -52,6 +89,8 @@ class ReadOnlyPlatformClient:
 
     def __post_init__(self) -> None:
         self.session = requests.Session()
+        self.session.headers.update(SESSION_HEADERS)
+        self.session.trust_env = True
         self._last_request_at = 0.0
         if self.controller is None:
             self.controller = PlatformAccessController(self.database, self.lock_path)
@@ -81,12 +120,14 @@ class ReadOnlyPlatformClient:
                     "protected session unavailable and WQ_PASSWORD is not configured"
                 )
             self._pace()
+            basic_auth = HTTPBasicAuth(username, password)
+            self.session.auth = basic_auth
             return self.request(
                 "POST",
                 f"{BASE_URL}/authentication",
                 endpoint_class="authentication",
                 allow_server_retry=False,
-                auth=(username, password),
+                auth=basic_auth,
             )
 
         ensure_authenticated(
@@ -110,7 +151,11 @@ class ReadOnlyPlatformClient:
     ) -> Any:
         verb = str(method).upper()
         attempts = max(1, int(self.max_attempts)) if verb == "GET" and allow_server_retry else 1
-        for attempt in range(1, attempts + 1):
+        auth_replayed = False
+        server_attempt = 1
+        request_attempt = 0
+        while server_attempt <= attempts:
+            request_attempt += 1
             self._pace()
             assert self.controller is not None
             with self.controller.global_lock():
@@ -118,7 +163,7 @@ class ReadOnlyPlatformClient:
                     endpoint_class,
                     verb,
                     recovery_probe=recovery_probe,
-                    attempt=attempt,
+                    attempt=request_attempt,
                     sync_id=sync_id or self.active_sync_id,
                 )
                 try:
@@ -129,9 +174,10 @@ class ReadOnlyPlatformClient:
                         status_code=0,
                         error_class=type(exc).__name__,
                     )
-                    if attempt >= attempts:
+                    if server_attempt >= attempts:
                         raise
-                    self.sleeper(min(2 ** (attempt - 1), 30))
+                    self.sleeper(min(2 ** (server_attempt - 1), 30))
+                    server_attempt += 1
                     continue
                 headers = getattr(response, "headers", {}) or {}
                 request_id = (
@@ -147,8 +193,16 @@ class ReadOnlyPlatformClient:
                     request_id=str(request_id),
                     response_body=getattr(response, "content", b""),
                 )
-            # A 429 is a global state transition, never an in-call retry. A 401
-            # also returns immediately so authentication cannot form a loop.
+            # A 429 is a global state transition, never an in-call retry. Auth
+            # failures get one credential-login replay, then return unchanged.
+            if (
+                endpoint_class != "authentication"
+                and _response_requires_reauthentication(response)
+                and not auth_replayed
+            ):
+                auth_replayed = True
+                self.authenticate(force=True)
+                continue
             if response.status_code in {401, 403, 429}:
                 return response
             if (
@@ -156,9 +210,10 @@ class ReadOnlyPlatformClient:
                 and
                 allow_server_retry
                 and response.status_code in {500, 502, 503, 504}
-                and attempt < attempts
+                and server_attempt < attempts
             ):
-                self.sleeper(min(2 ** (attempt - 1), 30))
+                self.sleeper(min(2 ** (server_attempt - 1), 30))
+                server_attempt += 1
                 continue
             return response
         raise PlatformReadError("platform request exhausted bounded retry attempts")
