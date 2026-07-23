@@ -514,6 +514,9 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    from alpha_mining.common import load_workspace_env
+
+    load_workspace_env(_ROOT / ".env")
     args = parse_args()
     if args.execute_submit:
         print(

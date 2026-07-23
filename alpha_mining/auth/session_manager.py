@@ -374,9 +374,22 @@ def _status_code(response: Any) -> int:
     return int(code)
 
 
-def _raise_for_auth_status(code: int) -> None:
+def _raise_for_auth_status(code: int, response: Any = None) -> None:
     if 200 <= code < 300:
         return
+    inquiry = ""
+    try:
+        payload = response.json() if response is not None and hasattr(response, "json") else {}
+        if isinstance(payload, dict):
+            inquiry = str(payload.get("inquiry") or "").strip()
+    except Exception:
+        inquiry = ""
+    if inquiry:
+        raise AuthenticationFailed(
+            "password login requires Persona biometrics; open "
+            f"https://platform.worldquantbrain.com/authenticate?inquiry={inquiry} "
+            f"complete face/captcha, then reuse the browser session cookie (HTTP {code})"
+        )
     raise AuthenticationFailed(f"authentication endpoint returned HTTP {code}")
 
 
@@ -451,7 +464,7 @@ def ensure_authenticated(
             try:
                 response = login_callback()
                 code = _status_code(response)
-                _raise_for_auth_status(code)
+                _raise_for_auth_status(code, response)
             except Exception as exc:
                 last_error = exc
                 if _should_retry(code, attempt, settings):
@@ -534,7 +547,7 @@ async def ensure_authenticated_async(
             try:
                 response = await login_callback()
                 code = _status_code(response)
-                _raise_for_auth_status(code)
+                _raise_for_auth_status(code, response)
             except Exception as exc:
                 last_error = exc
                 if _should_retry(code, attempt, settings):

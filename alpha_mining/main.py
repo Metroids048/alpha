@@ -569,6 +569,19 @@ def _cmd_factory_stop(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_factory_release(args: argparse.Namespace) -> int:
+    from dataclasses import asdict
+    from alpha_mining.factory.control import FactoryControl
+
+    try:
+        state = FactoryControl(args.database).release(args.confirm, reason=args.reason)
+    except PermissionError as exc:
+        print(f"[factory/release] BLOCKED: {exc}", file=sys.stderr)
+        return 2
+    print(json.dumps(asdict(state), sort_keys=True))
+    return 0
+
+
 def _cmd_factory_audit(args: argparse.Namespace) -> int:
     from alpha_mining.audit.acceptance import run_acceptance_audit
 
@@ -734,6 +747,14 @@ def _build_parser() -> argparse.ArgumentParser:
     p_factory_stop.add_argument("--database", default="research_memory.sqlite")
     p_factory_stop.add_argument("--reason", default="manual_stop")
     p_factory_stop.set_defaults(func=_cmd_factory_stop)
+    p_factory_release = factory_sub.add_parser(
+        "release",
+        help="Clear hard_stop after ledger sync + cluster freeze (does not enable submit).",
+    )
+    p_factory_release.add_argument("--database", default="research_memory.sqlite")
+    p_factory_release.add_argument("--confirm", default="")
+    p_factory_release.add_argument("--reason", default="manual_release")
+    p_factory_release.set_defaults(func=_cmd_factory_release)
     p_factory_audit = factory_sub.add_parser("audit")
     p_factory_audit.add_argument("--database", default="research_memory.sqlite")
     p_factory_audit.add_argument("--output-dir", default=".")
@@ -845,6 +866,9 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    from alpha_mining.common import load_workspace_env
+
+    load_workspace_env()
     parser = _build_parser()
     args = parser.parse_args(argv)
     return args.func(args)

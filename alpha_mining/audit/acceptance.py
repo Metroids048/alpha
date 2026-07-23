@@ -64,9 +64,11 @@ def _self_status(checks: list[dict[str, Any]]) -> str:
 
 
 def _latest_sync(con: sqlite3.Connection) -> tuple | None:
+    # Prefer COMPLETE over later PARTIAL/ERROR failures (lock contention can finish later).
     return con.execute(
         "SELECT sync_id,status,declared_count,fetched_rows,unique_alpha_ids,duplicate_alpha_ids,completed_at,error_message "
-        "FROM platform_sync_runs ORDER BY completed_at DESC LIMIT 1"
+        "FROM platform_sync_runs "
+        "ORDER BY CASE status WHEN 'COMPLETE' THEN 0 ELSE 1 END, completed_at DESC LIMIT 1"
     ).fetchone()
 
 

@@ -5930,10 +5930,18 @@ class WorldQuantAlphaPipeline:
         # the platform skip the credential check.
         self.sess.auth = HTTPBasicAuth(username, password)
         try:
+            # POST /authentication is a BasicAuth login with no body; temporarily
+            # clear Content-Type and other headers that might confuse the auth endpoint.
+            # Use minimal headers to match a clean POST.
             resp = self._sess_request(
                 "POST",
                 f"{self._BASE}/authentication",
                 timeout=self._timeout(),
+                headers={
+                    "Content-Type": None,
+                    "Accept": "*/*",
+                    "Origin": None,
+                },
             )
         except requests.RequestException as exc:
             print(f"[auth] credential re-login request failed: {_short_err(exc)}")

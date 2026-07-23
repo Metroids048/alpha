@@ -47,6 +47,23 @@ class FactoryControl:
             )
         return self.status()
 
+    def release(self, confirmation: str, *, reason: str = "manual_release") -> FactoryState:
+        """Clear hard_stop after ledger + cluster freeze; never enables submit/patch writes."""
+        if confirmation != "RELEASE_FACTORY_HARD_STOP":
+            raise PermissionError("factory release confirmation is invalid")
+        state = self.status()
+        if not state.ledger_sync_id:
+            raise PermissionError("COMPLETE ledger_sync_id is required before release")
+        if not state.cluster_freeze_complete:
+            raise PermissionError("cluster_freeze_complete is required before release")
+        now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        with sqlite3.connect(self.database) as con:
+            con.execute(
+                "UPDATE factory_control SET hard_stop=0,reason=?,updated_at=? WHERE singleton=1",
+                (str(reason or "manual_release"), now),
+            )
+        return self.status()
+
     def can_generate(self) -> bool:
         state = self.status()
         return not state.hard_stop and bool(state.ledger_sync_id) and state.cluster_freeze_complete
