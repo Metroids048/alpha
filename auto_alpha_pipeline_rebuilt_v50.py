@@ -9621,9 +9621,9 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument(
         "--sqlite-runs",
-        default="research_memory.sqlite",
+        default=None,
         metavar="PATH",
-        help="SQLite audit/idempotency store (default: research_memory.sqlite).",
+        help="SQLite audit/idempotency store (default: research_memory.sqlite outside observation mode).",
     )
     p.add_argument(
         "--submission-observe",
@@ -9784,7 +9784,11 @@ def main() -> int:
             if args.simulate_quality_check_seconds is not None
             else PipelineConfig.simulate_quality_check_poll_seconds
         ),
-        sqlite_runs_path=(str(args.sqlite_runs).strip() or None) if args.sqlite_runs else None,
+        sqlite_runs_path=(
+            str(args.sqlite_runs).strip()
+            if args.sqlite_runs
+            else "research_memory.sqlite"
+        ),
         submission_observe_enabled=bool(args.submission_observe),
         submission_observe_description_limit=max(0, int(args.submission_observe_description_limit)),
     )

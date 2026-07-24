@@ -408,21 +408,22 @@ def test_acceptance_report_writes_required_artifacts(tmp_path: Path) -> None:
         assert (tmp_path / name).is_file(), name
 
 
-def test_generator_emits_only_seven_bounded_mechanism_variants() -> None:
+def test_generator_emits_only_seven_group_rank_free_mechanism_variants() -> None:
     from alpha_mining.generator.consultant_generator import ConsultantGenerator
 
     candidates = ConsultantGenerator(max_per_hypothesis=99).generate(
         hypothesis_id="h1", family="fundamental", fields=["revenue", "close"]
     )
     assert [item.mutation_type for item in candidates] == [
-        "baseline",
-        "level_to_change",
+        "medium_horizon_momentum",
+        "short_horizon_reversal",
         "change_to_acceleration",
-        "absolute_to_historical_surprise",
-        "absolute_to_peer_relative",
-        "regime_conditioned",
-        "low_correlation_parent_hybrid",
+        "historical_surprise",
+        "volatility_regime",
+        "relative_flow",
+        "cross_signal_divergence",
     ]
+    assert all("group_rank" not in item.expression for item in candidates)
 
 
 def test_parent_priority_is_correlation_then_quality_then_robustness() -> None:

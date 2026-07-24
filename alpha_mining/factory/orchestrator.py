@@ -10,14 +10,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Protocol
 
-from alpha_mining.domain.expression_normalization import operator_topology
+from alpha_mining.domain.expression_normalization import behavior_signature, operator_topology
 from alpha_mining.domain.operator_registry import BASE_VARS
 from alpha_mining.description.pipeline import DescriptionPipeline
-from alpha_mining.generator.baseline_first import (
-    BaselineFirstGenerator,
-    BaselineOutcome,
-    classify_baseline,
-)
+from alpha_mining.generator.baseline_first import BaselineOutcome, classify_baseline
+from alpha_mining.generator.consultant_generator import ConsultantGenerator
 from alpha_mining.integration.phase4 import expression_id_for
 from alpha_mining.scheduler.arm_metrics import ArmDimensions, ResearchArmTracker
 from alpha_mining.simulate.settings_optimizer import SettingsOptimizer
@@ -72,7 +69,7 @@ class FactoryOrchestrator:
         SqliteRunLog(self.database).initialize_schema()
         migrate(self.database)
         self.simulation = simulation
-        self.generator = BaselineFirstGenerator()
+        self.generator = ConsultantGenerator()
 
     def _research_specs(self) -> list[ResearchSpec]:
         with sqlite3.connect(self.database) as con:
@@ -222,8 +219,8 @@ class FactoryOrchestrator:
                     "".join(expression.lower().split()),
                     operator_topology(expression),
                     None if spec.fallback else spec.hypothesis_id,
-                    "baseline_first",
-                    "BASELINE",
+                    "consultant_generator",
+                    "group_rank_disabled",
                     now,
                 ),
             )
@@ -274,18 +271,26 @@ class FactoryOrchestrator:
         generated = simulated = far_fail = near_pass = passed = failed = 0
         descriptions_validated = 0
         threshold = self._live_sharpe_threshold()
-        for spec in self._research_specs():
+        candidate_specs = [
+            (spec, candidate)
+            for spec in self._research_specs()
+            for candidate in self.generator.generate(
+                hypothesis_id=spec.hypothesis_id,
+                family=spec.family,
+                fields=spec.fields,
+            )
+        ]
+        claimed_behaviors: set[str] = set()
+        for spec, candidate in candidate_specs:
             if simulated >= max(0, int(batch_size)):
                 break
-            candidates = self.generator.generate(
-                hypothesis_id=spec.hypothesis_id, family=spec.family, fields=spec.fields
-            )
-            if not candidates:
+            behavior = behavior_signature(candidate.expression)
+            if not behavior or behavior in claimed_behaviors:
                 continue
-            candidate = candidates[0]
             settings = SettingsOptimizer(max_local_trials=4).stage1_default(spec.family)
             if not self._claim(candidate.expression, settings):
                 continue
+            claimed_behaviors.add(behavior)
             generated += 1
             try:
                 result = self.simulation.simulate(
