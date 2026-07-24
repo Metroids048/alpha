@@ -46,15 +46,15 @@ class ConsultantGenerator:
             field_list[1] if len(field_list) > 1 else "close",
         )
         templates = [
-            ("baseline", f"group_rank({primary}/cap, subindustry)-0.5"),
-            ("level_to_change", f"group_rank(ts_delta({primary},63)/cap,subindustry)-0.5"),
+            ("medium_horizon_momentum", f"rank(ts_rank({primary},63))"),
+            ("short_horizon_reversal", f"-rank(ts_delta({primary},5))"),
             ("change_to_acceleration", f"rank(ts_delta(ts_delta({primary},63),21))"),
-            ("absolute_to_historical_surprise", f"ts_zscore({primary},126)"),
-            ("absolute_to_peer_relative", f"group_rank({primary},industry)-0.5"),
-            ("regime_conditioned", f"trade_when(rank(volume/adv20)>0.5,group_rank({primary}/cap,subindustry)-0.5,-1)"),
+            ("historical_surprise", f"rank(ts_zscore({primary},126))"),
+            ("volatility_regime", f"-rank(ts_std_dev({primary},63))"),
+            ("relative_flow", f"rank(ts_mean({secondary},21)/adv20)"),
             (
-                "low_correlation_parent_hybrid",
-                f"group_rank({primary}/cap,subindustry)-rank(ts_delta(close,5))",
+                "cross_signal_divergence",
+                f"rank(ts_zscore({primary},63)-ts_zscore({secondary},63))",
             ),
         ]
         out: list[ConsultantCandidate] = []

@@ -55,6 +55,19 @@ def _sanitized_traceback() -> str:
     return _sanitize_diagnostic(traceback.format_exc())
 
 
+def cycle_exit_code(summary: object) -> int:
+    """Keep an empty batch visible to the outer recovery loop.
+
+    A zero-candidate cycle is not a fatal factory stop, but reporting it as a
+    success causes the loop to spin on the same exhausted request identities.
+    """
+
+    failed = int(getattr(summary, "failed", 0) or 0)
+    generated = int(getattr(summary, "generated", 0) or 0)
+    simulated = int(getattr(summary, "simulated", 0) or 0)
+    return 1 if failed > 0 or (generated == 0 and simulated == 0) else 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m alpha_mining.factory.runtime")
     parser.add_argument("--database", default="research_memory.sqlite")
@@ -127,7 +140,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             pass
         return recovery_exit_code(exc)
     print(f"[factory] {json.dumps(summary.__dict__, sort_keys=True)}")
-    return 0 if summary.failed == 0 else 1
+    if summary.generated == 0 and summary.simulated == 0:
+        print(
+            "[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; "
+            "the outer loop will record a recoverable failure and back off"
+        )
+    return cycle_exit_code(summary)
 
 
 if __name__ == "__main__":

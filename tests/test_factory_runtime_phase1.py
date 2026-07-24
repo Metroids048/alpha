@@ -66,23 +66,24 @@ def _research_database(tmp_path: Path) -> Path:
     return database
 
 
-def test_factory_orchestrator_runs_one_baseline_per_hypothesis_sequentially(tmp_path: Path) -> None:
+def test_factory_orchestrator_uses_group_rank_free_consultant_candidate(tmp_path: Path) -> None:
     from alpha_mining.factory.orchestrator import FactoryOrchestrator
 
     database = _research_database(tmp_path)
     simulation = _SequentialSimulationService()
     summary = FactoryOrchestrator(database, simulation).run_simulate(batch_size=20)
 
-    assert summary.generated == 1
-    assert summary.simulated == 1
-    assert summary.baseline_pass == 1
+    assert summary.generated == 7
+    assert summary.simulated == 7
+    assert summary.baseline_pass == 7
     assert simulation.max_active == 1
     assert "revenue" in simulation.calls[0][0]
+    assert "group_rank" not in simulation.calls[0][0]
     with sqlite3.connect(database) as con:
         assert con.execute(
-            "SELECT COUNT(*) FROM expressions WHERE generation_strategy='baseline_first'"
-        ).fetchone()[0] == 1
-        assert con.execute("SELECT COUNT(*) FROM simulation_runs").fetchone()[0] == 1
+            "SELECT COUNT(*) FROM expressions WHERE generation_strategy='consultant_generator'"
+        ).fetchone()[0] == 7
+        assert con.execute("SELECT COUNT(*) FROM simulation_runs").fetchone()[0] == 7
 
 
 def test_factory_orchestrator_uses_safe_base_field_fallback_without_research_rows(tmp_path: Path) -> None:
@@ -121,6 +122,17 @@ def test_runtime_classifies_recoverable_failures_without_stopping_loop() -> None
     assert recovery_exit_code(PermissionError("authentication refresh exhausted after HTTP 401")) == 4
     assert recovery_exit_code(requests.Timeout("temporary timeout")) == 3
     assert recovery_exit_code(RuntimeError("unexpected worker failure")) == 7
+
+
+def test_empty_candidate_batch_is_a_recoverable_cycle_failure() -> None:
+    from alpha_mining.factory.orchestrator import FactoryCycleSummary
+    from alpha_mining.factory.runtime import cycle_exit_code
+
+    empty = FactoryCycleSummary(0, 0, 0, 0, 0, 0)
+    completed = FactoryCycleSummary(1, 1, 0, 0, 1, 0)
+
+    assert cycle_exit_code(empty) == 1
+    assert cycle_exit_code(completed) == 0
 
 
 def test_factory_write_access_defaults_off_and_requires_confirmation(tmp_path: Path) -> None:
@@ -175,7 +187,8 @@ def test_new_alpha_pipeline_prepares_description_after_all_checks_pass(tmp_path:
                     },
                     "fieldMetadata": {"revenue": {"description": "reported revenue"}},
                     "operatorDefinitions": {
-                        "group_rank": "rank within a peer group"
+                        "rank": "cross-sectional rank",
+                        "ts_rank": "time-series rank",
                     },
                 },
             )
