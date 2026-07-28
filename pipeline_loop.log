@@ -554,3 +554,19 @@ NameError: name '_consume_pending_simulations' is not defined
 --- 2026-07-28T14:44:19Z cycle_1/simulate ---
 [factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
 [factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-28T14:46:21Z cycle_2/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-28T14:50:23Z cycle_3/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-28T14:58:25Z cycle_4/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-28T15:13:27Z cycle_5/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
