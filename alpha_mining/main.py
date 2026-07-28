@@ -385,7 +385,7 @@ def _cmd_submit_execute(args: argparse.Namespace) -> int:
         ).fetchall()
 
     if not candidates:
-        print(f"[submit/execute] endpoint_calls=0 candidates=0 allowed=0 blocked=0 submitted=0 failed=0")
+        print("[submit/execute] endpoint_calls=0 candidates=0 allowed=0 blocked=0 submitted=0 failed=0")
         return 0
 
     gateway = PlatformGateway(
@@ -505,6 +505,7 @@ def _cmd_platform_probe(args: argparse.Namespace) -> int:
         max_attempts=1,
         database=args.database,
         lock_path=args.lock_path,
+        use_environment_proxy=not args.no_proxy,
     )
     result = run_connectivity_probe(
         client,
@@ -516,6 +517,61 @@ def _cmd_platform_probe(args: argparse.Namespace) -> int:
     return 0 if result.ready_for_ledger_sync else 2
 
 
+def _cmd_platform_catalog_sync(args: argparse.Namespace) -> int:
+    from alpha_mining.platform.catalog import PlatformCatalogSynchronizer
+    from alpha_mining.platform.client import ReadOnlyPlatformClient
+
+    client = ReadOnlyPlatformClient(
+        state_path=args.auth_state_file,
+        min_interval=args.min_interval,
+        database=args.database,
+        lock_path=args.lock_path,
+        use_environment_proxy=not args.no_proxy,
+    )
+    try:
+        result = PlatformCatalogSynchronizer(Path(args.cache_dir)).sync(client, region=args.region, universe=args.universe, delay=args.delay)
+    except Exception as exc:
+        print(json.dumps({"status": "CATALOG_UNAVAILABLE", "error_class": type(exc).__name__, "detail": str(exc)[:320]}, sort_keys=True))
+        return 2
+    print(json.dumps({"status": "COMPLETE", **result}, sort_keys=True))
+    return 0
+
+
+def _cmd_platform_browser_login(args: argparse.Namespace) -> int:
+    import os
+
+    from alpha_mining.auth.browser_login import BrowserLoginError, login
+    from alpha_mining.auth.session_manager import AuthSettings
+
+    username = os.environ.get("WQ_USERNAME", "").strip()
+    if not username:
+        print("[platform/browser-login] BLOCKED: WQ_USERNAME is not configured", file=sys.stderr)
+        return 2
+    try:
+        result = login(
+            username,
+            profile_dir=args.profile_dir,
+            headless=args.headless,
+            timeout_seconds=args.timeout,
+            settings=AuthSettings(state_path=args.auth_state_file),
+        )
+    except BrowserLoginError as exc:
+        print(json.dumps({"status": "LOGIN_FAILED", "detail": str(exc)[:200]}, sort_keys=True))
+        return 2
+    print(
+        json.dumps(
+            {
+                "status": "COMPLETE",
+                "generation": result.generation,
+                "headless": bool(args.headless),
+                "had_cloudflare_clearance": result.had_cloudflare_clearance,
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
 def _cmd_platform_access_status(args: argparse.Namespace) -> int:
     from dataclasses import asdict
     from alpha_mining.auth.session_manager import auth_state_metadata
@@ -525,6 +581,29 @@ def _cmd_platform_access_status(args: argparse.Namespace) -> int:
     payload.update(auth_state_metadata(args.auth_state_file))
     print(json.dumps(payload, sort_keys=True))
     return 0
+
+
+def _cmd_platform_basic_auth_probe(args: argparse.Namespace) -> int:
+    """Run a single cookie-free read to distinguish proxy and auth failures."""
+    from alpha_mining.platform.client import ReadOnlyPlatformClient
+
+    client = ReadOnlyPlatformClient(
+        state_path=args.auth_state_file,
+        timeout=args.timeout,
+        min_interval=0,
+        max_attempts=1,
+        database=args.database,
+        lock_path=args.lock_path,
+        use_environment_proxy=not args.no_proxy,
+    )
+    try:
+        status = client.probe_basic_identity()
+    except Exception as exc:
+        print(json.dumps({"status": "ERROR", "error_class": type(exc).__name__}, sort_keys=True))
+        return 2
+    transport = "environment_proxy" if not args.no_proxy else "direct"
+    print(json.dumps({"auth_status_code": status, "transport": transport}, sort_keys=True))
+    return 0 if status == 200 else 1
 
 
 def _cmd_platform_clear_auth(args: argparse.Namespace) -> int:
@@ -715,7 +794,38 @@ def _build_parser() -> argparse.ArgumentParser:
     p_probe.add_argument("--min-interval", type=float, default=2.0)
     p_probe.add_argument("--output", default="platform_readiness.json")
     p_probe.add_argument("--events-csv", default="platform_request_events.csv")
+    p_probe.add_argument("--no-proxy", action="store_true")
     p_probe.set_defaults(func=_cmd_platform_probe)
+    p_basic_auth_probe = platform_sub.add_parser(
+        "basic-auth-probe",
+        help="One cookie-free Basic Auth identity GET; does not POST authentication.",
+    )
+    p_basic_auth_probe.add_argument("--database", default="research_memory.sqlite")
+    p_basic_auth_probe.add_argument("--auth-state-file", default=".wq_auth_state.json")
+    p_basic_auth_probe.add_argument("--lock-path", default="worldquant_api.lock")
+    p_basic_auth_probe.add_argument("--timeout", type=float, default=30.0)
+    p_basic_auth_probe.add_argument("--no-proxy", action="store_true")
+    p_basic_auth_probe.set_defaults(func=_cmd_platform_basic_auth_probe)
+    p_catalog_sync = platform_sub.add_parser("catalog-sync")
+    p_catalog_sync.add_argument("--database", default="research_memory.sqlite")
+    p_catalog_sync.add_argument("--auth-state-file", default=".wq_auth_state.json")
+    p_catalog_sync.add_argument("--lock-path", default="worldquant_api.lock")
+    p_catalog_sync.add_argument("--cache-dir", default=".")
+    p_catalog_sync.add_argument("--region", default="USA")
+    p_catalog_sync.add_argument("--universe", default="TOP3000")
+    p_catalog_sync.add_argument("--delay", type=int, default=1)
+    p_catalog_sync.add_argument("--min-interval", type=float, default=2.0)
+    p_catalog_sync.add_argument("--no-proxy", action="store_true")
+    p_catalog_sync.set_defaults(func=_cmd_platform_catalog_sync)
+    p_browser_login = platform_sub.add_parser(
+        "browser-login",
+        help="Persona-aware browser login via a persistent Playwright profile.",
+    )
+    p_browser_login.add_argument("--auth-state-file", default=".wq_auth_state.json")
+    p_browser_login.add_argument("--profile-dir", default=".wq_browser_profile")
+    p_browser_login.add_argument("--headless", action="store_true")
+    p_browser_login.add_argument("--timeout", type=float, default=300.0)
+    p_browser_login.set_defaults(func=_cmd_platform_browser_login)
     p_recovery_report = platform_sub.add_parser("recovery-report")
     p_recovery_report.add_argument("--database", default="research_memory.sqlite")
     p_recovery_report.add_argument("--auth-state-file", default=".wq_auth_state.json")
@@ -737,6 +847,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p_ledger_sync.add_argument("--report", default="platform_ledger_sync_report.json")
     p_ledger_sync.add_argument("--events-csv", default="platform_request_events.csv")
     p_ledger_sync.set_defaults(func=_cmd_platform_ledger_sync)
+
 
     p_factory = sub.add_parser("factory", help="vNext hard-stop and acceptance controls.")
     factory_sub = p_factory.add_subparsers(dest="factory_command", required=True)

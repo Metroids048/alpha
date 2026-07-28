@@ -34,6 +34,7 @@ CYCLE_SCRIPT = "run_pipeline_cycle.py"
 
 class RecoveryCategory(str, Enum):
     SUCCESS = "SUCCESS"
+    CATALOG_UNAVAILABLE = "CATALOG_UNAVAILABLE"
     RECOVERABLE_CYCLE_FAILURE = "RECOVERABLE_CYCLE_FAILURE"
     NETWORK_ERROR = "NETWORK_ERROR"
     AUTH_ERROR = "AUTH_ERROR"
@@ -96,6 +97,7 @@ def _outcome_from_rc(cycle: int, rc: int) -> CycleOutcome:
         4: RecoveryCategory.AUTH_ERROR,
         5: RecoveryCategory.RATE_LIMITED,
         6: RecoveryCategory.DATABASE_LOCKED,
+        8: RecoveryCategory.CATALOG_UNAVAILABLE,
     }
     category = (
         RecoveryCategory.CHILD_PROCESS_CRASH
@@ -113,6 +115,9 @@ def _recovery_delay(
     base = max(0.0, float(inter_cycle_sleep))
     if outcome.category is RecoveryCategory.SUCCESS:
         return base
+    if outcome.category is RecoveryCategory.CATALOG_UNAVAILABLE:
+        exponent = min(max(0, int(consecutive_failures) - 1), 2)
+        return min(3600.0, 900.0 * (2**exponent))
     exponent = min(max(0, int(consecutive_failures) - 1), 6)
     return min(900.0, max(1.0, base) * (2**exponent))
 
@@ -171,6 +176,16 @@ def run_forever(
             consecutive_failures=consecutive_failures,
             elapsed_seconds=elapsed_seconds,
         )
+        delay = _recovery_delay(
+            outcome,
+            consecutive_failures=consecutive_failures,
+            inter_cycle_sleep=inter_cycle_sleep,
+        )
+        if (
+            outcome.category is RecoveryCategory.CATALOG_UNAVAILABLE
+            and outcome.retry_after_seconds is None
+        ):
+            outcome = replace(outcome, retry_after_seconds=delay)
         if on_outcome is not None:
             try:
                 on_outcome(outcome)
@@ -180,13 +195,7 @@ def run_forever(
         cycle += 1
         if should_stop():
             break
-        sleeper(
-            _recovery_delay(
-                outcome,
-                consecutive_failures=consecutive_failures,
-                inter_cycle_sleep=inter_cycle_sleep,
-            )
-        )
+        sleeper(delay)
     return 0
 
 
@@ -677,6 +686,22 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument("--database", default="research_memory.sqlite")
     p.add_argument(
+        "--no-catalog-autosync",
+        dest="catalog_autosync",
+        action="store_false",
+        help="Do not run platform catalog-sync when the data-field/dataset/operator caches expire.",
+    )
+    p.add_argument(
+        "--catalog-region",
+        default="USA",
+        help="Region passed to catalog-sync when refreshing expired caches.",
+    )
+    p.add_argument(
+        "--catalog-universe",
+        default="TOP3000",
+        help="Universe passed to catalog-sync when refreshing expired caches.",
+    )
+    p.add_argument(
         "--pipeline-script",
         default="alpha_mining.factory.runtime",
         help="Recorded for compatibility logs only; cycle entry uses the vNext factory runtime.",
@@ -687,6 +712,83 @@ def parse_args() -> argparse.Namespace:
         help="Extra args forwarded to run_pipeline_cycle (prefix with --)",
     )
     return p.parse_args()
+
+
+CATALOG_CACHE_FILENAMES = (
+    ".alpha_datafields_cache.json",
+    ".alpha_datasets_cache.json",
+    ".alpha_operators_cache.json",
+)
+CATALOG_MAX_AGE_SECONDS = 24 * 60 * 60
+
+
+def _catalog_cache_stale(root: Path, *, max_age_seconds: float = CATALOG_MAX_AGE_SECONDS) -> bool:
+    """True when any data-field/dataset/operator cache is missing, invalid, or expired.
+
+    The generation gate in FactoryOrchestrator refuses to build new candidates
+    once these caches age out, so the loop must refresh them itself instead of
+    backing off forever on rc=8.
+    """
+
+    now = time.time()
+    for filename in CATALOG_CACHE_FILENAMES:
+        path = root / filename
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return True
+        if not isinstance(payload, dict):
+            return True
+        try:
+            cached_at = float(payload["cached_at"])
+        except (KeyError, TypeError, ValueError):
+            return True
+        if now - cached_at >= float(max_age_seconds):
+            return True
+    return False
+
+
+def _refresh_catalog_if_stale(
+    *,
+    args: argparse.Namespace,
+    root: Path,
+    cycle: int,
+    log_path: Path | None,
+) -> None:
+    """Refresh the platform catalog caches in-process-isolated when they expire.
+
+    Failures are non-fatal: pending simulation requests can still be consumed
+    without a fresh catalog, so a refresh error must not abort the cycle.
+    """
+
+    if not bool(getattr(args, "catalog_autosync", True)):
+        return
+    if not _catalog_cache_stale(root):
+        return
+    print(f"[loop] catalog cache stale; running catalog-sync before cycle {cycle}")
+    cmd = [
+        _python_exe(),
+        "-m",
+        "alpha_mining",
+        "platform",
+        "catalog-sync",
+        "--database",
+        str(getattr(args, "database", "research_memory.sqlite")),
+        "--cache-dir",
+        str(root),
+        "--region",
+        str(getattr(args, "catalog_region", "USA")),
+        "--universe",
+        str(getattr(args, "catalog_universe", "TOP3000")),
+    ]
+    result = _run_subprocess(
+        cmd, cwd=root, label=f"cycle_{cycle}/catalog-sync", log_path=log_path
+    )
+    if result.rc == 0:
+        print(f"[loop] catalog-sync ok for cycle {cycle}")
+    else:
+        detail = _sanitize_diagnostic(result.output_tail)[-300:]
+        print(f"[loop] catalog-sync rc={result.rc}; continuing with pending work. {detail}")
 
 
 def _run_pipeline_cycle_once(
@@ -726,6 +828,8 @@ def _run_pipeline_cycle_once(
                 task_id=f"cycle_{cycle}/network_wait",
                 detail="explicit stop requested during network wait",
             )
+
+    _refresh_catalog_if_stale(args=args, root=root, cycle=cycle, log_path=log_path)
 
     sim_cmd = _build_cycle_cmd(
         cycle_script=cycle_script,

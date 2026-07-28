@@ -25,6 +25,10 @@ def _strip_resilient_flag(argv: list[str]) -> tuple[list[str], bool]:
 
 
 def main() -> int:
+    # Load environment variables from .env file
+    from alpha_mining.common import load_workspace_env
+    load_workspace_env(_ROOT / ".env")
+
     argv, use_resilient = _strip_resilient_flag(sys.argv[1:])
     sys.argv = [sys.argv[0], *argv]
     from alpha_mining.factory.runtime import main as factory_main

@@ -255,7 +255,8 @@ async def _authenticate(
 
 async def probe_async_connection(cfg: Any) -> None:
     """Lightweight aiohttp connectivity check (used by --preflight)."""
-    raw_proxy = (
+    bypass_proxy = os.environ.get("WQ_NO_PROXY", "").strip().lower() in {"1", "true", "yes", "on"}
+    raw_proxy = "" if bypass_proxy else (
         (str(cfg.https_proxy).strip() if cfg.https_proxy else "")
         or os.environ.get("HTTPS_PROXY", "")
         or os.environ.get("https_proxy", "")
@@ -267,7 +268,7 @@ async def probe_async_connection(cfg: Any) -> None:
         auth=auth,
         connector=connector,
         headers=_default_headers(),
-        trust_env=True,
+        trust_env=not bypass_proxy,
     ) as session:
         await _authenticate(session, proxy=proxy)
 
@@ -559,12 +560,15 @@ async def run_async_simulation_batch(pipeline: Any, payloads: list[dict]) -> Any
     poll_feedback_ids: set[str] = set()
     result_stats: dict[str, Any] = {"queue": Counter(), "invert": 0, "highlights": []}
 
+    bypass_proxy = os.environ.get("WQ_NO_PROXY", "").strip().lower() in {"1", "true", "yes", "on"}
+    if bypass_proxy:
+        proxy = None
     async with aiohttp.ClientSession(
         auth=auth,
         connector=connector,
         timeout=timeout,
         headers=_default_headers(),
-        trust_env=True,
+        trust_env=not bypass_proxy,
     ) as session:
         await _authenticate(session, proxy=proxy)
         print("[simulate/async] auth OK")

@@ -90,7 +90,7 @@ def test_only_one_probe_is_allowed_after_retry_after(tmp_path: Path) -> None:
 
 
 def test_failed_recovery_probes_remain_rate_limited_and_auto_recoverable(tmp_path: Path) -> None:
-    from alpha_mining.platform.access import CircuitOpen, PlatformAccessController
+    from alpha_mining.platform.access import PlatformAccessController
 
     clock = MutableClock()
     controller = PlatformAccessController(
@@ -431,7 +431,7 @@ def test_password_auth_uses_basic_auth_post_without_body(tmp_path: Path, monkeyp
     client.request = fake_request  # type: ignore[method-assign]
     monkeypatch.setattr(
         "alpha_mining.platform.client.ensure_authenticated",
-        lambda session, login, username, settings, force=False: login(),
+        lambda session, login, username, settings, force=False, **_kwargs: login(),
     )
 
     client.authenticate(force=True)
@@ -444,10 +444,11 @@ def test_password_auth_uses_basic_auth_post_without_body(tmp_path: Path, monkeyp
     assert "application/json" in client.session.headers["Accept"]
 
 
-def test_no_cookie_cache_performs_password_login_and_persists_internal_session(
+def test_no_cookie_cache_defers_password_login_until_a_protected_read_fails(
     tmp_path: Path, monkeypatch
 ) -> None:
-    from alpha_mining.platform.client import BASE_URL, ReadOnlyPlatformClient
+    from requests.auth import HTTPBasicAuth
+    from alpha_mining.platform.client import ReadOnlyPlatformClient
 
     monkeypatch.setenv("WQ_USERNAME", "user@example.test")
     monkeypatch.setenv("WQ_PASSWORD", "test-password")
@@ -472,11 +473,86 @@ def test_no_cookie_cache_performs_password_login_and_persists_internal_session(
 
     client.authenticate()
 
-    assert calls == [("POST", f"{BASE_URL}/authentication")]
-    assert (tmp_path / "missing-auth-state.json").is_file()
-    assert "internal-test-cookie" not in (tmp_path / "missing-auth-state.json").read_text(
-        encoding="utf-8"
+    assert calls == []
+    assert isinstance(client.session.auth, HTTPBasicAuth)
+
+
+def test_basic_auth_probe_is_cookie_free_and_never_replays_password_login(
+    tmp_path: Path, monkeypatch
+) -> None:
+    from alpha_mining.platform.client import BASE_URL, ReadOnlyPlatformClient
+
+    monkeypatch.setenv("WQ_USERNAME", "user@example.test")
+    monkeypatch.setenv("WQ_PASSWORD", "test-password")
+    client = ReadOnlyPlatformClient(
+        state_path=tmp_path / "auth-state.json",
+        database=tmp_path / "events.sqlite",
+        lock_path=tmp_path / "worldquant_api.lock",
+        min_interval=0,
+        use_environment_proxy=False,
     )
+    calls: list[tuple[str, str]] = []
+
+    def fake_request(method: str, url: str, **_kwargs):
+        calls.append((method, url))
+        return type(
+            "Response",
+            (),
+            {"status_code": 401, "headers": {}, "content": b"{}", "url": url, "history": []},
+        )()
+
+    monkeypatch.setattr(client.session, "request", fake_request)
+
+    assert client.probe_basic_identity() == 401
+    assert calls == [("GET", f"{BASE_URL}/users/self")]
+    assert client.session.cookies.get_dict() == {}
+    assert client.session.trust_env is False
+
+
+def test_catalog_failure_exposes_only_platform_error_message(tmp_path: Path, monkeypatch) -> None:
+    from alpha_mining.platform.client import PlatformReadError, ReadOnlyPlatformClient
+
+    monkeypatch.setenv("WQ_USERNAME", "user@example.test")
+    monkeypatch.setenv("WQ_PASSWORD", "test-password")
+    client = ReadOnlyPlatformClient(
+        state_path=tmp_path / "auth-state.json",
+        database=tmp_path / "events.sqlite",
+        lock_path=tmp_path / "worldquant_api.lock",
+        min_interval=0,
+    )
+    client.authenticate = lambda: None  # type: ignore[method-assign]
+    client.request = lambda *_args, **_kwargs: type(  # type: ignore[method-assign]
+        "Response",
+        (),
+        {"status_code": 400, "json": lambda self: {"message": "Invalid universe"}},
+    )()
+
+    with pytest.raises(PlatformReadError, match="HTTP 400: Invalid universe"):
+        client.list_datasets({})
+
+
+def test_catalog_failure_uses_a_bounded_raw_body_when_no_json_error_exists(
+    tmp_path: Path, monkeypatch
+) -> None:
+    from alpha_mining.platform.client import PlatformReadError, ReadOnlyPlatformClient
+
+    monkeypatch.setenv("WQ_USERNAME", "user@example.test")
+    monkeypatch.setenv("WQ_PASSWORD", "test-password")
+    client = ReadOnlyPlatformClient(
+        state_path=tmp_path / "auth-state.json",
+        database=tmp_path / "events.sqlite",
+        lock_path=tmp_path / "worldquant_api.lock",
+        min_interval=0,
+    )
+    client.authenticate = lambda: None  # type: ignore[method-assign]
+    client.request = lambda *_args, **_kwargs: type(  # type: ignore[method-assign]
+        "Response",
+        (),
+        {"status_code": 400, "content": b"bad   catalog\nparameter", "json": lambda self: None},
+    )()
+
+    with pytest.raises(PlatformReadError, match="HTTP 400: bad catalog parameter"):
+        client.list_datasets({})
 
 
 def test_expired_cookie_401_relogs_with_password_and_recovers_original_request(

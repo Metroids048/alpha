@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -63,6 +65,24 @@ def _research_database(tmp_path: Path) -> Path:
         con.execute(
             "UPDATE factory_control SET hard_stop=0,reason='',ledger_sync_id='sync-1',cluster_freeze_complete=1"
         )
+    cached_at = datetime.now(timezone.utc).timestamp()
+    (tmp_path / ".alpha_datasets_cache.json").write_text(
+        json.dumps({"cached_at": cached_at, "dataset_ids": ["fundamental6"]}),
+        encoding="utf-8",
+    )
+    (tmp_path / ".alpha_datafields_cache.json").write_text(
+        json.dumps({"cached_at": cached_at, "rows": [{"id": "revenue", "_ds": "fundamental6"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / ".alpha_operators_cache.json").write_text(
+        json.dumps(
+            {
+                "cached_at": cached_at,
+                "operators": ["rank", "ts_rank", "ts_delta", "ts_zscore", "ts_std_dev", "ts_mean"],
+            }
+        ),
+        encoding="utf-8",
+    )
     return database
 
 
@@ -73,20 +93,103 @@ def test_factory_orchestrator_uses_group_rank_free_consultant_candidate(tmp_path
     simulation = _SequentialSimulationService()
     summary = FactoryOrchestrator(database, simulation).run_simulate(batch_size=20)
 
-    assert summary.generated == 7
-    assert summary.simulated == 7
-    assert summary.baseline_pass == 7
+    # ConsultantGenerator now ships 14 templates (original 7 + 7 extension skeletons).
+    # A fresh DB has no expression_identities, so all 14 are claimed and simulated.
+    assert summary.generated == 14
+    assert summary.simulated == 14
+    assert summary.baseline_pass == 14
     assert simulation.max_active == 1
     assert "revenue" in simulation.calls[0][0]
     assert "group_rank" not in simulation.calls[0][0]
     with sqlite3.connect(database) as con:
         assert con.execute(
             "SELECT COUNT(*) FROM expressions WHERE generation_strategy='consultant_generator'"
-        ).fetchone()[0] == 7
-        assert con.execute("SELECT COUNT(*) FROM simulation_runs").fetchone()[0] == 7
+        ).fetchone()[0] == 14
+        assert con.execute("SELECT COUNT(*) FROM simulation_runs").fetchone()[0] == 14
 
 
-def test_factory_orchestrator_uses_safe_base_field_fallback_without_research_rows(tmp_path: Path) -> None:
+def test_factory_rejects_a_historical_field_skeleton_before_simulation(tmp_path: Path) -> None:
+    from alpha_mining.domain.expression_normalization import expression_identity
+    from alpha_mining.factory.orchestrator import FactoryOrchestrator
+
+    database = _research_database(tmp_path)
+    historical = "-rank(ts_delta(cashflow_op, 7))"
+    identity = expression_identity(historical)
+    with sqlite3.connect(database) as con:
+        con.execute(
+            """INSERT INTO expressions
+            (expression_id,expression_text,normalized_text,structure_sig,generation_strategy,generation_layer,created_at)
+            VALUES ('historical',?,'historical','historical','fixture','fixture','2026-01-01')""",
+            (historical,),
+        )
+        con.execute(
+            """INSERT INTO expression_identities
+            (expression_id,exact_hash,parameter_skeleton,field_skeleton,created_at)
+            VALUES ('historical',?,?,?,'2026-01-01')""",
+            (identity.exact_hash, identity.parameter_skeleton, identity.field_skeleton),
+        )
+
+    simulation = _SequentialSimulationService()
+    summary = FactoryOrchestrator(database, simulation).run_simulate(batch_size=20)
+
+    # 1 of 14 skeletons (neg(ts_delta(FIELD,#))) is pre-blocked, so 13 are claimed.
+    assert summary.generated == summary.simulated == 13
+    # The blocked template is specifically "-rank(ts_delta(revenue,5))"; other templates
+    # that happen to contain "ts_delta(revenue,5)" as a sub-expression (e.g. decayed_momentum)
+    # have a different skeleton and are still allowed.
+    assert all("-rank(ts_delta(revenue,5))" != expression for expression, _ in simulation.calls)
+
+
+def test_factory_claim_reserves_field_skeleton_before_simulation(tmp_path: Path) -> None:
+    from alpha_mining.factory.orchestrator import FactoryOrchestrator
+
+    factory = FactoryOrchestrator(_research_database(tmp_path), _SequentialSimulationService())
+    settings = {"region": "USA", "universe": "TOP3000", "delay": 1}
+
+    assert factory._claim("rank(ts_delta(revenue, 21))", settings)
+    assert not factory._claim("rank(ts_delta(cashflow_op, 63))", settings)
+
+
+def test_factory_refreshes_operator_cache_only_from_platform_ledger(tmp_path: Path) -> None:
+    from alpha_mining.factory.orchestrator import FactoryOrchestrator
+
+    database = _research_database(tmp_path)
+    (tmp_path / ".alpha_operators_cache.json").unlink()
+    with sqlite3.connect(database) as con:
+        con.execute(
+            """INSERT INTO platform_sync_runs
+            (sync_id,filters_json,declared_count,fetched_rows,unique_alpha_ids,duplicate_alpha_ids,status,error_message,started_at,completed_at)
+            VALUES ('sync-operators','{}',1,1,1,0,'COMPLETE','','2026-01-01','2999-01-01')"""
+        )
+        con.execute(
+            """INSERT INTO platform_alpha_observations
+            (sync_id,alpha_id,raw_payload_hash,raw_payload_json,synced_at)
+            VALUES ('sync-operators','a1','hash',?,?)""",
+            (
+                json.dumps(
+                    {
+                        "operatorDefinitions": {
+                            "rank": "rank",
+                            "ts_rank": "rank",
+                            "ts_delta": "delta",
+                            "ts_zscore": "zscore",
+                            "ts_std_dev": "std",
+                            "ts_mean": "mean",
+                        }
+                    }
+                ),
+                datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            ),
+        )
+
+    summary = FactoryOrchestrator(database, _SequentialSimulationService()).run_simulate(batch_size=1)
+
+    assert summary.generated == summary.simulated == 1
+    cache = json.loads((tmp_path / ".alpha_operators_cache.json").read_text(encoding="utf-8"))
+    assert cache["source"] == "platform_alpha_observations"
+
+
+def test_factory_orchestrator_defers_without_verified_catalog_mappings(tmp_path: Path) -> None:
     from alpha_mining.factory.orchestrator import FactoryOrchestrator
     from alpha_mining.storage.migrations import migrate
     from alpha_mining.storage.sqlite_store import SqliteRunLog
@@ -98,9 +201,31 @@ def test_factory_orchestrator_uses_safe_base_field_fallback_without_research_row
 
     summary = FactoryOrchestrator(database, simulation).run_simulate(batch_size=2)
 
-    assert summary.generated == 2
-    assert summary.simulated == 2
-    assert all("close" in expression or "volume" in expression for expression, _ in simulation.calls)
+    assert summary.generated == 0
+    assert summary.simulated == 0
+    assert summary.deferred_reason == "no verified data_mappings are available"
+    assert simulation.calls == []
+    with sqlite3.connect(database) as con:
+        assert con.execute(
+            "SELECT category FROM factory_events ORDER BY event_id DESC LIMIT 1"
+        ).fetchone()[0] == "CATALOG_UNAVAILABLE"
+
+
+def test_factory_rejects_a_field_mapped_to_the_wrong_dataset(tmp_path: Path) -> None:
+    from alpha_mining.factory.orchestrator import FactoryOrchestrator
+
+    database = _research_database(tmp_path)
+    datasets = tmp_path / ".alpha_datasets_cache.json"
+    datasets.write_text(
+        json.dumps({"cached_at": datetime.now(timezone.utc).timestamp(), "dataset_ids": ["fundamental6", "pv1"]}),
+        encoding="utf-8",
+    )
+    with sqlite3.connect(database) as con:
+        con.execute("UPDATE data_mappings SET dataset_id='pv1'")
+
+    summary = FactoryOrchestrator(database, _SequentialSimulationService()).run_simulate(batch_size=1)
+
+    assert summary.deferred_reason == "a mapped field-dataset pair is absent from the verified data-field cache"
 
 
 def test_authoritative_runtime_has_no_legacy_v50_delegation() -> None:
@@ -124,14 +249,16 @@ def test_runtime_classifies_recoverable_failures_without_stopping_loop() -> None
     assert recovery_exit_code(RuntimeError("unexpected worker failure")) == 7
 
 
-def test_empty_candidate_batch_is_a_recoverable_cycle_failure() -> None:
+def test_catalog_deferral_has_a_dedicated_recovery_exit_code() -> None:
     from alpha_mining.factory.orchestrator import FactoryCycleSummary
     from alpha_mining.factory.runtime import cycle_exit_code
 
     empty = FactoryCycleSummary(0, 0, 0, 0, 0, 0)
+    catalog_unavailable = FactoryCycleSummary(0, 0, 0, 0, 0, 0, deferred_reason="stale cache")
     completed = FactoryCycleSummary(1, 1, 0, 0, 1, 0)
 
     assert cycle_exit_code(empty) == 1
+    assert cycle_exit_code(catalog_unavailable) == 8
     assert cycle_exit_code(completed) == 0
 
 

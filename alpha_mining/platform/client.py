@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -13,8 +14,9 @@ from typing import Any, Callable, Iterable
 import requests
 from requests.auth import HTTPBasicAuth
 
-from alpha_mining.auth.session_manager import AuthSettings, ensure_authenticated
+from alpha_mining.auth.session_manager import AuthSettings, ensure_authenticated, mark_session_validated
 from alpha_mining.platform.access import PlatformAccessController
+from alpha_mining.platform.bearer_auth import load_bearer_token
 
 BASE_URL = "https://api.worldquantbrain.com"
 SESSION_HEADERS = {
@@ -85,12 +87,18 @@ class ReadOnlyPlatformClient:
     database: str | Path = "research_memory.sqlite"
     lock_path: str | Path = "worldquant_api.lock"
     controller: PlatformAccessController | None = field(default=None, repr=False)
+    use_environment_proxy: bool | None = None
     active_sync_id: str = field(default="", init=False, repr=False)
+    _authenticated_username: str = field(default="", init=False, repr=False)
 
     def __post_init__(self) -> None:
         self.session = requests.Session()
         self.session.headers.update(SESSION_HEADERS)
-        self.session.trust_env = True
+        if self.use_environment_proxy is None:
+            disabled = os.environ.get("WQ_NO_PROXY", "").strip().lower()
+            self.session.trust_env = disabled not in {"1", "true", "yes", "on"}
+        else:
+            self.session.trust_env = bool(self.use_environment_proxy)
         self._last_request_at = 0.0
         if self.controller is None:
             self.controller = PlatformAccessController(self.database, self.lock_path)
@@ -114,10 +122,17 @@ class ReadOnlyPlatformClient:
                 "WQ_USERNAME is required to match the protected auth-state fingerprint"
             )
 
+        # The platform authenticates via cookies (the `t` JWT cookie set by POST
+        # /authentication).  Never use Authorization: Bearer — the API ignores it.
+        # Priority:
+        #   1. Restore stored cookies if they are within the cooldown window (not force).
+        #   2. POST /authentication with Basic Auth (password login) to get a fresh cookie.
+
         def login() -> Any:
             if not password:
                 raise PlatformReadError(
-                    "protected session unavailable and WQ_PASSWORD is not configured"
+                    "no stored session and WQ_PASSWORD is not configured; "
+                    "import fresh cookies via: python import_cookie_now.py"
                 )
             self._pace()
             basic_auth = HTTPBasicAuth(username, password)
@@ -130,13 +145,94 @@ class ReadOnlyPlatformClient:
                 auth=basic_auth,
             )
 
+        # Remove any stale Bearer header that might have been set previously.
+        self.session.headers.pop("Authorization", None)
+        self.session.auth = None
+
+        # Step 1: reuse the stored session while its `t` JWT is genuinely unexpired.
+        # The auth-state cooldown window (25 min) is far shorter than the JWT's real
+        # lifetime (~4 h), so relying on the cooldown alone discards usable cookies
+        # and forces a password login that the platform now rejects with 401.
+        if not force:
+            restored = self._restore_unexpired_session_cookies(username)
+            if restored:
+                self._authenticated_username = username
+                return
+
+        # Step 2: carry Basic Auth credentials from the start. Password login stays
+        # deferred inside ensure_authenticated (allow_password_login=force), so the
+        # next protected read is what actually exercises the credentials; a 401 there
+        # triggers exactly one forced replay via the auth-replay path in request().
+        if password:
+            self.session.auth = HTTPBasicAuth(username, password)
+
         ensure_authenticated(
             self.session,
             login,
             username,
-            AuthSettings(state_path=self.state_path, max_attempts=1),
+            AuthSettings(state_path=self.state_path, max_attempts=2),
             force=force,
+            # Deferred by design: with no usable stored session, do NOT spend a
+            # POST /authentication here. Let the first protected read return 401
+            # and trigger exactly one forced credential replay. Eagerly logging in
+            # burns the daily auth cap and, on a Persona-gated account, produces a
+            # 401 storm that trips the platform 429 circuit.
+            allow_password_login=force,
         )
+        self._authenticated_username = username
+
+    def _restore_unexpired_session_cookies(self, username: str) -> bool:
+        """Load stored cookies into the session when their `t` JWT is still valid.
+
+        Returns True only when a usable session was restored. The JWT `exp` claim
+        is the authority on freshness; the local auth-state cooldown is not.
+        """
+        from alpha_mining.auth.session_manager import (  # noqa: PLC0415
+            _account_fingerprint,
+            _load_state,
+            _restore_requests_cookies,
+            _unprotect_cookie_rows,
+        )
+
+        try:
+            bearer = load_bearer_token(self.state_path, username)
+            if bearer is None or bearer.is_expired:
+                return False
+            path = AuthSettings(state_path=self.state_path).resolved_state_path()
+            state = _load_state(
+                path, _account_fingerprint(username), datetime.now(timezone.utc)
+            )
+            rows = _unprotect_cookie_rows(state.get("cookie_blob_dpapi_b64"))
+            if not _restore_requests_cookies(self.session, rows):
+                return False
+        except Exception:
+            return False
+        print(
+            "[platform/auth] reusing stored session cookies; "
+            f"jwt_remaining={int(bearer.remaining_seconds)}s"
+        )
+        return True
+
+    def probe_basic_identity(self) -> int:
+        """Issue exactly one identity GET with Basic Auth and no stored session.
+
+        This is a transport/authentication diagnostic only.  It deliberately
+        bypasses the persisted cookie state and suppresses credential-login
+        replay so a 401 cannot turn into a hidden POST /authentication.
+        """
+        username = os.environ.get("WQ_USERNAME", "").strip()
+        password = os.environ.get("WQ_PASSWORD", "")
+        if not username or not password:
+            raise PlatformReadError("WQ_USERNAME and WQ_PASSWORD are required")
+        self.session.auth = HTTPBasicAuth(username, password)
+        response = self.request(
+            "GET",
+            f"{BASE_URL}/users/self",
+            allow_server_retry=False,
+            allow_auth_replay=False,
+            endpoint_class="identity",
+        )
+        return int(response.status_code)
 
     def request(
         self,
@@ -144,6 +240,7 @@ class ReadOnlyPlatformClient:
         url: str,
         *,
         allow_server_retry: bool = True,
+        allow_auth_replay: bool = True,
         endpoint_class: str = "read",
         recovery_probe: bool = False,
         sync_id: str = "",
@@ -193,11 +290,24 @@ class ReadOnlyPlatformClient:
                     request_id=str(request_id),
                     response_body=getattr(response, "content", b""),
                 )
+            if (
+                endpoint_class != "authentication"
+                and 200 <= int(response.status_code) < 300
+                and self._authenticated_username
+            ):
+                try:
+                    mark_session_validated(
+                        self._authenticated_username,
+                        AuthSettings(state_path=self.state_path, max_attempts=1),
+                    )
+                except Exception:
+                    pass
             # A 429 is a global state transition, never an in-call retry. Auth
             # failures get one credential-login replay, then return unchanged.
             if (
                 endpoint_class != "authentication"
                 and _response_requires_reauthentication(response)
+                and allow_auth_replay
                 and not auth_replayed
             ):
                 auth_replayed = True
@@ -241,6 +351,45 @@ class ReadOnlyPlatformClient:
         if not isinstance(payload, dict):
             raise PlatformReadError("alpha list response is not an object")
         return payload
+
+    def _catalog_page(self, resource: str, params: dict[str, object]) -> dict[str, Any]:
+        self.authenticate()
+        response = self.request("GET", f"{BASE_URL}/{resource}", params=dict(params), endpoint_class="catalog")
+        if response.status_code != 200:
+            detail = ""
+            try:
+                error = response.json()
+            except Exception:
+                error = None
+            if isinstance(error, dict):
+                message = error.get("message") or error.get("error") or error.get("code")
+                if isinstance(message, dict):
+                    message = message.get("message") or message.get("code")
+                if isinstance(message, (str, int, float)):
+                    detail = str(message).replace("\r", " ").replace("\n", " ")[:300]
+            if not detail:
+                raw = getattr(response, "content", b"")
+                if isinstance(raw, bytes):
+                    raw = raw.decode("utf-8", errors="replace")
+                if isinstance(raw, str):
+                    detail = re.sub(r"\s+", " ", raw).strip()[:300]
+            suffix = f": {detail}" if detail else ""
+            raise PlatformReadError(
+                f"read-only {resource} catalog failed with HTTP {response.status_code}{suffix}"
+            )
+        payload = response.json()
+        if not isinstance(payload, dict):
+            raise PlatformReadError(f"read-only {resource} catalog response is not an object")
+        return payload
+
+    def list_datasets(self, params: dict[str, object]) -> dict[str, Any]:
+        return self._catalog_page("data-sets", params)
+
+    def list_data_fields(self, params: dict[str, object]) -> dict[str, Any]:
+        return self._catalog_page("data-fields", params)
+
+    def list_operators(self, params: dict[str, object]) -> dict[str, Any]:
+        return self._catalog_page("operators", params)
 
     def count_alphas(self, params: dict[str, object]) -> int:
         self.authenticate()

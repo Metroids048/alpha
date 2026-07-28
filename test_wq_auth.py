@@ -25,6 +25,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         action="store_true",
         help="Print non-secret credential configuration diagnostics without sending a request.",
     )
+    parser.add_argument(
+        "--cookie-env",
+        default="",
+        help="Import an explicitly provided browser Cookie header from this environment variable.",
+    )
     args = parser.parse_args(list(argv) if argv is not None else [])
     from alpha_mining.common import load_workspace_env
 
@@ -38,15 +43,29 @@ def main(argv: Sequence[str] | None = None) -> int:
         print("WQ_USERNAME or WQ_PASSWORD is not configured in .env")
         return 1
     if args.diagnose:
-        placeholder = password.strip().lower() in {
-            "your_worldquant_password",
-            "replace_with_password",
-        } or "..." in password
         print(
             "Credential configuration: "
             f"username_present={bool(username)} password_present={bool(password)} "
-            f"password_looks_placeholder={placeholder}"
+            "password_value_not_inspected=True"
         )
+        return 0
+    if args.cookie_env:
+        cookie_header = os.environ.get(str(args.cookie_env), "")
+        if not cookie_header:
+            print("Browser Cookie environment variable is not configured")
+            return 1
+        from alpha_mining.auth.session_manager import AuthSettings, import_browser_session
+
+        try:
+            result = import_browser_session(
+                username,
+                cookie_header,
+                AuthSettings(state_path=Path(__file__).resolve().parent / ".wq_auth_state.json"),
+            )
+        except Exception as exc:
+            print(f"Browser session import failed: {type(exc).__name__}")
+            return 1
+        print(f"Browser session imported (generation={result.generation})")
         return 0
 
     session = requests.Session()

@@ -65,6 +65,13 @@ def cycle_exit_code(summary: object) -> int:
     failed = int(getattr(summary, "failed", 0) or 0)
     generated = int(getattr(summary, "generated", 0) or 0)
     simulated = int(getattr(summary, "simulated", 0) or 0)
+    # Real progress outranks a generation deferral: draining pending requests is
+    # useful work even when a stale catalog blocks new candidate generation, so
+    # the outer loop must not apply catalog backoff to a cycle that simulated.
+    if simulated > 0:
+        return 0
+    if str(getattr(summary, "deferred_reason", "") or "").strip():
+        return 8
     return 1 if failed > 0 or (generated == 0 and simulated == 0) else 0
 
 
@@ -140,7 +147,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             pass
         return recovery_exit_code(exc)
     print(f"[factory] {json.dumps(summary.__dict__, sort_keys=True)}")
-    if summary.generated == 0 and summary.simulated == 0:
+    if summary.deferred_reason:
+        print(f"[factory] CATALOG_UNAVAILABLE: {summary.deferred_reason}")
+        print("[factory] generation deferred; the outer loop will persist the reason and use catalog backoff")
+    elif summary.generated == 0 and summary.simulated == 0:
         print(
             "[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; "
             "the outer loop will record a recoverable failure and back off"

@@ -228,6 +228,51 @@ def _save_state(path: Path, state: Mapping[str, Any]) -> None:
             pass
 
 
+def import_browser_session(
+    username: str,
+    cookie_header: str,
+    settings: AuthSettings | None = None,
+) -> AuthResult:
+    """Store an operator-provided browser session using the normal DPAPI state.
+
+    Only the platform authentication and Cloudflare clearance cookies are
+    accepted. Callers must obtain the cookie header through an explicit
+    operator action; this helper never reads browser profiles.
+    """
+
+    settings = settings or AuthSettings()
+    _check_settings(settings)
+    parsed: dict[str, str] = {}
+    for part in str(cookie_header or "").split(";"):
+        name, separator, value = part.strip().partition("=")
+        if separator and name in {"t", "cf_clearance"} and value:
+            parsed[name] = value
+    if "t" not in parsed:
+        raise AuthStateError("browser session does not contain the required t cookie")
+
+    path = settings.resolved_state_path()
+    fingerprint = _account_fingerprint(username)
+    with _StateLock(path, settings.lock_timeout_seconds):
+        now = _utc_now()
+        state = _load_state(path, fingerprint, now)
+        rows = [
+            {
+                "name": name,
+                "value": value,
+                "domain": ".worldquantbrain.com",
+                "path": "/",
+                "secure": True,
+                "expires": None,
+            }
+            for name, value in sorted(parsed.items())
+        ]
+        state["last_auth_utc"] = now.isoformat().replace("+00:00", "Z")
+        state["generation"] = int(state["generation"]) + 1
+        state["cookie_blob_dpapi_b64"] = _protect_cookie_rows(rows)
+        _save_state(path, state)
+        return AuthResult(False, True, int(state["generation"]), int(state["auth_attempts"]))
+
+
 def _protect_cookie_rows(rows: list[dict[str, Any]]) -> str:
     try:
         import win32crypt
@@ -394,6 +439,22 @@ def _reserve_attempt(path: Path, state: dict[str, Any], settings: AuthSettings) 
     _save_state(path, state)
 
 
+def mark_session_validated(
+    username: str, settings: AuthSettings | None = None
+) -> None:
+    """Refresh local session freshness only after an authenticated platform read succeeds."""
+    settings = settings or AuthSettings()
+    _check_settings(settings)
+    path = settings.resolved_state_path()
+    fingerprint = _account_fingerprint(username)
+    with _StateLock(path, settings.lock_timeout_seconds):
+        state = _load_state(path, fingerprint, _utc_now())
+        if not _unprotect_cookie_rows(state.get("cookie_blob_dpapi_b64")):
+            raise AuthStateError("authentication state has no protected session cookies")
+        state["last_auth_utc"] = _utc_now().isoformat().replace("+00:00", "Z")
+        _save_state(path, state)
+
+
 def _should_retry(code: int | None, attempt: int, settings: AuthSettings) -> bool:
     return attempt < int(settings.max_attempts) and (code is None or code >= 500)
 
@@ -405,6 +466,7 @@ def ensure_authenticated(
     settings: AuthSettings | None = None,
     *,
     force: bool = False,
+    allow_password_login: bool = True,
 ) -> AuthResult:
     settings = settings or AuthSettings()
     _check_settings(settings)
@@ -415,15 +477,16 @@ def ensure_authenticated(
         state = _load_state(path, fingerprint, now)
         local_generation = _session_generation(requests_session)
         rows = _unprotect_cookie_rows(state.get("cookie_blob_dpapi_b64"))
+        # Stored cookies are reusable for as long as they exist: the 25-minute
+        # cooldown is a login-rate guard, not a session-expiry signal.  The real
+        # expiry lives in the `t` JWT (checked by the platform client) and in the
+        # platform's own 401, which triggers a forced re-authentication replay.
+        # Gating restore on the cooldown discarded still-valid sessions and forced
+        # a password login the platform now answers with 401.
         can_restore = bool(rows) and (
-            (not force and _within_cooldown(state, now, settings.cooldown_seconds))
-            or (
-                force
-                and (
-                    local_generation is None
-                    or local_generation < int(state["generation"])
-                )
-            )
+            not force
+            or local_generation is None
+            or local_generation < int(state["generation"])
         )
         if can_restore:
             restored = _restore_requests_cookies(requests_session, rows)
@@ -435,6 +498,13 @@ def ensure_authenticated(
         if not force and _within_cooldown(state, now, settings.cooldown_seconds):
             _mark_session(requests_session, int(state["generation"]))
             _save_state(path, state)
+            return AuthResult(
+                False, False, int(state["generation"]), int(state["auth_attempts"])
+            )
+        if not force and not allow_password_login:
+            # No usable stored session and the caller has not opted into spending
+            # a credential login. Return unauthenticated and let the first
+            # protected read's 401 drive exactly one forced replay.
             return AuthResult(
                 False, False, int(state["generation"]), int(state["auth_attempts"])
             )

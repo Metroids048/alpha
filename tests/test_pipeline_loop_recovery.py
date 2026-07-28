@@ -136,6 +136,31 @@ def test_recovery_delay_is_capped_and_success_uses_base_sleep() -> None:
     ) == 12
 
 
+def test_catalog_unavailable_uses_persisted_fifteen_to_sixty_minute_backoff() -> None:
+    outcomes = []
+    sleeps: list[float] = []
+
+    pipeline_loop.run_forever(
+        cycle_runner=lambda cycle: pipeline_loop.CycleOutcome(
+            cycle=cycle,
+            rc=8,
+            category=pipeline_loop.RecoveryCategory.CATALOG_UNAVAILABLE,
+            detail="data-field cache is stale",
+        ),
+        stop_requested=lambda: len(outcomes) >= 3,
+        sleeper=sleeps.append,
+        on_outcome=outcomes.append,
+        inter_cycle_sleep=0,
+    )
+
+    assert sleeps == [900.0, 1800.0]
+    assert [outcome.retry_after_seconds for outcome in outcomes] == [900.0, 1800.0, 3600.0]
+    assert all(
+        outcome.category is pipeline_loop.RecoveryCategory.CATALOG_UNAVAILABLE
+        for outcome in outcomes
+    )
+
+
 def test_cycle_outcome_unknown_exception_keeps_task_identity_and_traceback() -> None:
     observed = []
 

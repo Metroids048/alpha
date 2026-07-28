@@ -43,15 +43,21 @@ class SettingsOptimizer:
     def stage1_default(
         self, family: str, priors: list[dict] | None = None
     ) -> dict[str, Any]:
+        # The platform rejects a simulation unless instrumentType/unitHandling/
+        # language/visualization are all present: HTTP 400 "This field is required."
         defaults = {
+            "instrumentType": "EQUITY",
             "region": "USA",
             "universe": "TOP3000",
             "delay": 1,
             "neutralization": "SUBINDUSTRY",
             "decay": 0,
             "truncation": 0.08,
-            "nanHandling": "ON",
             "pasteurization": "ON",
+            "unitHandling": "VERIFY",
+            "nanHandling": "ON",
+            "language": "FASTEXPR",
+            "visualization": False,
         }
         viable = sorted(
             priors or [],

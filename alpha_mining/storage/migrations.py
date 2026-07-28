@@ -336,6 +336,42 @@ WHERE state='MANUAL_INTERVENTION' AND reason IN (
 );
 """,
     ),
+    (
+        12,
+        """
+CREATE TABLE IF NOT EXISTS factory_events (
+ event_id INTEGER PRIMARY KEY AUTOINCREMENT, category TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '',
+ observed_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_factory_events_category ON factory_events(category, observed_at);
+""",
+    ),
+    (
+        13,
+        """
+CREATE TABLE IF NOT EXISTS expression_identities (
+ expression_id TEXT PRIMARY KEY, exact_hash TEXT NOT NULL, parameter_skeleton TEXT NOT NULL,
+ field_skeleton TEXT NOT NULL, created_at TEXT NOT NULL,
+ FOREIGN KEY(expression_id) REFERENCES expressions(expression_id)
+);
+CREATE INDEX IF NOT EXISTS idx_expression_identities_exact_hash ON expression_identities(exact_hash);
+CREATE INDEX IF NOT EXISTS idx_expression_identities_parameter_skeleton ON expression_identities(parameter_skeleton);
+CREATE INDEX IF NOT EXISTS idx_expression_identities_field_skeleton ON expression_identities(field_skeleton);
+""",
+    ),
+    (
+        14,
+        """
+CREATE TABLE IF NOT EXISTS factory_candidate_claims (
+ claim_id INTEGER PRIMARY KEY AUTOINCREMENT, expression_text TEXT NOT NULL,
+ exact_hash TEXT NOT NULL UNIQUE, parameter_skeleton TEXT NOT NULL UNIQUE,
+ field_skeleton TEXT NOT NULL UNIQUE, request_hash TEXT NOT NULL UNIQUE,
+ status TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_factory_candidate_claims_status
+ ON factory_candidate_claims(status, updated_at);
+""",
+    ),
 )
 
 
