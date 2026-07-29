@@ -55,6 +55,13 @@ work/codex_crash_forensics_*/logs_2*_backup.sqlite
 work/codex_crash_forensics_*/logs_2*_verify_backup.sqlite
 *.sqlite
 
+# Authenticated-crawl browser profile copies (contain live session cookies)
+work/wq_crawl_profile/
+work/wq_crawl_profile_*/
+
+# Crawled WorldQuant reference corpus (external third-party content, large, derived)
+World quant/
+
 # DPAPI-protected WorldQuant authentication state (local current-user scope)
 .wq_auth_state.json
 .wq_auth_state.json.tmp.*

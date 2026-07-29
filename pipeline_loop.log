@@ -570,3 +570,135 @@ NameError: name '_consume_pending_simulations' is not defined
 --- 2026-07-28T15:13:27Z cycle_5/simulate ---
 [factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
 [factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-28T15:28:28Z cycle_6/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-28T15:43:30Z cycle_7/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-28T15:58:32Z cycle_8/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T00:48:27Z cycle_1/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T00:50:29Z cycle_2/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T00:54:31Z cycle_3/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T01:02:33Z cycle_4/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T01:17:35Z cycle_5/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T01:32:36Z cycle_6/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T01:47:38Z cycle_7/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T02:02:40Z cycle_8/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T02:17:42Z cycle_9/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T02:32:43Z cycle_10/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T02:47:45Z cycle_11/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T03:02:47Z cycle_12/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T03:17:49Z cycle_13/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T03:32:51Z cycle_14/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T03:47:52Z cycle_15/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T04:02:54Z cycle_16/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T04:17:56Z cycle_17/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T11:49:46Z cycle_1/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T11:51:48Z cycle_2/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T11:55:50Z cycle_3/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T12:03:51Z cycle_4/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T12:18:53Z cycle_5/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T12:33:56Z cycle_6/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T12:48:57Z cycle_7/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T13:03:59Z cycle_8/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T13:19:01Z cycle_9/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T13:39:16Z cycle_1/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T13:41:18Z cycle_2/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T13:45:20Z cycle_3/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T13:53:21Z cycle_4/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
