@@ -18,6 +18,7 @@ from alpha_mining.generation.validation import LocalExpressionValidator
 from alpha_mining.storage.csv_queue import CandidateCsvQueue
 
 from .metadata import MetadataCache, MetadataCacheStale
+from .scoring import score_candidate_rows
 
 
 @dataclass(frozen=True)
@@ -124,6 +125,7 @@ def run_offline_generation(
             skeleton_seen.add(skeleton)
             family_counts[candidate.family] = family_counts.get(candidate.family, 0) + 1
             added += 1
+        queue.replace_all(score_candidate_rows(queue.read()))
 
     existing_count = len(existing_rows)
     final_count = existing_count + added
@@ -195,8 +197,8 @@ def _candidate_row(
         "parent_template": candidate.parent_template,
         "economic_hypothesis": candidate.hypothesis,
         "description_draft": description,
-        "local_score": "1.0",
-        "priority_score": "1.0",
+        "local_score": "",
+        "priority_score": "",
         "queue_status": "GENERATED",
         "retry_count": "0",
     }

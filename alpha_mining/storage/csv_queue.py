@@ -100,6 +100,19 @@ class CandidateCsvQueue:
                 return
         raise KeyError(candidate_id)
 
+    def replace_all(self, rows: list[dict[str, str]]) -> None:
+        """Atomically replace the queue while preserving the declared CSV schema."""
+
+        self._require_lock()
+        normalized: list[dict[str, str]] = []
+        for source in rows:
+            row = self.empty_candidate()
+            row.update({key: str(value) for key, value in source.items() if key in row})
+            if not row["candidate_id"]:
+                raise ValueError("candidate_id is required")
+            normalized.append(row)
+        self._atomic_write(normalized)
+
     def _acquire_lock(self) -> None:
         if self.lock_path.exists():
             age = time.time() - self.lock_path.stat().st_mtime

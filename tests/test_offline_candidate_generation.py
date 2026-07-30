@@ -5,6 +5,8 @@ import hashlib
 import json
 import os
 import socket
+import sys
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -132,7 +134,11 @@ def test_offline_generation_writes_100_unique_candidates_without_io_leaks(
 
     monkeypatch.setattr(Path, "open", guarded_open)
 
+    platform_modules_before = {
+        name for name in sys.modules if name == "alpha_mining.platform" or name.startswith("alpha_mining.platform.")
+    }
     first = run_offline_generation(cache_dir=cache_dir, queue_path=queue, events_path=events, count=100)
+    first_rows = _read_csv(queue)
     second = run_offline_generation(cache_dir=cache_dir, queue_path=queue, events_path=events, count=100)
 
     assert first.added == 100
@@ -149,6 +155,77 @@ def test_offline_generation_writes_100_unique_candidates_without_io_leaks(
     assert all(row["queue_status"] == "QUEUED" for row in rows)
     assert all("sharpe" not in row["description_draft"].lower() for row in rows)
     assert len(_read_csv(events)) == 200
+    priorities = [float(row["priority_score"]) for row in rows]
+    assert len(set(priorities)) > 1
+    assert priorities == sorted(priorities, reverse=True)
+    expected_order = sorted(
+        rows,
+        key=lambda row: (
+            -float(row["priority_score"]),
+            -float(row["local_score"]),
+            row["operator_family"],
+            row["canonical_signature"],
+            row["candidate_id"],
+        ),
+    )
+    assert [row["candidate_id"] for row in rows] == [
+        row["candidate_id"] for row in expected_order
+    ]
+    assert [
+        (row["candidate_id"], row["local_score"], row["priority_score"]) for row in rows
+    ] == [
+        (row["candidate_id"], row["local_score"], row["priority_score"])
+        for row in first_rows
+    ]
+    family_counts = Counter(row["operator_family"] for row in rows)
+    scarce_count = min(family_counts.values())
+    abundant_count = max(family_counts.values())
+    assert scarce_count < abundant_count
+    scarce_bonuses = {
+        round(float(row["priority_score"]) - float(row["local_score"]), 6)
+        for row in rows
+        if family_counts[row["operator_family"]] == scarce_count
+    }
+    abundant_bonuses = {
+        round(float(row["priority_score"]) - float(row["local_score"]), 6)
+        for row in rows
+        if family_counts[row["operator_family"]] == abundant_count
+    }
+    assert min(scarce_bonuses) > max(abundant_bonuses)
+    assert {
+        name for name in sys.modules if name == "alpha_mining.platform" or name.startswith("alpha_mining.platform.")
+    } == platform_modules_before
+
+
+def test_failed_csv_history_reduces_candidate_priority(tmp_path: Path) -> None:
+    from alpha_mining.offline.service import run_offline_generation
+    from alpha_mining.storage.csv_queue import CandidateCsvQueue
+
+    cache_dir = tmp_path / "cache"
+    queue_path = tmp_path / "queue.csv"
+    events_path = tmp_path / "events.csv"
+    _write_cache(cache_dir)
+    run_offline_generation(
+        cache_dir=cache_dir,
+        queue_path=queue_path,
+        events_path=events_path,
+        count=100,
+    )
+    before = {row["candidate_id"]: float(row["priority_score"]) for row in _read_csv(queue_path)}
+    target_id = next(iter(before))
+    queue = CandidateCsvQueue(queue_path, events_path)
+    with queue.writer():
+        queue.transition(target_id, "FAILED", "offline validation failed")
+
+    run_offline_generation(
+        cache_dir=cache_dir,
+        queue_path=queue_path,
+        events_path=events_path,
+        count=100,
+    )
+    after = {row["candidate_id"]: float(row["priority_score"]) for row in _read_csv(queue_path)}
+
+    assert after[target_id] <= before[target_id] - 0.85
 
 
 def test_missing_cache_stops_with_sync_instruction(tmp_path: Path, capsys) -> None:
