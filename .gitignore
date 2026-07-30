@@ -143,6 +143,8 @@ __pycache__/
 !数据/**/.gitkeep
 
 # Legacy generated artifacts retained locally but not versioned.
+/总alpha.csv
+/通过门槛的alpha.csv
 .alpha_operators_cache.json
 alpha_novelty_store.json
 alpha_feedback_*.csv
