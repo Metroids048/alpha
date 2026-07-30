@@ -59,8 +59,9 @@ work/codex_crash_forensics_*/logs_2*_verify_backup.sqlite
 work/wq_crawl_profile/
 work/wq_crawl_profile_*/
 
-# Crawled WorldQuant reference corpus (external third-party content, large, derived)
-World quant/
+# WorldQuant reference corpus: track markdown notes only; ignore other crawled/derived files
+World quant/*
+!World quant/*.md
 
 # DPAPI-protected WorldQuant authentication state (local current-user scope)
 .wq_auth_state.json
