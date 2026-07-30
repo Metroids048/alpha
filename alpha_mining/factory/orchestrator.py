@@ -344,13 +344,10 @@ class FactoryOrchestrator:
         request_hash = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
         now = _utc_now()
         with sqlite3.connect(self.database) as con:
-            # Use only exact_hash for deduplication so that the same template applied
-            # to different data fields (distinct exact expressions) can all be claimed.
-            # parameter_skeleton / field_skeleton dedup was too aggressive: it blocked
-            # every hypothesis that shared an expression topology with any prior run.
             historical = con.execute(
-                "SELECT 1 FROM expression_identities WHERE exact_hash=? LIMIT 1",
-                (identity.exact_hash,),
+                """SELECT 1 FROM expression_identities
+                   WHERE exact_hash=? OR field_skeleton=? LIMIT 1""",
+                (identity.exact_hash, identity.field_skeleton),
             ).fetchone()
             if historical:
                 return False
