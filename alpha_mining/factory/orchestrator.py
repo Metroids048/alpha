@@ -346,16 +346,15 @@ class FactoryOrchestrator:
         with sqlite3.connect(self.database) as con:
             historical = con.execute(
                 """SELECT 1 FROM expression_identities
-                   WHERE exact_hash=? OR field_skeleton=? LIMIT 1""",
-                (identity.exact_hash, identity.field_skeleton),
+                   WHERE exact_hash=? LIMIT 1""",
+                (identity.exact_hash,),
             ).fetchone()
             if historical:
                 return False
             # Clear stale FAILED entries so UNIQUE constraints don't block retries.
-            # factory_candidate_claims: UNIQUE on field_skeleton
             con.execute(
-                "DELETE FROM factory_candidate_claims WHERE field_skeleton=? AND status='FAILED'",
-                (identity.field_skeleton,),
+                "DELETE FROM factory_candidate_claims WHERE exact_hash=? AND status='FAILED'",
+                (identity.exact_hash,),
             )
             # simulation_requests: UNIQUE on request_hash — stale FAILEDs block
             # INSERT OR IGNORE, causing rowcount=0 and silent skip of all candidates.

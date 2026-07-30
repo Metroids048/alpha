@@ -372,6 +372,29 @@ CREATE INDEX IF NOT EXISTS idx_factory_candidate_claims_status
  ON factory_candidate_claims(status, updated_at);
 """,
     ),
+    (
+        15,
+        """
+ALTER TABLE factory_candidate_claims RENAME TO factory_candidate_claims_v14;
+CREATE TABLE factory_candidate_claims (
+ claim_id INTEGER PRIMARY KEY AUTOINCREMENT, expression_text TEXT NOT NULL,
+ exact_hash TEXT NOT NULL UNIQUE, parameter_skeleton TEXT NOT NULL,
+ field_skeleton TEXT NOT NULL, request_hash TEXT NOT NULL UNIQUE,
+ status TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+);
+INSERT INTO factory_candidate_claims
+ (claim_id,expression_text,exact_hash,parameter_skeleton,field_skeleton,request_hash,status,created_at,updated_at)
+SELECT claim_id,expression_text,exact_hash,parameter_skeleton,field_skeleton,request_hash,status,created_at,updated_at
+FROM factory_candidate_claims_v14;
+DROP TABLE factory_candidate_claims_v14;
+CREATE INDEX idx_factory_candidate_claims_status
+ ON factory_candidate_claims(status, updated_at);
+CREATE INDEX idx_factory_candidate_claims_parameter_skeleton
+ ON factory_candidate_claims(parameter_skeleton);
+CREATE INDEX idx_factory_candidate_claims_field_skeleton
+ ON factory_candidate_claims(field_skeleton);
+""",
+    ),
 )
 
 

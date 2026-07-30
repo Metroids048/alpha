@@ -108,12 +108,12 @@ def test_factory_orchestrator_uses_group_rank_free_consultant_candidate(tmp_path
         assert con.execute("SELECT COUNT(*) FROM simulation_runs").fetchone()[0] == 14
 
 
-def test_factory_rejects_a_historical_field_skeleton_before_simulation(tmp_path: Path) -> None:
+def test_factory_rejects_an_exact_historical_expression_before_simulation(tmp_path: Path) -> None:
     from alpha_mining.domain.expression_normalization import expression_identity
     from alpha_mining.factory.orchestrator import FactoryOrchestrator
 
     database = _research_database(tmp_path)
-    historical = "-rank(ts_delta(cashflow_op, 7))"
+    historical = "-rank(ts_delta(revenue,5))"
     identity = expression_identity(historical)
     with sqlite3.connect(database) as con:
         con.execute(
@@ -132,22 +132,20 @@ def test_factory_rejects_a_historical_field_skeleton_before_simulation(tmp_path:
     simulation = _SequentialSimulationService()
     summary = FactoryOrchestrator(database, simulation).run_simulate(batch_size=20)
 
-    # 1 of 14 skeletons (neg(ts_delta(FIELD,#))) is pre-blocked, so 13 are claimed.
+    # Only the exact historical expression is blocked; skeleton siblings remain eligible.
     assert summary.generated == summary.simulated == 13
-    # The blocked template is specifically "-rank(ts_delta(revenue,5))"; other templates
-    # that happen to contain "ts_delta(revenue,5)" as a sub-expression (e.g. decayed_momentum)
-    # have a different skeleton and are still allowed.
     assert all("-rank(ts_delta(revenue,5))" != expression for expression, _ in simulation.calls)
 
 
-def test_factory_claim_reserves_field_skeleton_before_simulation(tmp_path: Path) -> None:
+def test_factory_claim_allows_same_skeleton_with_a_different_field(tmp_path: Path) -> None:
     from alpha_mining.factory.orchestrator import FactoryOrchestrator
 
     factory = FactoryOrchestrator(_research_database(tmp_path), _SequentialSimulationService())
     settings = {"region": "USA", "universe": "TOP3000", "delay": 1}
 
     assert factory._claim("rank(ts_delta(revenue, 21))", settings)
-    assert not factory._claim("rank(ts_delta(cashflow_op, 63))", settings)
+    assert not factory._claim("rank(ts_delta(revenue, 21))", settings)
+    assert factory._claim("rank(ts_delta(cashflow_op, 63))", settings)
 
 
 def test_factory_refreshes_operator_cache_only_from_platform_ledger(tmp_path: Path) -> None:
