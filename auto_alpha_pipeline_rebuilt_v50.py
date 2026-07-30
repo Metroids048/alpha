@@ -1767,10 +1767,10 @@ class PipelineConfig:
     # IS ladder Sharpe pre-check (Prompt 2). Opt-in; requires extra platform simulation calls.
     ladder_check_enabled: bool = False
     # WQ platform IS ladder check: per-year minimum Sharpe for year-by-year
-    # consistency check. 1.0 is the original default; the composite triage
+    # consistency check. 1.65 is the safe opt-in default; the composite triage
     # filter (Sharpe>1.57 AND Fitness>1 AND Turnover 1%-70%) is enforced
     # separately in legacy_triage.filter_worth_resubmitting().
-    ladder_check_min_sharpe: float = 1.0
+    ladder_check_min_sharpe: float = 1.65
     ladder_check_start_year: int = 2019
     ladder_check_end_year: int = 2023
     # Signal diversity: down-weight fast/short-window price signals in fine-rank (Prompt 3).
@@ -7268,7 +7268,7 @@ class WorldQuantAlphaPipeline:
         expression = str(row.get("expression") or "").strip()
         if not expression:
             return True, "ladder_check_skipped:missing_expression"
-        threshold = float(getattr(self.cfg, "ladder_check_min_sharpe", 1.0))
+        threshold = float(getattr(self.cfg, "ladder_check_min_sharpe", 1.65))
         from alpha_mining.filter.ladder_check import (
             check_yearly_sharpes,
             year_range,

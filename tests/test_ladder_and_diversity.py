@@ -156,6 +156,22 @@ class TestDiversityPenalty:
 # ── run_yearly_ladder_check integration (mock HTTP) ──────────────────────────
 
 
+def test_pipeline_config_uses_safe_disabled_ladder_defaults() -> None:
+    import importlib.util
+
+    root = Path(__file__).resolve().parent.parent
+    mod_path = root / "auto_alpha_pipeline_rebuilt_v50.py"
+    mod_spec = importlib.util.spec_from_file_location("v50_ladder_defaults", mod_path)
+    mod = importlib.util.module_from_spec(mod_spec)
+    sys.modules["v50_ladder_defaults"] = mod
+    mod_spec.loader.exec_module(mod)
+
+    settings = mod.PipelineConfig(username="u", password="p")
+
+    assert settings.ladder_check_enabled is False
+    assert settings.ladder_check_min_sharpe == 1.65
+
+
 def _make_pipeline_with_ladder(tmp_path: Path, *, ladder_enabled: bool = True):
     import importlib.util
 
