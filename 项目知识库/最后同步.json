@@ -1,10 +1,10 @@
 {
   "project": "alpha",
-  "time": "2026-07-29T17:38:57",
+  "time": "2026-07-30T23:36:34",
   "dry_run": false,
   "stats": {
-    "copied": 2,
-    "unchanged": 8,
+    "copied": 1,
+    "unchanged": 10,
     "conflict": 1,
     "skip": 0,
     "project": "alpha"
