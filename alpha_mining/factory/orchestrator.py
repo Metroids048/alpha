@@ -606,17 +606,12 @@ class FactoryOrchestrator:
                 fields=spec.fields,
             )
         ]
-        claimed_skeletons: set[str] = set()
         for spec, candidate in candidate_specs:
             if simulated >= max(0, int(batch_size)):
                 break
-            identity = expression_identity(candidate.expression)
-            if not identity.field_skeleton or identity.field_skeleton in claimed_skeletons:
-                continue
             settings = SettingsOptimizer(max_local_trials=4).stage1_default(spec.family)
             if not self._claim(candidate.expression, settings):
                 continue
-            claimed_skeletons.add(identity.field_skeleton)
             generated += 1
             try:
                 result = self.simulation.simulate(
