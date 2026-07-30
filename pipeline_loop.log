@@ -702,3 +702,27 @@ NameError: name '_consume_pending_simulations' is not defined
 --- 2026-07-29T13:53:21Z cycle_4/simulate ---
 [factory] {"baseline_pass": 0, "deferred_reason": "", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
 [factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; the outer loop will record a recoverable failure and back off
+
+--- 2026-07-29T14:19:22Z cycle_1/catalog-sync ---
+{"detail": "authentication endpoint returned HTTP 401", "error_class": "AuthenticationFailed", "status": "CATALOG_UNAVAILABLE"}
+
+--- 2026-07-29T14:19:28Z cycle_1/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "data-field cache is stale", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] CATALOG_UNAVAILABLE: data-field cache is stale
+[factory] generation deferred; the outer loop will persist the reason and use catalog backoff
+
+--- 2026-07-29T14:34:29Z cycle_2/catalog-sync ---
+{"detail": "read-only data-sets catalog failed with HTTP 429: API rate limit exceeded", "error_class": "PlatformReadError", "status": "CATALOG_UNAVAILABLE"}
+
+--- 2026-07-29T14:34:30Z cycle_2/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "data-field cache is stale", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] CATALOG_UNAVAILABLE: data-field cache is stale
+[factory] generation deferred; the outer loop will persist the reason and use catalog backoff
+
+--- 2026-07-29T15:04:30Z cycle_3/catalog-sync ---
+{"detail": "rate-limit interval expired; only one explicit read probe is allowed", "error_class": "CircuitOpen", "status": "CATALOG_UNAVAILABLE"}
+
+--- 2026-07-29T15:04:31Z cycle_3/simulate ---
+[factory] {"baseline_pass": 0, "deferred_reason": "data-field cache is stale", "descriptions_validated": 0, "failed": 0, "far_fail": 0, "generated": 0, "near_pass": 0, "simulated": 0}
+[factory] CATALOG_UNAVAILABLE: data-field cache is stale
+[factory] generation deferred; the outer loop will persist the reason and use catalog backoff
