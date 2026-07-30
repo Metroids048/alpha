@@ -154,3 +154,11 @@ historical_alpha_eligibility.csv
 legacy_triage_*.csv
 shadow_run_*.csv
 shadow_run_*.json
+
+# AI-KNOWLEDGE-MANAGED-START
+AI原始记录/
+项目知识库/会话记录/
+**/.env
+**/*.pem
+**/*.key
+# AI-KNOWLEDGE-MANAGED-END

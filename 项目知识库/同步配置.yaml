@@ -1,0 +1,17 @@
+版本: 1
+项目编号: "alpha"
+项目名称: "alpha"
+项目根目录: "C:/Users/win/Desktop/alpha"
+中央目录: "C:/Users/win/Desktop/全局配置"
+中央镜像目录: "C:/Users/win/Desktop/全局配置/项目镜像/alpha"
+敏感级别: "PRIVATE"
+同步:
+  启用: true
+  项目到中央: true
+  中央到项目: true
+  原始聊天: false
+  会话摘要: true
+Git:
+  提交项目知识库: false
+  提交Cursor规则: true
+  提交原始记录: false

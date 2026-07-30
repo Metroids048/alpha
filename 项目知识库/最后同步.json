@@ -1,0 +1,12 @@
+{
+  "project": "alpha",
+  "time": "2026-07-29T17:38:57",
+  "dry_run": false,
+  "stats": {
+    "copied": 2,
+    "unchanged": 8,
+    "conflict": 1,
+    "skip": 0,
+    "project": "alpha"
+  }
+}

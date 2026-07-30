@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "matcher": "Read|Write|Shell",
+        "command": "python \"C:/Users/win/Desktop/全局配置/工具/检查隐私.py\" --hook-stdin",
+        "note": "拦截密钥路径与危险命令；不采集完整聊天"
+      }
+    ]
+  }
+}
