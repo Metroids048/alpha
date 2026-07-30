@@ -1,56 +1,80 @@
-"""测试：清理未完成的 expressions"""
+from __future__ import annotations
+
 import sqlite3
-import unittest
+from datetime import datetime, timezone
+from pathlib import Path
 
 
-class TestCleanStaleExpressions(unittest.TestCase):
-    def test_clean_stale_expressions(self):
-        """清理未完成的 expressions，让 pipeline 重新开始"""
-        con = sqlite3.connect('alpha_state.sqlite3')
+def test_clean_stale_expressions_uses_an_injected_database(tmp_path: Path, monkeypatch) -> None:
+    from alpha_mining.domain.expression_normalization import expression_identity
+    from alpha_mining.storage.maintenance import clean_stale_expressions
+    from alpha_mining.storage.sqlite_store import SqliteRunLog
 
-        print('\n🧹 清理未完成的 expressions')
-        print('=' * 60)
+    monkeypatch.chdir(tmp_path)
+    database = tmp_path / "maintenance-fixture.sqlite"
+    SqliteRunLog(database).initialize_schema()
 
-        # 1. 删除 expression_identities
-        result1 = con.execute('DELETE FROM expression_identities').rowcount
-        print(f'✅ 删除了 {result1} 个 expression_identities')
+    expressions = {
+        "stale": ("rank(ts_delta(revenue,5))", "2020-01-01T00:00:00Z"),
+        "recent": ("rank(ts_rank(revenue,21))", "2026-07-30T00:00:00Z"),
+        "completed": ("rank(ts_mean(revenue,63))", "2020-01-01T00:00:00Z"),
+    }
+    with sqlite3.connect(database) as connection:
+        connection.execute(
+            """INSERT INTO research_topics
+               (topic_id,topic_name_cn,topic_name_en,category,data_category,description,source,created_at,active)
+               VALUES ('topic','topic','topic','fixture','fixture','fixture','fixture','2026-01-01',1)"""
+        )
+        connection.execute(
+            """INSERT INTO hypotheses
+               (hypothesis_id,topic_id,statement_cn,statement_en,mechanism,horizon,created_at,status)
+               VALUES ('hypothesis','topic','test','test','test','medium','2026-01-01','active')"""
+        )
+        connection.execute(
+            """INSERT INTO data_mappings
+               (mapping_id,hypothesis_id,data_field,dataset_id,rationale,field_quality_score,selected_by,created_at)
+               VALUES ('mapping','hypothesis','revenue','fixture','test',1.0,'test','2026-01-01')"""
+        )
+        for expression_id, (expression, created_at) in expressions.items():
+            identity = expression_identity(expression)
+            connection.execute(
+                """INSERT INTO expressions
+                   (expression_id,expression_text,normalized_text,structure_sig,hypothesis_id,
+                    generation_strategy,generation_layer,created_at)
+                   VALUES (?,?,?,?,?,'fixture','L5',?)""",
+                (expression_id, expression, expression, identity.field_skeleton, "hypothesis", created_at),
+            )
+            connection.execute(
+                """INSERT INTO expression_identities
+                   (expression_id,exact_hash,parameter_skeleton,field_skeleton,created_at)
+                   VALUES (?,?,?,?,?)""",
+                (
+                    expression_id,
+                    identity.exact_hash,
+                    identity.parameter_skeleton,
+                    identity.field_skeleton,
+                    created_at,
+                ),
+            )
+        connection.execute(
+            """INSERT INTO simulation_runs
+               (utc_iso,alpha_id,expression,status,queue_status,expression_id)
+               VALUES ('2026-01-01','alpha-completed',?,'COMPLETE','done','completed')""",
+            (expressions["completed"][0],),
+        )
 
-        # 2. 删除 expressions
-        result2 = con.execute('DELETE FROM expressions').rowcount
-        print(f'✅ 删除了 {result2} 个 expressions')
+    result = clean_stale_expressions(
+        database,
+        stale_before=datetime(2026, 7, 29, tzinfo=timezone.utc),
+    )
 
-        con.commit()
-
-        # 3. 验证清理结果
-        print('\n📊 清理后统计:')
-        identities = con.execute("SELECT COUNT(*) FROM expression_identities").fetchone()[0]
-        expressions = con.execute("SELECT COUNT(*) FROM expressions").fetchone()[0]
-        sim_req = con.execute("SELECT COUNT(*) FROM simulation_requests").fetchone()[0]
-        claims = con.execute("SELECT COUNT(*) FROM factory_candidate_claims").fetchone()[0]
-
-        print(f'   expression_identities: {identities}')
-        print(f'   expressions: {expressions}')
-        print(f'   simulation_requests: {sim_req}')
-        print(f'   factory_candidate_claims: {claims}')
-
-        # 4. 验证 hypotheses 和 data_mappings 还在
-        hyp = con.execute("SELECT COUNT(*) FROM hypotheses").fetchone()[0]
-        mappings = con.execute("SELECT COUNT(*) FROM data_mappings").fetchone()[0]
-
-        print(f'\n✅ 保留的数据:')
-        print(f'   hypotheses: {hyp}')
-        print(f'   data_mappings: {mappings}')
-
-        con.close()
-
-        print('\n✅ 清理完成！现在 generator 可以从头生成新的候选')
-
-        # 断言清理成功
-        self.assertEqual(identities, 0)
-        self.assertEqual(expressions, 0)
-        self.assertGreater(hyp, 0)
-        self.assertGreater(mappings, 0)
-
-
-if __name__ == '__main__':
-    unittest.main()
+    assert result.deleted_expressions == 1
+    assert result.deleted_identities == 1
+    assert result.retained_expressions == 2
+    with sqlite3.connect(database) as connection:
+        assert {
+            row[0] for row in connection.execute("SELECT expression_id FROM expressions")
+        } == {"recent", "completed"}
+        assert connection.execute("SELECT COUNT(*) FROM hypotheses").fetchone()[0] == 1
+        assert connection.execute("SELECT COUNT(*) FROM data_mappings").fetchone()[0] == 1
+    assert not Path("alpha_state.sqlite3").exists()
