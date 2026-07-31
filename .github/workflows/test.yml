@@ -48,6 +48,19 @@ jobs:
             }
           }
           if ($pytestExit -ne 0) { exit $pytestExit }
+      - name: Publish failed test summary
+        if: failure()
+        shell: pwsh
+        run: |
+          $path = 'test-results/pytest-output.txt'
+          if (Test-Path $path) {
+            $summary = (Get-Content -LiteralPath $path -Tail 100) -join "`n"
+            if ($summary.Length -gt 12000) {
+              $summary = $summary.Substring($summary.Length - 12000)
+            }
+            $summary = $summary.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+            Write-Output "::error title=Pytest failure summary::$summary"
+          }
       - name: Upload failed test evidence
         if: failure()
         uses: actions/upload-artifact@v4
