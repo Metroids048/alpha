@@ -148,8 +148,12 @@ def main() -> int:
             "300",
             "--inter-cycle-sleep",
             "120",
-            "--resilient-async",
         ]
+    if "--resilient-async" in loop_args:
+        _log(
+            log_path,
+            "[supervisor] WARNING --resilient-async is a legacy P2 path and is not enabled by default",
+        )
 
     state = _load_state(state_path)
     restarts = int(state.get("restarts", 0))

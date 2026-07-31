@@ -48,6 +48,7 @@ alpha50.csv
 
 # Plans
 .claude/plans/
+.claude/settings.local.json
 
 # Local forensics backups (exceed GitHub 100MB limit)
 work/codex_crash_forensics_*/logs_2*_backup.sqlite

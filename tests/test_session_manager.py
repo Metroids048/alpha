@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+import hashlib
 import subprocess
 import sys
 import threading
@@ -24,6 +25,19 @@ from alpha_mining.auth.session_manager import (
     ensure_authenticated_async,
 )
 import alpha_mining.auth.session_manager as session_manager
+
+
+class _FakeProtector:
+    """Portable authenticated envelope for state-machine boundary tests."""
+
+    def protect(self, payload: bytes) -> bytes:
+        return hashlib.sha256(payload).digest() + payload
+
+    def unprotect(self, payload: bytes) -> bytes:
+        digest, clear = payload[:32], payload[32:]
+        if digest != hashlib.sha256(clear).digest():
+            raise ValueError("protected payload integrity check failed")
+        return clear
 
 
 class _AuthHandler(BaseHTTPRequestHandler):
@@ -65,6 +79,7 @@ def _settings(tmp_path: Path, **overrides: object) -> AuthSettings:
         "daily_cap": 5,
         "max_attempts": 2,
         "lock_timeout_seconds": 5,
+        "protector": _FakeProtector(),
     }
     values.update(overrides)
     return AuthSettings(**values)
@@ -504,7 +519,7 @@ def test_utc_day_change_resets_attempt_counter(
     assert handler.calls == 3
 
 
-def test_dpapi_blob_tampering_fails_closed(tmp_path: Path, auth_server) -> None:
+def test_protected_blob_tampering_fails_closed(tmp_path: Path, auth_server) -> None:
     url, handler = auth_server
     settings = _settings(tmp_path)
     session = requests.Session()
@@ -528,7 +543,7 @@ def test_dpapi_blob_tampering_fails_closed(tmp_path: Path, auth_server) -> None:
     assert handler.calls == 1
 
 
-def test_requests_cookie_attributes_round_trip_through_dpapi(tmp_path: Path) -> None:
+def test_requests_cookie_attributes_round_trip_through_protector(tmp_path: Path) -> None:
     settings = _settings(tmp_path)
     source = requests.Session()
 
@@ -562,7 +577,7 @@ def test_requests_cookie_attributes_round_trip_through_dpapi(tmp_path: Path) -> 
     assert cookie.expires == 2_000_000_000
 
 
-def test_aiohttp_cookie_attributes_round_trip_through_dpapi(tmp_path: Path) -> None:
+def test_aiohttp_cookie_attributes_round_trip_through_protector(tmp_path: Path) -> None:
     settings = _settings(tmp_path)
 
     class Response:
@@ -611,6 +626,7 @@ def test_aiohttp_cookie_attributes_round_trip_through_dpapi(tmp_path: Path) -> N
     asyncio.run(exercise())
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows DPAPI integration")
 def test_five_fresh_processes_restore_one_dpapi_session(
     tmp_path: Path, auth_server
 ) -> None:
@@ -632,6 +648,7 @@ def test_five_fresh_processes_restore_one_dpapi_session(
     assert handler.calls == 1
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows DPAPI integration")
 def test_concurrent_processes_share_the_cross_process_lock(
     tmp_path: Path, auth_server
 ) -> None:

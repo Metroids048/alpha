@@ -111,9 +111,16 @@ def test_factory_orchestrator_uses_group_rank_free_consultant_candidate(tmp_path
 def test_factory_rejects_an_exact_historical_expression_before_simulation(tmp_path: Path) -> None:
     from alpha_mining.domain.expression_normalization import expression_identity
     from alpha_mining.factory.orchestrator import FactoryOrchestrator
+    from alpha_mining.generator.consultant_generator import ConsultantGenerator
 
     database = _research_database(tmp_path)
-    historical = "-rank(ts_delta(revenue,5))"
+    historical = ConsultantGenerator().generate(
+        hypothesis_id="h1",
+        family="fundamental",
+        mechanism="profitability surprise",
+        horizon="medium",
+        fields=("revenue",),
+    )[0].expression
     identity = expression_identity(historical)
     with sqlite3.connect(database) as con:
         con.execute(
@@ -134,7 +141,7 @@ def test_factory_rejects_an_exact_historical_expression_before_simulation(tmp_pa
 
     # Only the exact historical expression is blocked; skeleton siblings remain eligible.
     assert summary.generated == summary.simulated == 13
-    assert all("-rank(ts_delta(revenue,5))" != expression for expression, _ in simulation.calls)
+    assert all(historical != expression for expression, _ in simulation.calls)
 
 
 def test_factory_claim_allows_same_skeleton_with_a_different_field(tmp_path: Path) -> None:
@@ -201,12 +208,13 @@ def test_factory_orchestrator_defers_without_verified_catalog_mappings(tmp_path:
 
     assert summary.generated == 0
     assert summary.simulated == 0
-    assert summary.deferred_reason == "no verified data_mappings are available"
+    assert summary.generation_state == "NO_RESEARCH_SPECS"
+    assert summary.deferred_reason == "no active research specifications are available"
     assert simulation.calls == []
     with sqlite3.connect(database) as con:
         assert con.execute(
             "SELECT category FROM factory_events ORDER BY event_id DESC LIMIT 1"
-        ).fetchone()[0] == "CATALOG_UNAVAILABLE"
+        ).fetchone()[0] == "NO_RESEARCH_SPECS"
 
 
 def test_factory_rejects_a_field_mapped_to_the_wrong_dataset(tmp_path: Path) -> None:
@@ -314,6 +322,7 @@ def test_new_alpha_pipeline_prepares_description_after_all_checks_pass(tmp_path:
                     "operatorDefinitions": {
                         "rank": "cross-sectional rank",
                         "ts_rank": "time-series rank",
+                        "ts_delta": "time-series change",
                     },
                 },
             )

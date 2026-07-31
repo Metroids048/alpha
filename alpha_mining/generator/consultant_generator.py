@@ -33,6 +33,8 @@ class ConsultantGenerator:
         *,
         hypothesis_id: str,
         family: str,
+        mechanism: str,
+        horizon: str,
         fields: Iterable[str],
         parent_expression: str = "",
     ) -> list[ConsultantCandidate]:
@@ -41,40 +43,74 @@ class ConsultantGenerator:
         )
         if not field_list:
             return []
-        primary = field_list[0]
-        templates = [
-            # --- Original 7 templates (field_skeletons: ts_rank, neg(ts_delta),
-            #     ts_delta(ts_delta), ts_zscore, neg(ts_std_dev),
-            #     div(ts_mean,ts_std_dev), sub(ts_zscore,ts_zscore)) ---
-            ("medium_horizon_momentum", f"rank(ts_rank({primary},63))"),
-            ("short_horizon_reversal", f"-rank(ts_delta({primary},5))"),
-            ("change_to_acceleration", f"rank(ts_delta(ts_delta({primary},63),21))"),
-            ("historical_surprise", f"rank(ts_zscore({primary},126))"),
-            ("volatility_regime", f"-rank(ts_std_dev({primary},63))"),
-            ("relative_flow", f"rank(ts_mean({primary},21)/ts_std_dev({primary},63))"),
-            (
-                "cross_signal_divergence",
-                f"rank(ts_zscore({primary},63)-ts_zscore({primary},21))",
-            ),
-            # --- Extension 7 templates (distinct field_skeletons) ---
-            # skeleton: ts_mean(ts_delta(FIELD,#),#)
-            ("smoothed_delta", f"rank(ts_mean(ts_delta({primary},1),20))"),
-            # skeleton: div(ts_std_dev(FIELD,#),ts_std_dev(FIELD,#))
-            ("vol_ratio_regimes", f"rank(ts_std_dev({primary},5)/ts_std_dev({primary},20))"),
-            # skeleton: sub(ts_rank(FIELD,#),ts_rank(FIELD,#))
-            ("rank_spread_horizons", f"rank(ts_rank({primary},20)-ts_rank({primary},60))"),
-            # skeleton: div(FIELD,ts_mean(FIELD,#))
-            ("normalized_level", f"rank({primary}/ts_mean({primary},20))"),
-            # skeleton: ts_decay_linear(ts_delta(FIELD,#),#)
-            ("decayed_momentum", f"rank(ts_decay_linear(ts_delta({primary},5),10))"),
-            # skeleton: ts_ir(FIELD,#)
-            ("information_ratio", f"rank(ts_ir({primary},20))"),
-            # skeleton: sub(ts_max(FIELD,#),ts_min(FIELD,#))
-            ("range_signal", f"rank(ts_max({primary},20)-ts_min({primary},20))"),
-        ]
+        windows = {
+            "short": (5, 10, 20),
+            "medium": (21, 63, 126),
+            "long": (63, 126, 252),
+        }.get(str(horizon or "").strip().lower(), (21, 63, 126))
+
+        keyword_groups = {
+            "momentum": ("momentum", "trend", "growth"),
+            "reversal": ("reversal", "mean reversion", "contrarian"),
+            "volatility": ("volatility", "risk"),
+            "fundamental": ("fundamental", "value", "quality", "profitability"),
+        }
+
+        def classify(text: str) -> str:
+            normalized = " ".join(str(text or "").lower().replace("_", " ").split())
+            for category, keywords in keyword_groups.items():
+                if any(keyword in normalized for keyword in keywords):
+                    return category
+            return "balanced"
+
+        profile = classify(mechanism)
+        if profile == "balanced":
+            profile = classify(family)
+        window_order = {
+            "momentum": (windows[0], windows[1], windows[2]),
+            "reversal": (windows[0], windows[2], windows[1]),
+            "volatility": (windows[1], windows[0], windows[2]),
+            "fundamental": (windows[2], windows[1], windows[0]),
+            "balanced": windows,
+        }[profile]
+        w_short, w_medium, w_long = window_order
+
+        template_groups = {
+            "momentum": [
+                ("medium_horizon_momentum", lambda f, _o: f"rank(ts_rank({f},{w_medium}))"),
+                ("smoothed_delta", lambda f, _o: f"rank(ts_mean(ts_delta({f},1),{w_short}))"),
+                ("decayed_momentum", lambda f, _o: f"rank(ts_decay_linear(ts_delta({f},{w_short}),{w_medium}))"),
+                ("information_ratio", lambda f, _o: f"rank(ts_ir({f},{w_medium}))"),
+            ],
+            "reversal": [
+                ("short_horizon_reversal", lambda f, _o: f"-rank(ts_delta({f},{w_short}))"),
+                ("cross_signal_divergence", lambda f, o: f"rank(ts_zscore({f},{w_medium})-ts_zscore({o},{w_medium}))"),
+                ("rank_spread_horizons", lambda f, _o: f"rank(ts_rank({f},{w_short})-ts_rank({f},{w_long}))"),
+            ],
+            "volatility": [
+                ("volatility_regime", lambda f, _o: f"-rank(ts_std_dev({f},{w_medium}))"),
+                ("relative_flow", lambda f, _o: f"rank(ts_mean({f},{w_short})/ts_std_dev({f},{w_medium}))"),
+                ("vol_ratio_regimes", lambda f, _o: f"rank(ts_std_dev({f},{w_short})/ts_std_dev({f},{w_long}))"),
+                ("range_signal", lambda f, _o: f"rank(ts_max({f},{w_short})-ts_min({f},{w_short}))"),
+            ],
+            "fundamental": [
+                ("change_to_acceleration", lambda f, _o: f"rank(ts_delta(ts_delta({f},{w_medium}),{w_short}))"),
+                ("historical_surprise", lambda f, _o: f"rank(ts_zscore({f},{w_long}))"),
+                ("normalized_level", lambda f, _o: f"rank({f}/ts_mean({f},{w_medium}))"),
+            ],
+        }
+        category_order = ["momentum", "reversal", "volatility", "fundamental"]
+        if profile != "balanced":
+            category_order = [profile] + [item for item in category_order if item != profile]
+        templates = []
+        for category in category_order:
+            templates.extend(template_groups[category])
         out: list[ConsultantCandidate] = []
         counts: dict[str, int] = {}
-        for mutation_type, expression in templates:
+        for index, (mutation_type, builder) in enumerate(templates):
+            field = field_list[index % len(field_list)]
+            other = field_list[(index + 1) % len(field_list)]
+            expression = builder(field, other)
             signature = behavior_signature(expression)
             if counts.get(signature, 0) >= self.max_same_behavior:
                 continue

@@ -63,16 +63,25 @@ def cycle_exit_code(summary: object) -> int:
     """
 
     failed = int(getattr(summary, "failed", 0) or 0)
+    unknown = int(getattr(summary, "unknown", 0) or 0)
     generated = int(getattr(summary, "generated", 0) or 0)
     simulated = int(getattr(summary, "simulated", 0) or 0)
+    generation_state = str(getattr(summary, "generation_state", "READY") or "READY")
     # Real progress outranks a generation deferral: draining pending requests is
     # useful work even when a stale catalog blocks new candidate generation, so
     # the outer loop must not apply catalog backoff to a cycle that simulated.
     if simulated > 0:
         return 0
-    if str(getattr(summary, "deferred_reason", "") or "").strip():
+    if generation_state == "CANDIDATE_SPACE_EXHAUSTED":
+        return 9
+    if generation_state == "CATALOG_UNAVAILABLE":
         return 8
-    return 1 if failed > 0 or (generated == 0 and simulated == 0) else 0
+    if (
+        generation_state == "READY"
+        and str(getattr(summary, "deferred_reason", "") or "").strip()
+    ):
+        return 8
+    return 1 if failed > 0 or unknown > 0 or (generated == 0 and simulated == 0) else 0
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -147,9 +156,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             pass
         return recovery_exit_code(exc)
     print(f"[factory] {json.dumps(summary.__dict__, sort_keys=True)}")
-    if summary.deferred_reason:
+    if summary.generation_state == "CANDIDATE_SPACE_EXHAUSTED":
+        print(f"[factory] CANDIDATE_SPACE_EXHAUSTED: {summary.deferred_reason}")
+        print("[factory] no simulation was submitted; the outer loop will use long backoff")
+    elif summary.generation_state == "CATALOG_UNAVAILABLE":
         print(f"[factory] CATALOG_UNAVAILABLE: {summary.deferred_reason}")
         print("[factory] generation deferred; the outer loop will persist the reason and use catalog backoff")
+    elif summary.generation_state == "NO_RESEARCH_SPECS":
+        print(f"[factory] NO_RESEARCH_SPECS: {summary.deferred_reason}")
     elif summary.generated == 0 and summary.simulated == 0:
         print(
             "[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; "

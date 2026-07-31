@@ -35,6 +35,7 @@ CYCLE_SCRIPT = "run_pipeline_cycle.py"
 class RecoveryCategory(str, Enum):
     SUCCESS = "SUCCESS"
     CATALOG_UNAVAILABLE = "CATALOG_UNAVAILABLE"
+    CANDIDATE_EXHAUSTED = "CANDIDATE_EXHAUSTED"
     RECOVERABLE_CYCLE_FAILURE = "RECOVERABLE_CYCLE_FAILURE"
     NETWORK_ERROR = "NETWORK_ERROR"
     AUTH_ERROR = "AUTH_ERROR"
@@ -98,6 +99,7 @@ def _outcome_from_rc(cycle: int, rc: int) -> CycleOutcome:
         5: RecoveryCategory.RATE_LIMITED,
         6: RecoveryCategory.DATABASE_LOCKED,
         8: RecoveryCategory.CATALOG_UNAVAILABLE,
+        9: RecoveryCategory.CANDIDATE_EXHAUSTED,
     }
     category = (
         RecoveryCategory.CHILD_PROCESS_CRASH
@@ -118,6 +120,8 @@ def _recovery_delay(
     if outcome.category is RecoveryCategory.CATALOG_UNAVAILABLE:
         exponent = min(max(0, int(consecutive_failures) - 1), 2)
         return min(3600.0, 900.0 * (2**exponent))
+    if outcome.category is RecoveryCategory.CANDIDATE_EXHAUSTED:
+        return 3600.0
     exponent = min(max(0, int(consecutive_failures) - 1), 6)
     return min(900.0, max(1.0, base) * (2**exponent))
 
@@ -182,7 +186,8 @@ def run_forever(
             inter_cycle_sleep=inter_cycle_sleep,
         )
         if (
-            outcome.category is RecoveryCategory.CATALOG_UNAVAILABLE
+            outcome.category
+            in {RecoveryCategory.CATALOG_UNAVAILABLE, RecoveryCategory.CANDIDATE_EXHAUSTED}
             and outcome.retry_after_seconds is None
         ):
             outcome = replace(outcome, retry_after_seconds=delay)

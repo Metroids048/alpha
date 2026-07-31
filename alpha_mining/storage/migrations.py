@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -393,6 +394,29 @@ CREATE INDEX idx_factory_candidate_claims_parameter_skeleton
  ON factory_candidate_claims(parameter_skeleton);
 CREATE INDEX idx_factory_candidate_claims_field_skeleton
  ON factory_candidate_claims(field_skeleton);
+        """,
+    ),
+    (
+        16,
+        """
+CREATE TABLE IF NOT EXISTS simulation_requests (
+ request_hash TEXT PRIMARY KEY, payload_json TEXT NOT NULL, status TEXT NOT NULL,
+ created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+);
+ALTER TABLE simulation_requests ADD COLUMN attempt_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE simulation_requests ADD COLUMN lease_started_at TEXT NOT NULL DEFAULT '';
+ALTER TABLE simulation_requests ADD COLUMN progress_location TEXT NOT NULL DEFAULT '';
+ALTER TABLE simulation_requests ADD COLUMN alpha_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE simulation_requests ADD COLUMN last_error TEXT NOT NULL DEFAULT '';
+UPDATE simulation_requests
+SET status='FAILED',updated_at=CURRENT_TIMESTAMP
+WHERE status='CLAIMED' AND EXISTS (
+    SELECT 1 FROM factory_candidate_claims fc
+    WHERE fc.request_hash=simulation_requests.request_hash AND fc.status='FAILED'
+);
+UPDATE simulation_requests
+SET status='UNKNOWN',last_error='legacy CLAIMED request has no verifiable external checkpoint',updated_at=CURRENT_TIMESTAMP
+WHERE status='CLAIMED';
 """,
     ),
 )
@@ -423,6 +447,55 @@ def migrate(path: str | Path) -> None:
                 if connection.in_transaction:
                     connection.rollback()
                 raise
+        tables = {
+            str(row[0])
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            )
+        }
+        required = {
+            "simulation_requests",
+            "simulation_runs",
+            "factory_candidate_claims",
+        }
+        if required <= tables:
+            now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+            connection.execute("BEGIN IMMEDIATE")
+            rows = connection.execute(
+                """SELECT request_hash,payload_json FROM simulation_requests
+                   WHERE status='UNKNOWN'
+                     AND last_error='legacy CLAIMED request has no verifiable external checkpoint'"""
+            ).fetchall()
+            for request_hash, payload_json in rows:
+                try:
+                    expression = str(
+                        json.loads(str(payload_json)).get("regular") or ""
+                    ).strip()
+                except (AttributeError, TypeError, ValueError, json.JSONDecodeError):
+                    continue
+                if not expression:
+                    continue
+                run = connection.execute(
+                    """SELECT alpha_id FROM simulation_runs
+                       WHERE expression=? AND TRIM(COALESCE(alpha_id,''))<>''
+                         AND UPPER(COALESCE(status,'')) NOT IN ('FAILED','ERROR','REJECTED')
+                       ORDER BY id DESC LIMIT 1""",
+                    (expression,),
+                ).fetchone()
+                if not run:
+                    continue
+                connection.execute(
+                    """UPDATE simulation_requests
+                       SET status='COMPLETE',alpha_id=?,last_error='',updated_at=?
+                       WHERE request_hash=? AND status='UNKNOWN'""",
+                    (str(run[0]).strip(), now, request_hash),
+                )
+                connection.execute(
+                    """UPDATE factory_candidate_claims
+                       SET status='SIMULATED',updated_at=? WHERE request_hash=?""",
+                    (now, request_hash),
+                )
+            connection.commit()
     finally:
         connection.close()
 
