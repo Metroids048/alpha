@@ -32,6 +32,15 @@ SUBMISSION_JSONL = "submission_results.jsonl"
 CYCLE_SCRIPT = "run_pipeline_cycle.py"
 
 
+def _console(message: object = "", *, end: str = "\n") -> None:
+    """Best-effort terminal output; detached sessions must keep logging and running."""
+    try:
+        sys.stdout.write(f"{message}{end}")
+        sys.stdout.flush()
+    except (OSError, ValueError):
+        pass
+
+
 class RecoveryCategory(str, Enum):
     SUCCESS = "SUCCESS"
     CATALOG_UNAVAILABLE = "CATALOG_UNAVAILABLE"
@@ -146,7 +155,7 @@ def run_forever(
             return bool(stop_requested())
         except Exception as exc:
             detail = _sanitize_diagnostic(f"{type(exc).__name__}: {exc}")
-            print(f"[loop] warn stop probe failed: {detail}")
+            _console(f"[loop] warn stop probe failed: {detail}")
             return False
 
     while not should_stop():
@@ -196,7 +205,7 @@ def run_forever(
                 on_outcome(outcome)
             except Exception as exc:
                 detail = _sanitize_diagnostic(f"{type(exc).__name__}: {exc}")
-                print(f"[loop] warn outcome persistence failed: {detail}")
+                _console(f"[loop] warn outcome persistence failed: {detail}")
         cycle += 1
         if should_stop():
             break
@@ -248,6 +257,11 @@ def _persisted_retry_after_seconds(
     except ValueError:
         return None
     return max(0.0, (deadline.astimezone(timezone.utc) - current).total_seconds())
+
+
+def _rate_limit_recovery_probe_due(database: Path) -> bool:
+    remaining = _persisted_retry_after_seconds(database)
+    return remaining is not None and remaining <= 0.0
 
 
 # Exit code emitted by the cycle subprocess (auto_alpha_pipeline_rebuilt_v50.NETWORK_EXIT_CODE)
@@ -328,7 +342,7 @@ def _wait_for_network(
         if stop_requested():
             return False
         was_down = True
-        print(f"[loop] network unreachable proxy={host}:{port}; waiting {wait}s")
+        _console(f"[loop] network unreachable proxy={host}:{port}; waiting {wait}s")
         state.update(
             {
                 "network_unreachable": True,
@@ -343,7 +357,7 @@ def _wait_for_network(
             return False
         wait = min(int(cap), wait * 2)
     if was_down:
-        print(f"[loop] network restored proxy={host}:{port} after ~{waited_total}s")
+        _console(f"[loop] network restored proxy={host}:{port} after ~{waited_total}s")
     state.update({"network_unreachable": False, "last_network_ok_utc": _utc()})
     _save_state(state_path, state)
     return True
@@ -473,7 +487,7 @@ def _run_subprocess(
         if mi + 1 < len(cmd):
             mode = cmd[mi + 1]
     log_tag = f" log={log_path.name}" if log_path else ""
-    print(f"[loop] {label} mode={mode}{log_tag}")
+    _console(f"[loop] {label} mode={mode}{log_tag}")
 
     popen_kwargs: dict[str, Any] = {
         "cwd": str(cwd),
@@ -502,19 +516,16 @@ def _run_subprocess(
         assert proc.stdout is not None
         for line in proc.stdout:
             output_tail.append(line)
-            sys.stdout.write(line)
-            if not line.endswith("\n"):
-                sys.stdout.write("\n")
-            sys.stdout.flush()
             if log_file is not None:
                 log_file.write(line if line.endswith("\n") else line + "\n")
                 log_file.flush()
+            _console(line, end="" if line.endswith("\n") else "\n")
     finally:
         if log_file is not None:
             log_file.close()
 
     rc = int(proc.wait())
-    print(f"[loop] {label} exit_code={rc}")
+    _console(f"[loop] {label} exit_code={rc}")
     return ChildProcessResult(rc=rc, output_tail="".join(output_tail))
 
 
@@ -690,6 +701,8 @@ def parse_args() -> argparse.Namespace:
         help="Repo root (default: directory containing this script).",
     )
     p.add_argument("--database", default="research_memory.sqlite")
+    p.add_argument("--auth-state-file", default=".wq_auth_state.json")
+    p.add_argument("--lock-path", default="worldquant_api.lock")
     p.add_argument(
         "--no-catalog-autosync",
         dest="catalog_autosync",
@@ -770,7 +783,41 @@ def _refresh_catalog_if_stale(
         return
     if not _catalog_cache_stale(root):
         return
-    print(f"[loop] catalog cache stale; running catalog-sync before cycle {cycle}")
+    _console(f"[loop] catalog cache stale; running catalog-sync before cycle {cycle}")
+    database = Path(getattr(args, "database", "research_memory.sqlite"))
+    if not database.is_absolute():
+        database = root / database
+    if _rate_limit_recovery_probe_due(database):
+        probe_cmd = [
+            _python_exe(),
+            "-m",
+            "alpha_mining",
+            "platform",
+            "probe",
+            "--database",
+            str(database),
+            "--auth-state-file",
+            str(getattr(args, "auth_state_file", root / ".wq_auth_state.json")),
+            "--lock-path",
+            str(getattr(args, "lock_path", root / "worldquant_api.lock")),
+            "--output",
+            str(root / "platform_readiness.json"),
+            "--events-csv",
+            str(root / "platform_request_events.csv"),
+        ]
+        probe_result = _run_subprocess(
+            probe_cmd,
+            cwd=root,
+            label=f"cycle_{cycle}/access-recovery-probe",
+            log_path=log_path,
+        )
+        if probe_result.rc != 0:
+            detail = _sanitize_diagnostic(probe_result.output_tail)[-300:]
+            _console(
+                f"[loop] access recovery probe rc={probe_result.rc}; "
+                f"catalog sync deferred. {detail}"
+            )
+            return
     cmd = [
         _python_exe(),
         "-m",
@@ -778,7 +825,11 @@ def _refresh_catalog_if_stale(
         "platform",
         "catalog-sync",
         "--database",
-        str(getattr(args, "database", "research_memory.sqlite")),
+        str(database),
+        "--auth-state-file",
+        str(getattr(args, "auth_state_file", root / ".wq_auth_state.json")),
+        "--lock-path",
+        str(getattr(args, "lock_path", root / "worldquant_api.lock")),
         "--cache-dir",
         str(root),
         "--region",
@@ -790,10 +841,10 @@ def _refresh_catalog_if_stale(
         cmd, cwd=root, label=f"cycle_{cycle}/catalog-sync", log_path=log_path
     )
     if result.rc == 0:
-        print(f"[loop] catalog-sync ok for cycle {cycle}")
+        _console(f"[loop] catalog-sync ok for cycle {cycle}")
     else:
         detail = _sanitize_diagnostic(result.output_tail)[-300:]
-        print(f"[loop] catalog-sync rc={result.rc}; continuing with pending work. {detail}")
+        _console(f"[loop] catalog-sync rc={result.rc}; continuing with pending work. {detail}")
 
 
 def _run_pipeline_cycle_once(
@@ -812,7 +863,7 @@ def _run_pipeline_cycle_once(
     network_sleeper: Callable[[float], object] = time.sleep,
 ) -> CycleOutcome:
     t0 = time.time()
-    print(f"[loop] ===== cycle {cycle} =====")
+    _console(f"[loop] ===== cycle {cycle} =====")
 
     if bool(getattr(args, "network_gate", True)):
         network_ready = _wait_for_network(
@@ -848,13 +899,13 @@ def _run_pipeline_cycle_once(
     )
     sim_rc = sim_result.rc
     elapsed = time.time() - t0
-    print(f"[loop] cycle {cycle} simulate finished in {elapsed / 3600:.1f}h rc={sim_rc}")
+    _console(f"[loop] cycle {cycle} simulate finished in {elapsed / 3600:.1f}h rc={sim_rc}")
 
     recheck_rc = 0
     if _should_run_recheck_cycle(args, cycle):
         recheck_passthrough = [x for x in passthrough if x != "--no-prebatch-recheck"]
         recheck_extra = _build_recheck_extra_args(args)
-        print(
+        _console(
             f"[loop] periodic recheck: max_items={int(args.recheck_max_items)} "
             f"wall={float(args.recheck_wall_budget_seconds):.0f}s "
             f"per_alpha={float(args.recheck_quick_timeout_seconds):.0f}s"
@@ -875,7 +926,7 @@ def _run_pipeline_cycle_once(
         )
         recheck_rc = recheck_result.rc
         if recheck_rc != 0:
-            print(f"[loop] warn recheck exit={recheck_rc}; continuing loop")
+            _console(f"[loop] warn recheck exit={recheck_rc}; continuing loop")
 
     submit_rounds = 0
     submit_rc = 0
@@ -886,10 +937,10 @@ def _run_pipeline_cycle_once(
                 max_queue_similarity=float(args.max_queue_similarity),
             )
             if ready <= 0:
-                print(f"[loop] cycle {cycle} submit queue empty (ready=0)")
+                _console(f"[loop] cycle {cycle} submit queue empty (ready=0)")
                 break
             submit_rounds += 1
-            print(f"[loop] cycle {cycle} submit round {submit_rounds} ready={ready}")
+            _console(f"[loop] cycle {cycle} submit round {submit_rounds} ready={ready}")
             sub_cmd = _build_cycle_cmd(
                 cycle_script=cycle_script,
                 mode="submit",
@@ -905,7 +956,7 @@ def _run_pipeline_cycle_once(
             )
             submit_rc = submit_result.rc
             if submit_rc != 0:
-                print(f"[loop] warn submit exit={submit_rc}; rechecking queue")
+                _console(f"[loop] warn submit exit={submit_rc}; rechecking queue")
             ready_after = _count_ready(
                 root,
                 max_queue_similarity=float(args.max_queue_similarity),
@@ -928,7 +979,7 @@ def _run_pipeline_cycle_once(
         }
     )
     _save_state(state_path, state)
-    print(
+    _console(
         f"[loop] cycle {cycle} done elapsed={elapsed:.0f}s "
         f"sim_rc={sim_rc} submit_rounds={submit_rounds}"
     )
@@ -945,7 +996,7 @@ def main() -> int:
     load_workspace_env(_ROOT / ".env")
     args = parse_args()
     if args.execute_submit:
-        print(
+        _console(
             "[loop] BLOCKED: legacy --execute-submit is disabled; use python -m alpha_mining submit execute"
         )
         return 2
@@ -958,7 +1009,7 @@ def main() -> int:
     control = FactoryControl(database)
     factory_state = control.status()
     if factory_state.hard_stop:
-        print(f"[loop] BLOCKED hard_stop=1 reason={factory_state.reason}")
+        _console(f"[loop] BLOCKED hard_stop=1 reason={factory_state.reason}")
         return 2
     state_path = Path(args.state_file)
     if not state_path.is_absolute():
@@ -970,7 +1021,7 @@ def main() -> int:
             log_path = root / log_path
     cycle_script = root / CYCLE_SCRIPT
     if not cycle_script.is_file():
-        print(f"[loop] error: missing {cycle_script}")
+        _console(f"[loop] error: missing {cycle_script}")
         return 2
 
     passthrough = _build_passthrough_args(args)
@@ -979,12 +1030,12 @@ def main() -> int:
     state = _load_state(state_path)
     batch_size = max(1, int(args.batch_size))
 
-    print(
+    _console(
         f"[loop] start workspace={root} batch_size={batch_size} cycles=unbounded "
         f"resilient={args.resilient_async} submit_drain={run_submit_drain}"
     )
     if log_path is not None:
-        print(f"[loop] log_file={log_path}")
+        _console(f"[loop] log_file={log_path}")
 
     stop_event = threading.Event()
     signal_number = 0
@@ -1062,7 +1113,7 @@ def main() -> int:
                 traceback_text=outcome.traceback_text,
             )
         except Exception as exc:
-            print(f"[loop] warn incident persistence failed: {type(exc).__name__}: {exc}")
+            _console(f"[loop] warn incident persistence failed: {type(exc).__name__}: {exc}")
 
     try:
         result = run_forever(
@@ -1082,9 +1133,9 @@ def main() -> int:
     state["stop_signal"] = signal_number
     _save_state(state_path, state)
     if signal_number:
-        print(f"[loop] stopped by signal={signal_number}")
+        _console(f"[loop] stopped by signal={signal_number}")
         return 130 if signal_number == int(getattr(signal, "SIGINT", 2)) else 0
-    print("[loop] stopped by factory control")
+    _console("[loop] stopped by factory control")
     return result
 
 

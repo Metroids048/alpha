@@ -4,12 +4,14 @@
 from __future__ import annotations
 
 import argparse
+import csv
+import io
 import json
 import os
-import re
 import subprocess
 import sys
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -27,7 +29,10 @@ def _utc() -> str:
 
 def _log(path: Path, msg: str) -> None:
     line = f"{_utc()} {msg}"
-    print(line, flush=True)
+    try:
+        print(line, flush=True)
+    except (OSError, ValueError):
+        pass
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as f:
         f.write(line + "\n")
@@ -39,12 +44,36 @@ def _subprocess_hidden() -> dict[str, Any]:
     return subprocess_no_window_kwargs()
 
 
-def _pipeline_pids() -> list[int]:
-    """Return PIDs of python processes running alpha pipeline scripts (Windows)."""
-    if os.name != "nt":
-        return []
+@dataclass(frozen=True)
+class PipelineProcess:
+    pid: int
+    parent_pid: int
+    command_line: str
+
+
+def _parse_pipeline_processes(output: str) -> list[PipelineProcess]:
     match_markers = ("auto_alpha_pipeline_rebuilt", "run_pipeline_cycle", "run_pipeline_loop")
     exclude = "run_pipeline_supervisor"
+    rows: list[PipelineProcess] = []
+    reader = csv.DictReader(io.StringIO(output or ""))
+    for raw_row in reader:
+        row = {str(key or "").strip(): value for key, value in raw_row.items()}
+        command_line = str(row.get("CommandLine") or "").strip()
+        if exclude in command_line or not any(marker in command_line for marker in match_markers):
+            continue
+        try:
+            pid = int(str(row.get("ProcessId") or "").strip())
+            parent_pid = int(str(row.get("ParentProcessId") or "0").strip())
+        except ValueError:
+            continue
+        rows.append(PipelineProcess(pid, parent_pid, command_line))
+    return rows
+
+
+def _pipeline_processes() -> list[PipelineProcess]:
+    """Return Python processes running Alpha pipeline scripts on Windows."""
+    if os.name != "nt":
+        return []
     try:
         r = subprocess.run(
             [
@@ -53,7 +82,7 @@ def _pipeline_pids() -> list[int]:
                 "where",
                 "name='python.exe'",
                 "get",
-                "ProcessId,CommandLine",
+                "ProcessId,ParentProcessId,CommandLine",
                 "/FORMAT:CSV",
             ],
             capture_output=True,
@@ -64,19 +93,57 @@ def _pipeline_pids() -> list[int]:
         )
     except Exception:
         return []
-    out: list[int] = []
-    for line in (r.stdout or "").splitlines():
-        line = line.strip()
-        if not line or line.startswith("Node,"):
-            continue
-        if exclude in line:
-            continue
-        if not any(marker in line for marker in match_markers):
-            continue
-        m = re.search(r",(\d+)\s*$", line)
-        if m:
-            out.append(int(m.group(1)))
-    return out
+    return _parse_pipeline_processes(r.stdout or "")
+
+
+def _pipeline_pids() -> list[int]:
+    return [process.pid for process in _pipeline_processes()]
+
+
+def _pid_exists(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    if os.name != "nt":
+        try:
+            os.kill(pid, 0)
+        except OSError:
+            return False
+        return True
+    try:
+        import ctypes
+
+        handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, int(pid))
+        if not handle:
+            return False
+        ctypes.windll.kernel32.CloseHandle(handle)
+        return True
+    except Exception:
+        return False
+
+
+def _orphaned_pipeline_roots(
+    processes: list[PipelineProcess],
+    *,
+    pid_exists: Any = _pid_exists,
+) -> list[PipelineProcess]:
+    pipeline_pids = {process.pid for process in processes}
+    roots = [process for process in processes if process.parent_pid not in pipeline_pids]
+    return [process for process in roots if not pid_exists(process.parent_pid)]
+
+
+def _terminate_process_tree(process: PipelineProcess) -> bool:
+    try:
+        result = subprocess.run(
+            ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=str(_ROOT),
+            **_subprocess_hidden(),
+        )
+    except Exception:
+        return False
+    return int(result.returncode) == 0
 
 
 def _load_state(path: Path) -> dict[str, Any]:
@@ -163,11 +230,29 @@ def main() -> int:
 
     if args.wait_for_idle:
         while True:
-            pids = _pipeline_pids()
-            if not pids:
+            processes = _pipeline_processes()
+            if not processes:
                 break
-            _log(log_path, f"[supervisor] waiting for existing pipeline PIDs={pids}")
-            time.sleep(max(10, int(args.poll_interval)))
+            orphaned_roots = _orphaned_pipeline_roots(processes)
+            if orphaned_roots:
+                stale_pids = [process.pid for process in processes]
+                root_pids = [process.pid for process in orphaned_roots]
+                _log(
+                    log_path,
+                    "[supervisor] taking over orphaned pipeline "
+                    f"roots={root_pids} tree_pids={stale_pids}",
+                )
+                if not all(_terminate_process_tree(process) for process in orphaned_roots):
+                    _log(log_path, "[supervisor] BLOCKED failed to stop orphaned pipeline")
+                    return 2
+                time.sleep(1)
+                continue
+            pids = [process.pid for process in processes]
+            _log(
+                log_path,
+                f"[supervisor] existing pipeline is active PIDs={pids}; no duplicate started",
+            )
+            return 0
 
     while True:
         if max_restarts > 0 and restarts >= max_restarts:
