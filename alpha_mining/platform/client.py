@@ -14,7 +14,12 @@ from typing import Any, Callable, Iterable
 import requests
 from requests.auth import HTTPBasicAuth
 
-from alpha_mining.auth.session_manager import AuthSettings, ensure_authenticated, mark_session_validated
+from alpha_mining.auth.session_manager import (
+    AuthSettings,
+    CookieProtector,
+    ensure_authenticated,
+    mark_session_validated,
+)
 from alpha_mining.platform.access import PlatformAccessController
 from alpha_mining.platform.bearer_auth import load_bearer_token
 
@@ -87,6 +92,7 @@ class ReadOnlyPlatformClient:
     database: str | Path = "research_memory.sqlite"
     lock_path: str | Path = "worldquant_api.lock"
     controller: PlatformAccessController | None = field(default=None, repr=False)
+    auth_protector: CookieProtector | None = field(default=None, repr=False)
     use_environment_proxy: bool | None = None
     active_sync_id: str = field(default="", init=False, repr=False)
     _authenticated_username: str = field(default="", init=False, repr=False)
@@ -170,7 +176,11 @@ class ReadOnlyPlatformClient:
             self.session,
             login,
             username,
-            AuthSettings(state_path=self.state_path, max_attempts=2),
+            AuthSettings(
+                state_path=self.state_path,
+                max_attempts=2,
+                protector=self.auth_protector,
+            ),
             force=force,
             # Deferred by design: with no usable stored session, do NOT spend a
             # POST /authentication here. Let the first protected read return 401
@@ -198,7 +208,10 @@ class ReadOnlyPlatformClient:
             bearer = load_bearer_token(self.state_path, username)
             if bearer is None or bearer.is_expired:
                 return False
-            path = AuthSettings(state_path=self.state_path).resolved_state_path()
+            path = AuthSettings(
+                state_path=self.state_path,
+                protector=self.auth_protector,
+            ).resolved_state_path()
             state = _load_state(
                 path, _account_fingerprint(username), datetime.now(timezone.utc)
             )
@@ -298,7 +311,11 @@ class ReadOnlyPlatformClient:
                 try:
                     mark_session_validated(
                         self._authenticated_username,
-                        AuthSettings(state_path=self.state_path, max_attempts=1),
+                        AuthSettings(
+                            state_path=self.state_path,
+                            max_attempts=1,
+                            protector=self.auth_protector,
+                        ),
                     )
                 except Exception:
                     pass

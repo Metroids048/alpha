@@ -2,12 +2,26 @@ from __future__ import annotations
 
 import sqlite3
 import json
+import hashlib
 import multiprocessing
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
+
+
+class _FakeProtector:
+    """Portable protector for authentication state-machine tests."""
+
+    def protect(self, payload: bytes) -> bytes:
+        return hashlib.sha256(payload).digest() + payload
+
+    def unprotect(self, payload: bytes) -> bytes:
+        digest, clear = payload[:32], payload[32:]
+        if digest != hashlib.sha256(clear).digest():
+            raise ValueError("protected payload integrity check failed")
+        return clear
 
 
 class MutableClock:
@@ -567,6 +581,7 @@ def test_expired_cookie_401_relogs_with_password_and_recovers_original_request(
         database=tmp_path / "events.sqlite",
         lock_path=tmp_path / "worldquant_api.lock",
         min_interval=0,
+        auth_protector=_FakeProtector(),
     )
     calls: list[tuple[str, str]] = []
     get_count = 0
