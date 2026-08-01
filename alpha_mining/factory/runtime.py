@@ -122,6 +122,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     from alpha_mining.factory.orchestrator import FactoryOrchestrator
     from alpha_mining.platform.gateway import PlatformGateway
     from alpha_mining.platform.access import CircuitOpen
+    from alpha_mining.generation.service import CandidateGenerationService
 
     batch_size = int(args.target_simulate_batch or args.run_payload_cap)
     gateway = PlatformGateway(
@@ -130,10 +131,40 @@ def main(argv: Sequence[str] | None = None) -> int:
         lock_path=args.lock_path,
         min_interval=max(0.0, float(args.min_interval)),
     )
+
+    # Initialize LLM-powered candidate generation
+    llm_generator = None
     try:
-        summary = FactoryOrchestrator(args.database, gateway).run_simulate(
-            batch_size=batch_size
+        from alpha_mining.llm import create_runtime_providers
+        from alpha_mining.generator.expression import ExpressionGenerator
+        from alpha_mining.generator.llm_consultant_bridge import LLMConsultantBridge
+
+        providers = create_runtime_providers()
+
+        # For now, ExpressionGenerator will be initialized per-hypothesis inside the bridge
+        # because it needs catalog/validator which are hypothesis-specific
+        # We just pass the LLM providers to the bridge
+        llm_generator = LLMConsultantBridge(
+            database=args.database,
+            llm=providers.llm,
+            max_per_hypothesis=8,
         )
+
+        print("[factory] LLM generation enabled: DeepSeek + ExpressionGenerator")
+    except Exception as exc:
+        print(f"[factory] WARNING: LLM initialization failed: {exc}")
+        print("[factory] Falling back to ConsultantGenerator (template-based)")
+        llm_generator = None
+
+    candidate_service = CandidateGenerationService(
+        args.database,
+        generator=llm_generator,  # Will use ConsultantGenerator if None
+    )
+
+    try:
+        summary = FactoryOrchestrator(
+            args.database, gateway, candidate_service=candidate_service
+        ).run_simulate(batch_size=batch_size)
     except CircuitOpen as exc:
         print(f"[factory] RATE_LIMITED: {exc}")
         return 5
