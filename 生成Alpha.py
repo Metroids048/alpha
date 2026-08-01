@@ -156,9 +156,14 @@ def main(argv: list[str] | None = None) -> int:
         cfg.preset = args.preset
 
     try:
+        # Patch v50 引擎：强制启用字段/数据集磁盘缓存，忽略 TTL（完全离线模式）
+        cfg.enable_fields_disk_cache = True
+        cfg.fields_disk_cache_ttl_seconds = 365 * 24 * 3600  # 1年，实际上就是永久使用缓存
+
         pipeline = v50.WorldQuantAlphaPipeline(cfg)
         selector = v50.ProfileSelector(cfg)
         print("[生成Alpha] ✓ v50 引擎已初始化（ExpressionFactory + FieldCatalog + NearPassAmplifier）")
+        print("[生成Alpha] ✓ 磁盘缓存 TTL 已设为永久（完全离线模式）")
     except Exception as exc:
         print(f"[生成Alpha] ✗ v50 引擎初始化失败: {exc}")
         import traceback
