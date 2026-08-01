@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 """
-提交Alpha脚本（持续循环模式）
+提交Alpha脚本（持续循环模式，真实 simulate + CLI 子命令提交保护）
 
 功能：
-1. 持续循环读取"待提交Alpha列表.csv"
-2. 扫脸登录后，使用账号密码/cookie/API连接WorldQuant
-3. 批量simulate alpha
-4. 自动生成description
-5. 有description的alpha自动submit，否则只simulate不submit
-6. 已处理的alpha追加到"已提交Alpha历史.csv"
-7. Ctrl+C 停止
+1. 登录检查/自动续期（照抄 启动Alpha主线.py 的逻辑）
+2. 持续循环读取"待提交Alpha列表.csv"
+3. 批量 simulate alpha（真实调用 PlatformGateway，settings 包含全部必需字段）
+4. 调用已有 CLI 子命令：sync-ledger / description backfill / submit dry-run / submit execute
+5. 历史记录如实记录真实状态（不允许假成功）
+6. Ctrl+C 停止
 
 前置条件：
 - 已运行"生成Alpha.py"生成待提交列表
-- 已完成扫脸登录
+- WQ_USERNAME / WQ_PASSWORD 已设置在 .env 中
 """
 
 from __future__ import annotations
@@ -21,6 +20,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import subprocess
 import sys
 import time
 from datetime import datetime, timezone
@@ -29,6 +29,77 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
+
+
+def _auth_state_path(args) -> Path:
+    """解析认证状态文件路径"""
+    path = Path(args.auth_state)
+    return path if path.is_absolute() else _ROOT / path
+
+
+def _read_auth_status(path: Path) -> str:
+    """读取认证状态"""
+    try:
+        from alpha_mining.auth.session_manager import auth_state_status
+
+        return str(auth_state_status(path)).upper()
+    except Exception:
+        return "UNKNOWN"
+
+
+def _ensure_fresh_auth(args) -> int:
+    """确保认证状态是 FRESH，否则尝试登录（照抄 启动Alpha主线.py 的逻辑）"""
+    state_path = _auth_state_path(args)
+    status = _read_auth_status(state_path)
+
+    print(f"[提交Alpha] 认证状态: {status} ({state_path.name})")
+
+    if status == "FRESH":
+        print(f"[提交Alpha] ✓ 认证状态有效，无需登录\n")
+        return 0
+
+    print(f"[提交Alpha] 认证状态不是 FRESH，尝试续期...")
+
+    profile_dir = _ROOT / args.profile_dir
+    base_cmd = [
+        sys.executable,
+        "-m",
+        "alpha_mining",
+        "platform",
+        "browser-login",
+        "--auth-state-file",
+        str(state_path),
+        "--profile-dir",
+        str(profile_dir),
+    ]
+
+    # 先尝试 headless 模式（快速）
+    print(f"[提交Alpha] 尝试 headless 登录...")
+    headless_rc = subprocess.run(
+        [*base_cmd, "--headless", "--timeout", "30"],
+        cwd=str(_ROOT),
+        check=False,
+    ).returncode
+
+    if headless_rc == 0:
+        print(f"[提交Alpha] ✓ headless 登录成功\n")
+        return 0
+
+    # headless 失败，退化到 headed 模式（需要用户扫脸）
+    print(f"[提交Alpha] headless 失败，打开浏览器进行人工登录（需要扫脸）...")
+    print(f"[提交Alpha] 请在浏览器中完成登录，超时 300 秒")
+    headed_rc = subprocess.run(
+        [*base_cmd, "--timeout", "300"],
+        cwd=str(_ROOT),
+        check=False,
+    ).returncode
+
+    if headed_rc == 0:
+        print(f"[提交Alpha] ✓ headed 登录成功\n")
+        return 0
+
+    print(f"[提交Alpha] ✗ 登录失败，退出")
+    return headed_rc
 
 
 def read_pending_candidates(input_path: Path, processed_hashes: set) -> list[dict]:
@@ -59,9 +130,18 @@ def append_to_history(history_path: Path, candidate: dict, result: dict):
 
         if not file_exists:
             writer.writerow([
-                "候选ID", "表达式", "精确哈希", "策略家族",
-                "生成时间", "提交时间", "alpha_id", "sharpe",
-                "status", "submitted", "description_length", "error"
+                "候选ID",
+                "表达式",
+                "精确哈希",
+                "策略家族",
+                "生成时间",
+                "处理时间",
+                "alpha_id",
+                "status",
+                "sharpe",
+                "fitness",
+                "turnover",
+                "error",
             ])
 
         writer.writerow([
@@ -72,41 +152,72 @@ def append_to_history(history_path: Path, candidate: dict, result: dict):
             candidate.get("生成时间", ""),
             result.get("processed_at", ""),
             result.get("alpha_id", ""),
-            result.get("sharpe", ""),
             result.get("status", ""),
-            result.get("submitted", False),
-            result.get("description_length", 0),
+            result.get("sharpe", ""),
+            result.get("fitness", ""),
+            result.get("turnover", ""),
             result.get("error", ""),
         ])
+
+
+def _default_settings() -> dict:
+    """完整的平台 settings 默认值（避免像旧版只传 3 个字段）"""
+    return {
+        "instrumentType": "EQUITY",
+        "region": "USA",
+        "universe": "TOP3000",
+        "delay": 1,
+        "decay": 0,
+        "neutralization": "SUBINDUSTRY",
+        "truncation": 0.08,
+        "pasteurization": "ON",
+        "unitHandling": "VERIFY",
+        "nanHandling": "OFF",
+        "language": "FASTEXPR",
+        "visualization": False,
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="持续循环批量提交Alpha到WorldQuant平台")
     parser.add_argument("--input", default="待提交Alpha列表.csv", help="输入CSV文件")
-    parser.add_argument("--history", default="已提交Alpha历史.csv", help="历史记录文件")
+    parser.add_argument("--history", default="已处理Alpha历史.csv", help="历史记录文件")
     parser.add_argument("--database", default="research_memory.sqlite", help="研究数据库")
+    parser.add_argument("--config", default="alpha_mining/config.yaml", help="配置文件路径")
     parser.add_argument("--auth-state", default=".wq_auth_state.json", help="认证状态文件")
-    parser.add_argument("--batch-size", type=int, default=10, help="每批提交数量")
+    parser.add_argument("--profile-dir", default=".wq_browser_profile", help="浏览器配置目录")
+    parser.add_argument("--batch-size", type=int, default=20, help="每批 simulate 数量")
+    parser.add_argument("--max-submit", type=int, default=20, help="每轮最大提交数")
     parser.add_argument("--interval", type=int, default=30, help="轮次间隔（秒）")
-    parser.add_argument("--dry-run", action="store_true", help="模拟运行（不实际提交）")
-    parser.add_argument("--simulate-only", action="store_true", help="仅simulate，不submit")
+    parser.add_argument("--max-rounds", type=int, default=0, help="最大轮数（0=无限循环）")
+    parser.add_argument("--simulate-only", action="store_true", help="仅 simulate，跳过台账/description/submit")
+    parser.add_argument("--允许提交", action="store_true", help="允许真实提交（默认 False，加上才会跑 submit execute --execute-submit）")
+    parser.add_argument("--确认短语", default="I_UNDERSTAND_REAL_SUBMISSION", help="提交确认短语")
     args = parser.parse_args(argv)
 
     from alpha_mining.common import load_workspace_env
+
     load_workspace_env(_ROOT / ".env")
 
     print(f"[提交Alpha] === 持续提交模式 ===")
     print(f"[提交Alpha] 输入: {args.input}")
     print(f"[提交Alpha] 历史: {args.history}")
+    print(f"[提交Alpha] 数据库: {args.database}")
     print(f"[提交Alpha] 批次: {args.batch_size}")
     print(f"[提交Alpha] 间隔: {args.interval} 秒")
-    if args.dry_run:
-        print(f"[提交Alpha] 模式: 模拟运行")
-    elif args.simulate_only:
-        print(f"[提交Alpha] 模式: 仅simulate")
+    if args.simulate_only:
+        print(f"[提交Alpha] 模式: 仅 simulate")
+    elif args.允许提交:
+        print(f"[提交Alpha] 模式: simulate + 台账同步 + description + 真实提交")
+        print(f"[提交Alpha] ⚠️  真实提交已启用！")
     else:
-        print(f"[提交Alpha] 模式: simulate + submit")
+        print(f"[提交Alpha] 模式: simulate + 台账同步 + description + dry-run（不真实提交）")
     print()
+
+    # 登录检查/自动续期
+    auth_rc = _ensure_fresh_auth(args)
+    if auth_rc != 0:
+        return auth_rc
 
     input_path = Path(args.input)
     history_path = Path(args.history)
@@ -125,30 +236,19 @@ def main(argv: list[str] | None = None) -> int:
 
     # 初始化平台网关
     gateway = None
-    if not args.dry_run:
-        try:
-            from alpha_mining.platform.gateway import PlatformGateway
+    try:
+        from alpha_mining.platform.gateway import PlatformGateway
 
-            gateway = PlatformGateway(
-                state_path=args.auth_state,
-                database=args.database,
-                lock_path="worldquant_api.lock",
-                min_interval=2.0,
-            )
-            print(f"[提交Alpha] ✓ 平台网关已初始化")
-        except Exception as exc:
-            print(f"[提交Alpha] ✗ 平台网关初始化失败: {exc}")
-            return 1
-
-    # 初始化description生成器
-    providers = None
-    if not args.dry_run:
-        try:
-            from alpha_mining.llm import create_runtime_providers
-            providers = create_runtime_providers()
-            print(f"[提交Alpha] ✓ Description生成器已初始化")
-        except Exception as exc:
-            print(f"[提交Alpha] 警告: Description初始化失败: {exc}")
+        gateway = PlatformGateway(
+            state_path=str(_auth_state_path(args)),
+            database=args.database,
+            lock_path="worldquant_api.lock",
+            min_interval=2.0,
+        )
+        print(f"[提交Alpha] ✓ 平台网关已初始化\n")
+    except Exception as exc:
+        print(f"[提交Alpha] ✗ 平台网关初始化失败: {exc}")
+        return 1
 
     round_num = 0
     total_processed = 0
@@ -156,6 +256,11 @@ def main(argv: list[str] | None = None) -> int:
     try:
         while True:
             round_num += 1
+
+            if args.max_rounds > 0 and round_num > args.max_rounds:
+                print(f"\n[提交Alpha] 已达到最大轮数 {args.max_rounds}，停止")
+                break
+
             print(f"[提交Alpha] === 第 {round_num} 轮 ===")
 
             # 读取待提交候选
@@ -169,83 +274,185 @@ def main(argv: list[str] | None = None) -> int:
             print(f"[提交Alpha] 待处理: {len(candidates)} 个候选")
 
             # 处理本批次
-            batch = candidates[:args.batch_size]
+            batch = candidates[: args.batch_size]
 
             for idx, candidate in enumerate(batch, 1):
                 expression = candidate.get("表达式", "")
                 candidate_id = candidate.get("候选ID", "")
-                family = candidate.get("策略家族", "")
                 exact_hash = candidate.get("精确哈希", "")
+                settings_json = candidate.get("模拟设置JSON", "")
 
-                print(f"[提交Alpha] [{idx}/{len(batch)}] {candidate_id[:16]}...")
+                print(f"[提交Alpha] [{idx}/{len(batch)}] {candidate_id[:32]}...")
 
                 result = {
                     "processed_at": datetime.now(timezone.utc).isoformat(),
-                    "submitted": False,
+                    "alpha_id": "",
+                    "status": "",
+                    "sharpe": "",
+                    "fitness": "",
+                    "turnover": "",
+                    "error": "",
                 }
 
-                if args.dry_run:
-                    print(f"[提交Alpha]   [模拟] simulate: {expression[:60]}...")
-                    result["status"] = "DRY_RUN"
-                    result["alpha_id"] = "dry_run_id"
-                    result["sharpe"] = 0.0
-                else:
-                    # Simulate
-                    try:
-                        settings = {"region": "USA", "universe": "TOP3000", "delay": 1}
-                        sim_result = gateway.simulate(
-                            expression=expression,
-                            settings=settings,
-                            alpha_type="REGULAR",
-                        )
-                        result["alpha_id"] = sim_result.alpha_id
-                        result["status"] = sim_result.status
-                        result["sharpe"] = sim_result.metrics.get("sharpe", 0.0)
+                # 解析 settings（如果为空，使用完整默认值）
+                try:
+                    if settings_json:
+                        settings = json.loads(settings_json)
+                    else:
+                        settings = _default_settings()
+                        print(f"[提交Alpha]   警告: 模拟设置JSON为空，使用默认完整 settings")
 
-                        print(f"[提交Alpha]   ✓ simulate: sharpe={result['sharpe']:.3f}")
+                    # 确保 settings 包含全部必需字段（补齐缺失字段）
+                    defaults = _default_settings()
+                    for key, value in defaults.items():
+                        settings.setdefault(key, value)
 
-                    except Exception as exc:
-                        print(f"[提交Alpha]   ✗ simulate失败: {exc}")
-                        result["error"] = str(exc)
-                        append_to_history(history_path, candidate, result)
-                        processed_hashes.add(exact_hash)
-                        total_processed += 1
-                        continue
+                except Exception as exc:
+                    print(f"[提交Alpha]   ✗ settings 解析失败: {exc}")
+                    result["error"] = f"settings_parse_error: {exc}"
+                    result["status"] = "SETTINGS_INVALID"
+                    append_to_history(history_path, candidate, result)
+                    processed_hashes.add(exact_hash)
+                    total_processed += 1
+                    continue
 
-                    # 生成description并submit
-                    if not args.simulate_only:
-                        description = None
-                        try:
-                            if providers:
-                                from alpha_mining.submitter.description import generate_description
-                                draft = generate_description(
-                                    expression,
-                                    llm=providers.llm,
-                                    family=family,
-                                    source="consultant_generator"
-                                )
-                                description = draft.text
-                                result["description_length"] = len(description)
-                                print(f"[提交Alpha]   ✓ description: {len(description)} 字符")
-                        except Exception as exc:
-                            print(f"[提交Alpha]   警告: description生成失败: {exc}")
+                # Simulate（真实调用平台接口）
+                try:
+                    sim_result = gateway.simulate(
+                        expression=expression,
+                        settings=settings,
+                        alpha_type="REGULAR",
+                    )
+                    result["alpha_id"] = sim_result.alpha_id or ""
+                    result["status"] = sim_result.status or ""
+                    result["sharpe"] = sim_result.metrics.get("sharpe", "")
+                    result["fitness"] = sim_result.metrics.get("fitness", "")
+                    result["turnover"] = sim_result.metrics.get("turnover", "")
 
-                        # Submit（仅在有description时）
-                        if description and len(description.strip()) > 50:
-                            try:
-                                # TODO: 调用gateway的submit方法
-                                # gateway.submit(result["alpha_id"], description)
-                                print(f"[提交Alpha]   ✓ 已submit")
-                                result["submitted"] = True
-                            except Exception as exc:
-                                print(f"[提交Alpha]   ✗ submit失败: {exc}")
-                        else:
-                            print(f"[提交Alpha]   - 跳过submit（无有效description）")
+                    print(f"[提交Alpha]   ✓ simulate: alpha_id={result['alpha_id']}, sharpe={result['sharpe']}, status={result['status']}")
 
-                # 记录到历史
+                except Exception as exc:
+                    print(f"[提交Alpha]   ✗ simulate 失败: {exc}")
+                    result["error"] = str(exc)
+                    result["status"] = "SIMULATE_FAILED"
+                    append_to_history(history_path, candidate, result)
+                    processed_hashes.add(exact_hash)
+                    total_processed += 1
+                    continue
+
+                # 记录到历史（simulate 成功）
                 append_to_history(history_path, candidate, result)
                 processed_hashes.add(exact_hash)
                 total_processed += 1
+
+            # 如果不是 simulate-only，继续执行台账同步 / description / submit
+            if not args.simulate_only:
+                print(f"\n[提交Alpha] === 台账同步 / Description / Submit ===")
+
+                # 1. 台账同步
+                print(f"[提交Alpha] 执行: platform sync-ledger...")
+                try:
+                    subprocess.run(
+                        [
+                            sys.executable,
+                            "-m",
+                            "alpha_mining",
+                            "platform",
+                            "sync-ledger",
+                            "--database",
+                            args.database,
+                            "--auth-state-file",
+                            str(_auth_state_path(args)),
+                            "--status",
+                            "UNSUBMITTED",
+                        ],
+                        cwd=str(_ROOT),
+                        check=True,
+                    )
+                    print(f"[提交Alpha] ✓ 台账同步完成")
+                except subprocess.CalledProcessError as exc:
+                    print(f"[提交Alpha] ✗ 台账同步失败: {exc}")
+
+                # 2. Description backfill
+                print(f"[提交Alpha] 执行: description backfill...")
+                try:
+                    subprocess.run(
+                        [
+                            sys.executable,
+                            "-m",
+                            "alpha_mining",
+                            "description",
+                            "backfill",
+                            "--database",
+                            args.database,
+                            "--execute",
+                            "--confirm",
+                            args.确认短语,
+                        ],
+                        cwd=str(_ROOT),
+                        check=True,
+                    )
+                    print(f"[提交Alpha] ✓ description backfill 完成")
+                except subprocess.CalledProcessError as exc:
+                    print(f"[提交Alpha] ✗ description backfill 失败: {exc}")
+
+                # 3. Submit dry-run
+                print(f"[提交Alpha] 执行: submit dry-run...")
+                try:
+                    subprocess.run(
+                        [
+                            sys.executable,
+                            "-m",
+                            "alpha_mining",
+                            "submit",
+                            "dry-run",
+                            "--database",
+                            args.database,
+                            "--config",
+                            args.config,
+                        ],
+                        cwd=str(_ROOT),
+                        check=True,
+                    )
+                    print(f"[提交Alpha] ✓ submit dry-run 完成")
+                except subprocess.CalledProcessError as exc:
+                    print(f"[提交Alpha] ✗ submit dry-run 失败: {exc}")
+
+                # 4. Submit execute（仅在用户显式加了 --允许提交 时执行）
+                if args.允许提交:
+                    print(f"\n[提交Alpha] ⚠️  执行: submit execute --execute-submit（真实提交）...")
+                    print(f"[提交Alpha] 重要提示：真正提交前，请确保 {args.config} 中 consultant: 段落下的 execute_submit 已设为 true")
+                    print(f"[提交Alpha] 如果未设置，提交将被配置文件拒绝（双重保险）\n")
+                    try:
+                        subprocess.run(
+                            [
+                                sys.executable,
+                                "-m",
+                                "alpha_mining",
+                                "submit",
+                                "execute",
+                                "--database",
+                                args.database,
+                                "--config",
+                                args.config,
+                                "--confirm",
+                                args.确认短语,
+                                "--auth-state-file",
+                                str(_auth_state_path(args)),
+                                "--max-submit",
+                                str(args.max_submit),
+                                "--execute-submit",
+                            ],
+                            cwd=str(_ROOT),
+                            check=True,
+                        )
+                        print(f"[提交Alpha] ✓ submit execute 完成")
+                    except subprocess.CalledProcessError as exc:
+                        print(f"[提交Alpha] ✗ submit execute 失败: {exc}")
+                else:
+                    print(f"[提交Alpha] - 跳过真实提交（未加 --允许提交 参数）")
+
+                print()
 
             # 等待下一轮
             print(f"[提交Alpha] 等待 {args.interval} 秒...\n")
