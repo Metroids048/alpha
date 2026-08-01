@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
-from dataclasses import dataclass
+from dataclasses import dataclass, field as dataclasses_field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable
@@ -40,6 +40,7 @@ class RequestLease:
     lease_started_at: str
     progress_location: str = ""
     alpha_id: str = ""
+    context: dict[str, Any] = dataclasses_field(default_factory=dict)
 
 
 class SimulationRequestStore:
@@ -56,7 +57,13 @@ class SimulationRequestStore:
         self.lease_timeout_seconds = max(1.0, float(lease_timeout_seconds))
         self._now = now
 
-    def claim(self, expression: str, settings: dict[str, Any]) -> ClaimResult:
+    def claim(
+        self,
+        expression: str,
+        settings: dict[str, Any],
+        *,
+        context: dict[str, Any] | None = None,
+    ) -> ClaimResult:
         identity = expression_identity(expression)
         if not identity.parameter_skeleton or not identity.field_skeleton:
             return ClaimResult(False, "invalid_identity")
@@ -93,11 +100,12 @@ class SimulationRequestStore:
                         now,
                     ),
                 )
+                context_json = json.dumps(context or {}, sort_keys=True)
                 con.execute(
                     """INSERT INTO simulation_requests
-                    (request_hash,payload_json,status,created_at,updated_at)
-                    VALUES (?,?,'PENDING',?,?)""",
-                    (request_hash, encoded, now, now),
+                    (request_hash,payload_json,context_json,status,created_at,updated_at)
+                    VALUES (?,?,?,'PENDING',?,?)""",
+                    (request_hash, encoded, context_json, now, now),
                 )
                 con.commit()
             except sqlite3.IntegrityError:
@@ -139,7 +147,8 @@ class SimulationRequestStore:
             con.execute("BEGIN IMMEDIATE")
             self._mark_stale_requests(con, cutoff, now)
             rows = con.execute(
-                """SELECT request_hash,payload_json,progress_location,alpha_id,status,lease_started_at
+                """SELECT request_hash,payload_json,progress_location,alpha_id,status,
+                          lease_started_at,COALESCE(context_json,'{}')
                    FROM simulation_requests
                    WHERE (status='PENDING'
                       OR (status='IN_PROGRESS' AND lease_started_at<?
@@ -148,7 +157,7 @@ class SimulationRequestStore:
                    ORDER BY created_at LIMIT ?""",
                 (cutoff, str(request_hash), str(request_hash), int(limit)),
             ).fetchall()
-            for request_hash, payload_json, location, alpha_id, status, lease_started_at in rows:
+            for request_hash, payload_json, location, alpha_id, status, lease_started_at, context_json in rows:
                 eligible = status == "PENDING" or (
                     status == "IN_PROGRESS"
                     and (_parse_time(str(lease_started_at)) is not None)
@@ -192,6 +201,12 @@ class SimulationRequestStore:
                         (now, request_hash),
                     )
                     continue
+                try:
+                    context_dict: dict[str, Any] = json.loads(context_json or "{}")
+                    if not isinstance(context_dict, dict):
+                        context_dict = {}
+                except (TypeError, ValueError):
+                    context_dict = {}
                 leases.append(
                     RequestLease(
                         str(request_hash),
@@ -200,6 +215,7 @@ class SimulationRequestStore:
                         now,
                         str(location or ""),
                         str(alpha_id or ""),
+                        context_dict,
                     )
                 )
             con.commit()

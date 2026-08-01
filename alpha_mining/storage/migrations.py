@@ -419,6 +419,44 @@ SET status='UNKNOWN',last_error='legacy CLAIMED request has no verifiable extern
 WHERE status='CLAIMED';
 """,
     ),
+    (
+        17,
+        """
+ALTER TABLE simulation_requests ADD COLUMN context_json TEXT NOT NULL DEFAULT '{}';
+CREATE TABLE IF NOT EXISTS candidate_outcomes (
+ request_hash TEXT PRIMARY KEY,
+ candidate_id TEXT NOT NULL DEFAULT '',
+ topic_id TEXT NOT NULL DEFAULT '',
+ hypothesis_id TEXT NOT NULL DEFAULT '',
+ research_family TEXT NOT NULL DEFAULT '',
+ strategy_family TEXT NOT NULL DEFAULT '',
+ mechanism TEXT NOT NULL DEFAULT '',
+ dataset TEXT NOT NULL DEFAULT '',
+ parent_template TEXT NOT NULL DEFAULT '',
+ exact_hash TEXT NOT NULL DEFAULT '',
+ parameter_skeleton TEXT NOT NULL DEFAULT '',
+ field_skeleton TEXT NOT NULL DEFAULT '',
+ outcome TEXT NOT NULL,
+ sharpe REAL,
+ fitness REAL,
+ turnover REAL,
+ checks_json TEXT NOT NULL DEFAULT '[]',
+ error_category TEXT NOT NULL DEFAULT '',
+ error_message TEXT NOT NULL DEFAULT '',
+ observed_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_co_topic ON candidate_outcomes(topic_id);
+CREATE INDEX IF NOT EXISTS idx_co_family ON candidate_outcomes(strategy_family);
+CREATE INDEX IF NOT EXISTS idx_co_skeleton ON candidate_outcomes(field_skeleton);
+CREATE TABLE IF NOT EXISTS research_arm_observation_windows (
+ arm_key TEXT NOT NULL,
+ current_window_count INTEGER NOT NULL DEFAULT 0,
+ current_window_base_pass_count INTEGER NOT NULL DEFAULT 0,
+ updated_at TEXT NOT NULL,
+ PRIMARY KEY (arm_key)
+);
+""",
+    ),
 )
 
 

@@ -125,7 +125,51 @@ class ResearchArmTracker:
             )
         return self.stats(arm)
 
-    def stats(self, arm: ArmDimensions) -> ArmStats:
+    def record_observation(
+        self,
+        arm: ArmDimensions,
+        *,
+        base_pass: bool,
+        sharpe: float | None = None,
+        near_pass: bool = False,
+        self_corr_pass: bool = False,
+        prod_corr_pass: bool = False,
+        final_submit: bool = False,
+    ) -> None:
+        """Record a single simulation outcome and flush window when 20 obs accumulate."""
+        with sqlite3.connect(self.database) as con:
+            row = con.execute(
+                "SELECT current_window_count,current_window_base_pass_count FROM research_arm_observation_windows WHERE arm_key=?",
+                (arm.key,),
+            ).fetchone()
+            count = int(row[0]) if row else 0
+            base_passes = int(row[1]) if row else 0
+            count += 1
+            base_passes += int(bool(base_pass))
+            if count >= 20:
+                # flush window
+                self.record_window(
+                    arm,
+                    sharpes=[float(sharpe or 0.0)] * count,
+                    base_passes=[base_pass] * count,
+                    near_passes=[near_pass] * count,
+                    self_corr_passes=int(self_corr_pass),
+                    prod_corr_passes=int(prod_corr_pass),
+                    final_submits=int(final_submit),
+                )
+                count = 0
+                base_passes = 0
+            con.execute(
+                """INSERT INTO research_arm_observation_windows (arm_key,current_window_count,current_window_base_pass_count,updated_at)
+                   VALUES (?,?,?,?)
+                   ON CONFLICT(arm_key) DO UPDATE SET
+                   current_window_count=excluded.current_window_count,
+                   current_window_base_pass_count=excluded.current_window_base_pass_count,
+                   updated_at=excluded.updated_at""",
+                (arm.key, count, base_passes, _utc_now()),
+            )
+
+
         with sqlite3.connect(self.database) as con:
             row = con.execute(
                 """SELECT simulation_count,base_pass_count,near_pass_count,sharpe_values_json,

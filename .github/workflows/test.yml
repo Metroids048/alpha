@@ -17,9 +17,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history required for security scanner
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - name: Security — verify git history
+        run: python tools/security/verify_git_history.py
       - name: Install test dependencies
         run: python -m pip install -r requirements-test.txt
       - name: Compile Python sources

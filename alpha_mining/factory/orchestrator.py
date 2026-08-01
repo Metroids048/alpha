@@ -86,12 +86,16 @@ class FactoryOrchestrator:
         simulation: SimulationService,
         *,
         lease_timeout_seconds: float = 900.0,
+        candidate_service: Any | None = None,
     ) -> None:
         self.database = Path(database)
         SqliteRunLog(self.database).initialize_schema()
         migrate(self.database)
         self.simulation = simulation
-        self.generator = ConsultantGenerator()
+        self._candidate_service = candidate_service
+        # Keep self.generator only when no external service is injected (backward compat)
+        if candidate_service is None:
+            self.generator = ConsultantGenerator()
         self._generation_deferral_reason = ""
         self._generation_state = "READY"
         self.requests = SimulationRequestStore(
@@ -641,52 +645,114 @@ class FactoryOrchestrator:
             failed += counts["failed"]
             unknown += counts["unknown"]
             descriptions_validated += counts["descriptions_validated"]
-        candidate_specs = [
-            (spec, candidate)
-            for spec in self._research_specs()
-            for candidate in self.generator.generate(
-                hypothesis_id=spec.hypothesis_id,
-                family=spec.family,
-                mechanism=spec.mechanism,
-                horizon=spec.horizon,
-                fields=spec.fields,
-            )
-        ]
-        exact_duplicates = 0
-        for spec, candidate in candidate_specs:
-            if attempted >= limit:
-                break
-            settings = SettingsOptimizer(max_local_trials=4).stage1_default(spec.family)
-            claim = self.requests.claim(candidate.expression, settings)
-            if not claim.claimed:
-                exact_duplicates += int(claim.reason == "exact_hash_exists")
-                continue
-            generated += 1
-            leases = self.requests.acquire(1, request_hash=claim.request_hash)
-            if not leases:
-                continue
-            attempted += 1
-            counts = self._execute_lease(spec, leases[0], threshold)
-            simulated += counts["simulated"]
-            far_fail += counts["far_fail"]
-            near_pass += counts["near_pass"]
-            passed += counts["baseline_pass"]
-            failed += counts["failed"]
-            unknown += counts["unknown"]
-            descriptions_validated += counts["descriptions_validated"]
-        if (
-            candidate_specs
-            and generated == 0
-            and attempted == 0
-            and exact_duplicates == len(candidate_specs)
-        ):
-            self._generation_state = "CANDIDATE_SPACE_EXHAUSTED"
-            self._generation_deferral_reason = (
-                "all generated candidate Exact Hash identities already exist"
-            )
-            self._record_factory_event(
-                "CANDIDATE_SPACE_EXHAUSTED", self._generation_deferral_reason
-            )
+
+        # --- Candidate generation ---
+        if self._candidate_service is not None:
+            remaining = max(0, limit - attempted)
+            from alpha_mining.generation.service import CandidateGenerationBatch
+            batch: CandidateGenerationBatch = self._candidate_service.generate(limit=remaining)
+            self._generation_state = batch.generation_state
+            self._generation_deferral_reason = batch.deferred_reason
+            exact_duplicates = 0
+            for proposal in batch.candidates:
+                if attempted >= limit:
+                    break
+                settings = SettingsOptimizer(max_local_trials=4).stage1_default(
+                    proposal.strategy_family
+                )
+                claim = self.requests.claim(
+                    proposal.expression,
+                    settings,
+                    context={
+                        "candidate_id": proposal.candidate_id,
+                        "topic_id": proposal.topic_id,
+                        "hypothesis_id": proposal.hypothesis_id,
+                        "research_family": proposal.research_family,
+                        "strategy_family": proposal.strategy_family,
+                        "mutation_type": proposal.mutation_type,
+                        "mechanism": proposal.mechanism,
+                        "dataset": proposal.dataset,
+                        "parent_template": proposal.parent_template,
+                        "generator_source": proposal.generator_source,
+                        "exact_hash": proposal.exact_hash,
+                        "parameter_skeleton": proposal.parameter_skeleton,
+                        "field_skeleton": proposal.field_skeleton,
+                    },
+                )
+                if not claim.claimed:
+                    exact_duplicates += int(claim.reason == "exact_hash_exists")
+                    continue
+                generated += 1
+                leases = self.requests.acquire(1, request_hash=claim.request_hash)
+                if not leases:
+                    continue
+                attempted += 1
+                spec = ResearchSpec(
+                    hypothesis_id=proposal.hypothesis_id,
+                    family=proposal.research_family,
+                    mechanism=proposal.mechanism,
+                    horizon="medium",
+                    fields=(proposal.dataset,),
+                    dataset=proposal.dataset,
+                    fallback=False,
+                )
+                counts = self._execute_lease(spec, leases[0], threshold)
+                simulated += counts["simulated"]
+                far_fail += counts["far_fail"]
+                near_pass += counts["near_pass"]
+                passed += counts["baseline_pass"]
+                failed += counts["failed"]
+                unknown += counts["unknown"]
+                descriptions_validated += counts["descriptions_validated"]
+        else:
+            # Fallback: original ConsultantGenerator path (no external service)
+            candidate_specs = [
+                (spec, candidate)
+                for spec in self._research_specs()
+                for candidate in self.generator.generate(
+                    hypothesis_id=spec.hypothesis_id,
+                    family=spec.family,
+                    mechanism=spec.mechanism,
+                    horizon=spec.horizon,
+                    fields=spec.fields,
+                )
+            ]
+            exact_duplicates = 0
+            for spec, candidate in candidate_specs:
+                if attempted >= limit:
+                    break
+                settings = SettingsOptimizer(max_local_trials=4).stage1_default(spec.family)
+                claim = self.requests.claim(candidate.expression, settings)
+                if not claim.claimed:
+                    exact_duplicates += int(claim.reason == "exact_hash_exists")
+                    continue
+                generated += 1
+                leases = self.requests.acquire(1, request_hash=claim.request_hash)
+                if not leases:
+                    continue
+                attempted += 1
+                counts = self._execute_lease(spec, leases[0], threshold)
+                simulated += counts["simulated"]
+                far_fail += counts["far_fail"]
+                near_pass += counts["near_pass"]
+                passed += counts["baseline_pass"]
+                failed += counts["failed"]
+                unknown += counts["unknown"]
+                descriptions_validated += counts["descriptions_validated"]
+            if (
+                "candidate_specs" in dir()
+                and candidate_specs
+                and generated == 0
+                and attempted == 0
+                and exact_duplicates == len(candidate_specs)
+            ):
+                self._generation_state = "CANDIDATE_SPACE_EXHAUSTED"
+                self._generation_deferral_reason = (
+                    "all generated candidate Exact Hash identities already exist"
+                )
+                self._record_factory_event(
+                    "CANDIDATE_SPACE_EXHAUSTED", self._generation_deferral_reason
+                )
         return FactoryCycleSummary(
             generated=generated,
             simulated=simulated,
