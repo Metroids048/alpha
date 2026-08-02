@@ -1991,6 +1991,12 @@ class PreflightValidator:
         s = _sig(expr)
         if not s:
             return False, "empty"
+        # FastPlus syntax / arity / Matrix-Vector-Group gate (soft-fallback if missing).
+        from alpha_mining.parser.fastplus_gate import check_expression
+
+        fp = check_expression(s)
+        if fp.available and not fp.ok:
+            return False, fp.reason
         low = s.lower()
         if any(x in low for x in ("http://", "https://", "www.", ".com")):
             return False, "url_like_token"

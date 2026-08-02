@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from alpha_mining.domain.expression_ast import AstNode, ExpressionSyntaxError, parse_expression
 from alpha_mining.offline.metadata import MetadataCache
+from alpha_mining.parser.fastplus_gate import check_expression
 
 
 @dataclass(frozen=True)
@@ -19,6 +20,9 @@ class LocalExpressionValidator:
         self.metadata = metadata
 
     def validate(self, expression: str) -> list[ValidationIssue]:
+        fp = check_expression(expression)
+        if fp.available and not fp.ok:
+            return [ValidationIssue("FASTPLUS", fp.diagnostic)]
         try:
             root = parse_expression(expression)
         except ExpressionSyntaxError as exc:

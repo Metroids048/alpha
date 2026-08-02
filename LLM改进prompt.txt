@@ -1,0 +1,106 @@
+# Alpha生成 - 第2轮迭代改进
+
+## 🎯 目标
+
+生成WorldQuant Brain平台可通过的高质量alpha表达式，标准：
+- Sharpe ≥ 1.58
+- Fitness ≥ 1.0
+- Turnover ≤ 70%
+
+## ❌ 前几轮的失败模式（避免重复）
+
+### 低Sharpe表达式特征
+这些表达式的Sharpe都太低（<0.5），不要生成类似的：
+1. sharpe=0.20: ...
+2. sharpe=0.24: ...
+3. sharpe=0.39: ...
+4. sharpe=0.36: ...
+5. sharpe=0.08: ...
+
+**避免**: 这些表达式的共同问题是信号太弱或噪音太大
+
+### 高Turnover表达式特征
+这些表达式的换手率太高（>100%），不要生成类似的：
+1. turnover=170.7%: ...
+2. turnover=173.0%: ...
+3. turnover=173.1%: ...
+4. turnover=172.8%: ...
+5. turnover=173.2%: ...
+
+**避免**: 使用ts_delta短窗口、高频信号
+
+### 低Fitness表达式特征
+1. fitness=0.06: ...
+2. fitness=0.05: ...
+3. fitness=0.01: ...
+4. fitness=0.01: ...
+5. fitness=0.00: ...
+
+**避免**: 过度复杂嵌套、弱预测力因子
+
+## ✅ 改进策略
+
+### 1. 提高Sharpe（信号强度）
+- 使用基本面变化因子（ts_delta(fundamental/cap, 126)）
+- 组合流动性调整（rank(volume/adv20)）
+- 使用ts_zscore标准化增强稳定性
+- 使用group_neutralize控制行业风险
+
+### 2. 控制Turnover（降低换手率）
+- 使用较长回看窗口（126天以上）
+- 避免ts_delta短窗口（<60天）
+- 使用ts_decay_linear代替简单rank
+- 使用ts_mean平滑信号
+
+### 3. 提高Fitness（信息系数）
+- 选择高预测力的基本面因子（收益、现金流、估值）
+- 确保横截面区分度（使用rank、ts_zscore）
+- 避免过度嵌套（≤4层）
+- 组合多个弱相关因子
+
+## 📝 生成要求
+
+请生成15个新的alpha表达式，要求：
+
+1. **创新性**: 不重复上述失败模式
+2. **多样性**: 覆盖不同因子组合和策略风格
+3. **语法**: FastExpr格式，确保语法正确
+4. **结构**: 优先使用以下模板
+
+### 推荐模板
+
+```python
+# 模板1: 基本面变化 + 流动性
+group_neutralize(
+    ts_zscore(ts_delta(fundamental_field/cap, 126), 126) * rank(ts_mean(volume, 63)/adv20),
+    sector
+)
+
+# 模板2: 标准化因子 + 行业中性
+group_neutralize(
+    ts_zscore(fundamental_field/cap, 126) * rank(ts_decay_linear(volume/adv20, 63)),
+    subindustry
+)
+
+# 模板3: 多因子组合
+group_neutralize(
+    rank(ts_zscore(field1/cap, 126)) + 0.5*rank(ts_zscore(field2/cap, 126)),
+    sector
+)
+```
+
+### 可用的高质量基本面字段
+
+- 收益类: `ebitda`, `earnings`, `revenue`, `sales`
+- 现金流: `fcf`, `operating_cash_flow`
+- 估值: `book_value`, `total_assets`
+- 分析师: `anl10_*`, `anl14_*`
+
+## 输出格式
+
+请直接输出15个表达式，每行一个，不要额外说明：
+
+```
+group_neutralize(ts_zscore(ts_delta(ebitda/cap,126),126)*rank(ts_mean(volume,63)/adv20),sector)
+...
+```
