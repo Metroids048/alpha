@@ -60,6 +60,16 @@ def _find_auth_cookie(cookies: list[dict]) -> bool:
     )
 
 
+def _worldquant_cookies(cookies: list[dict]) -> list[dict]:
+    """Keep auth cookies from every WorldQuant host used by the web app/API."""
+    result: list[dict] = []
+    for cookie in cookies:
+        domain = str(cookie.get("domain") or "").lstrip(".").lower()
+        if domain == "worldquantbrain.com" or domain.endswith(".worldquantbrain.com"):
+            result.append(cookie)
+    return result
+
+
 def login(
     username: str,
     *,
@@ -109,7 +119,7 @@ def login(
             page = context.pages[0] if context.pages else context.new_page()
             page.goto(f"{PLATFORM_URL}/", wait_until="domcontentloaded")
             while True:
-                cookies = context.cookies(PLATFORM_URL)
+                cookies = _worldquant_cookies(context.cookies())
                 if _find_auth_cookie(cookies):
                     header = _cookie_header(cookies)
                     result = import_browser_session(username, header, settings)

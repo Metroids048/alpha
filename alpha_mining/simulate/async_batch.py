@@ -5,8 +5,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
-import hashlib
-import sqlite3
 import os
 import socket
 import ssl
@@ -51,29 +49,20 @@ def deduplicate_simulation_payloads(payloads: list[dict]) -> list[dict]:
 
 
 def claim_simulation_payloads(database: str, payloads: list[dict]) -> list[dict]:
-    """Atomically claim exact requests so restarts cannot submit them twice."""
+    """Use the authoritative store to reserve legacy async request identities."""
+    from alpha_mining.factory.simulation_requests import SimulationRequestStore
     from alpha_mining.storage.migrations import migrate
 
     migrate(database)
+    store = SimulationRequestStore(database)
     claimed: list[dict] = []
-    now = utc_iso()
-    with sqlite3.connect(database) as con:
-        con.execute("BEGIN IMMEDIATE")
-        for payload in deduplicate_simulation_payloads(payloads):
-            canonical = json.dumps(
-                _sim_payload(payload),
-                sort_keys=True,
-                separators=(",", ":"),
-                default=str,
-            )
-            request_hash = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-            inserted = con.execute(
-                "INSERT OR IGNORE INTO simulation_requests(request_hash,payload_json,status,created_at,updated_at) VALUES (?,?,?,?,?)",
-                (request_hash, canonical, "CLAIMED", now, now),
-            ).rowcount
-            if inserted:
-                claimed.append(payload)
-        con.commit()
+    for payload in deduplicate_simulation_payloads(payloads):
+        simulation_payload = _sim_payload(payload)
+        result = store.claim(
+            str(simulation_payload["regular"]), dict(simulation_payload["settings"])
+        )
+        if result.claimed:
+            claimed.append(payload)
     return claimed
 
 
@@ -224,12 +213,12 @@ def _build_ssl_connector(cfg: Any) -> aiohttp.TCPConnector:
 async def _authenticate(
     session: aiohttp.ClientSession, *, proxy: str | None, max_retries: int = 4
 ) -> None:
+    from alpha_mining.auth.aiohttp_login import build_aiohttp_login_callback
     from alpha_mining.auth.session_manager import (
         AuthSettings,
         ensure_authenticated_async,
     )
 
-    kw: dict[str, Any] = {"proxy": proxy} if proxy else {}
     default_auth = getattr(session, "_default_auth", None)
     username = str(getattr(default_auth, "login", "") or "")
     settings = AuthSettings(
@@ -241,16 +230,12 @@ async def _authenticate(
         ),
     )
 
-    async def _login_once() -> aiohttp.ClientResponse:
-        async with session.post(
-            f"{BASE}/authentication",
-            timeout=aiohttp.ClientTimeout(total=90),
-            **kw,
-        ) as response:
-            await response.read()
-            return response
-
-    await ensure_authenticated_async(session, _login_once, username, settings)
+    login_once = build_aiohttp_login_callback(
+        session,
+        base_url=BASE,
+        proxy=proxy,
+    )
+    await ensure_authenticated_async(session, login_once, username, settings)
 
 
 async def probe_async_connection(cfg: Any) -> None:

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import inspect
+import argparse
 import sqlite3
+import sys
 import threading
 from datetime import datetime, timedelta, timezone
 
@@ -269,3 +271,74 @@ def test_stop_probe_database_lock_is_recoverable() -> None:
     )
 
     assert calls == [1, 2]
+
+
+def test_child_output_survives_detached_invalid_stdout(tmp_path, monkeypatch) -> None:
+    child = tmp_path / "child.py"
+    child.write_text("print('child-output')\n", encoding="utf-8")
+    log_path = tmp_path / "pipeline.log"
+
+    class InvalidStdout:
+        def write(self, _text: str) -> int:
+            raise OSError(22, "Invalid argument")
+
+        def flush(self) -> None:
+            raise OSError(22, "Invalid argument")
+
+    monkeypatch.setattr(pipeline_loop.sys, "stdout", InvalidStdout())
+
+    result = pipeline_loop._run_subprocess(
+        [sys.executable, str(child)],
+        cwd=tmp_path,
+        label="detached-child",
+        log_path=log_path,
+    )
+
+    assert result.rc == 0
+    assert "child-output" in result.output_tail
+    assert "child-output" in log_path.read_text(encoding="utf-8")
+
+
+def test_expired_rate_limit_probes_before_catalog_sync(tmp_path, monkeypatch) -> None:
+    from alpha_mining.storage.migrations import migrate
+
+    database = tmp_path / "research.sqlite"
+    migrate(database)
+    expired = (datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat().replace(
+        "+00:00", "Z"
+    )
+    with sqlite3.connect(database) as con:
+        con.execute(
+            "UPDATE platform_access_state SET state='RATE_LIMITED',retry_after_until=? "
+            "WHERE singleton=1",
+            (expired,),
+        )
+
+    calls: list[tuple[str, list[str]]] = []
+
+    def fake_run(cmd, *, cwd, label, log_path=None):
+        calls.append((label, list(cmd)))
+        return pipeline_loop.ChildProcessResult(0, "")
+
+    monkeypatch.setattr(pipeline_loop, "_run_subprocess", fake_run)
+    args = argparse.Namespace(
+        catalog_autosync=True,
+        database=str(database),
+        auth_state_file=str(tmp_path / "auth.json"),
+        lock_path=str(tmp_path / "api.lock"),
+        catalog_region="USA",
+        catalog_universe="TOP3000",
+    )
+
+    pipeline_loop._refresh_catalog_if_stale(
+        args=args,
+        root=tmp_path,
+        cycle=4,
+        log_path=None,
+    )
+
+    assert [label for label, _cmd in calls] == [
+        "cycle_4/access-recovery-probe",
+        "cycle_4/catalog-sync",
+    ]
+    assert calls[0][1][2:5] == ["alpha_mining", "platform", "probe"]

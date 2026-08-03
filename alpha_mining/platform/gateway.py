@@ -8,6 +8,13 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urljoin
 
+import requests
+
+from alpha_mining.factory.contracts import (
+    SimulationCheckpoint,
+    SimulationOutcomeUnknown,
+)
+
 from .client import BASE_URL, PlatformReadError, ReadOnlyPlatformClient
 from .protocol import alpha_id_from_progress, extract_checks, extract_metrics
 
@@ -63,35 +70,74 @@ class PlatformGateway:
         return {"status_code": int(response.status_code)}
 
     def simulate(
-        self, *, expression: str, settings: dict[str, Any], alpha_type: str = "REGULAR"
+        self,
+        *,
+        expression: str,
+        settings: dict[str, Any],
+        alpha_type: str = "REGULAR",
+        checkpoint: SimulationCheckpoint | None = None,
+        checkpoint_sink: Callable[[SimulationCheckpoint], None] | None = None,
     ):
         from alpha_mining.factory.orchestrator import SimulationResult
 
         self.authenticate()
+        resume = checkpoint or SimulationCheckpoint()
+        alpha_id = str(resume.alpha_id or "").strip()
+        location = str(resume.progress_location or "").strip()
+        if alpha_id:
+            detail = self.fetch_alpha(alpha_id)
+            return SimulationResult(
+                alpha_id=alpha_id,
+                status="COMPLETE",
+                metrics=extract_metrics(detail),
+                checks=extract_checks(detail),
+                raw=detail,
+            )
         kind = str(alpha_type or "REGULAR").upper()
-        payload: dict[str, Any] = {"type": kind, "settings": dict(settings)}
-        if kind == "REGULAR":
-            payload["regular"] = expression
-        else:
-            payload["expression"] = expression
-        response = self.client.request(
-            "POST",
-            f"{BASE_URL}/simulations",
-            json=payload,
-            endpoint_class="simulation_submit",
-            allow_server_retry=False,
-        )
-        if response.status_code not in {200, 201, 202}:
-            raise PlatformReadError(f"simulation submit failed with HTTP {response.status_code}")
-        try:
-            body = response.json()
-        except Exception:
-            body = {}
-        body = body if isinstance(body, dict) else {}
-        alpha_id = alpha_id_from_progress(body)
-        location = str(response.headers.get("Location") or "").strip()
-        if not alpha_id and not location:
-            raise PlatformReadError("simulation response has no alpha id or progress location")
+        body: dict[str, Any] = {}
+        if not location:
+            payload: dict[str, Any] = {"type": kind, "settings": dict(settings)}
+            if kind == "REGULAR":
+                payload["regular"] = expression
+            else:
+                payload["expression"] = expression
+            try:
+                response = self.client.request(
+                    "POST",
+                    f"{BASE_URL}/simulations",
+                    json=payload,
+                    endpoint_class="simulation_submit",
+                    allow_server_retry=False,
+                )
+            except (requests.Timeout, requests.ConnectionError) as exc:
+                raise SimulationOutcomeUnknown(
+                    "simulation POST ended without a confirmable platform response"
+                ) from exc
+            if response.status_code not in {200, 201, 202}:
+                raise PlatformReadError(f"simulation submit failed with HTTP {response.status_code}")
+            try:
+                parsed = response.json()
+            except Exception:
+                parsed = {}
+            body = parsed if isinstance(parsed, dict) else {}
+            alpha_id = str(alpha_id_from_progress(body) or "").strip()
+            location = str(response.headers.get("Location") or "").strip()
+            if not alpha_id and not location:
+                raise SimulationOutcomeUnknown(
+                    "accepted simulation response has no alpha id or progress location"
+                )
+            if checkpoint_sink is not None:
+                try:
+                    checkpoint_sink(
+                        SimulationCheckpoint(
+                            progress_location=location,
+                            alpha_id=alpha_id,
+                        )
+                    )
+                except Exception as exc:
+                    raise SimulationOutcomeUnknown(
+                        "platform accepted simulation but its checkpoint could not be persisted"
+                    ) from exc
         if not alpha_id:
             progress_url = location if location.startswith("http") else urljoin(f"{BASE_URL}/", location.lstrip("/"))
             deadline = time.monotonic() + max(1.0, float(self.max_poll_seconds))
@@ -112,6 +158,18 @@ class PlatformGateway:
                 alpha_id = alpha_id_from_progress(current)
                 if alpha_id:
                     body = current
+                    if checkpoint_sink is not None:
+                        try:
+                            checkpoint_sink(
+                                SimulationCheckpoint(
+                                    progress_location=location,
+                                    alpha_id=str(alpha_id),
+                                )
+                            )
+                        except Exception as exc:
+                            raise SimulationOutcomeUnknown(
+                                "simulation alpha id could not be persisted"
+                            ) from exc
                     break
                 self.sleeper(max(0.1, float(self.poll_interval)))
             if not alpha_id:

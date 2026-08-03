@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from http.cookies import SimpleCookie
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Mapping
+from typing import Any, Awaitable, Callable, Mapping, Protocol
 
 STATE_VERSION = 1
 AUTH_STATE_ENV = "WQ_AUTH_STATE_FILE"
@@ -40,6 +40,14 @@ class AuthenticationFailed(RuntimeError):
     """A bounded authentication request failed."""
 
 
+class CookieProtector(Protocol):
+    """Injectable cookie encryption boundary for portable state-machine tests."""
+
+    def protect(self, payload: bytes) -> bytes: ...
+
+    def unprotect(self, payload: bytes) -> bytes: ...
+
+
 @dataclass(frozen=True)
 class AuthSettings:
     state_path: str | Path = ".wq_auth_state.json"
@@ -47,6 +55,7 @@ class AuthSettings:
     daily_cap: int = 5
     max_attempts: int = 2
     lock_timeout_seconds: float = 120
+    protector: CookieProtector | None = None
 
     def resolved_state_path(self) -> Path:
         configured = os.environ.get(AUTH_STATE_ENV, "").strip()
@@ -86,10 +95,6 @@ def _process_lock(path: Path) -> threading.Lock:
 
 
 def _acquire_lock(state_path: Path, timeout: float) -> _HeldLock:
-    if os.name != "nt":
-        raise AuthStateError("DPAPI authentication state requires Windows")
-    import msvcrt
-
     lock_path = Path(str(state_path) + ".lock")
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     process_lock = _process_lock(lock_path)
@@ -105,7 +110,14 @@ def _acquire_lock(state_path: Path, timeout: float) -> _HeldLock:
         while True:
             try:
                 stream.seek(0)
-                msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+                if os.name == "nt":
+                    import msvcrt
+
+                    msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+
+                    fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
                 return _HeldLock(stream, process_lock)
             except OSError:
                 if time.monotonic() >= deadline:
@@ -119,11 +131,16 @@ def _acquire_lock(state_path: Path, timeout: float) -> _HeldLock:
 
 
 def _release_lock(held: _HeldLock) -> None:
-    import msvcrt
-
     try:
         held.stream.seek(0)
-        msvcrt.locking(held.stream.fileno(), msvcrt.LK_UNLCK, 1)
+        if os.name == "nt":
+            import msvcrt
+
+            msvcrt.locking(held.stream.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(held.stream.fileno(), fcntl.LOCK_UN)
     finally:
         held.stream.close()
         held.process_lock.release()
@@ -268,36 +285,48 @@ def import_browser_session(
         ]
         state["last_auth_utc"] = now.isoformat().replace("+00:00", "Z")
         state["generation"] = int(state["generation"]) + 1
-        state["cookie_blob_dpapi_b64"] = _protect_cookie_rows(rows)
+        state["cookie_blob_dpapi_b64"] = _protect_cookie_rows(rows, settings.protector)
         _save_state(path, state)
         return AuthResult(False, True, int(state["generation"]), int(state["auth_attempts"]))
 
 
-def _protect_cookie_rows(rows: list[dict[str, Any]]) -> str:
-    try:
+class DpapiCookieProtector:
+    def protect(self, payload: bytes) -> bytes:
         import win32crypt
 
-        payload = json.dumps(rows, ensure_ascii=False, separators=(",", ":")).encode(
-            "utf-8"
-        )
         protected = win32crypt.CryptProtectData(
             payload, "alpha-wq-auth-cookie", None, None, None, 0
         )
-        encrypted = protected[1] if isinstance(protected, tuple) else protected
+        return protected[1] if isinstance(protected, tuple) else protected
+
+    def unprotect(self, payload: bytes) -> bytes:
+        import win32crypt
+
+        unprotected = win32crypt.CryptUnprotectData(payload, None, None, None, 0)
+        return unprotected[1] if isinstance(unprotected, tuple) else unprotected
+
+
+def _protect_cookie_rows(
+    rows: list[dict[str, Any]], protector: CookieProtector | None = None
+) -> str:
+    try:
+        payload = json.dumps(rows, ensure_ascii=False, separators=(",", ":")).encode(
+            "utf-8"
+        )
+        encrypted = (protector or DpapiCookieProtector()).protect(payload)
         return base64.b64encode(encrypted).decode("ascii")
     except Exception as exc:
         raise AuthStateError("DPAPI could not encrypt authentication cookies") from exc
 
 
-def _unprotect_cookie_rows(blob: str | None) -> list[dict[str, Any]]:
+def _unprotect_cookie_rows(
+    blob: str | None, protector: CookieProtector | None = None
+) -> list[dict[str, Any]]:
     if not blob:
         return []
     try:
-        import win32crypt
-
         encrypted = base64.b64decode(blob, validate=True)
-        unprotected = win32crypt.CryptUnprotectData(encrypted, None, None, None, 0)
-        clear = unprotected[1] if isinstance(unprotected, tuple) else unprotected
+        clear = (protector or DpapiCookieProtector()).unprotect(encrypted)
         rows = json.loads(clear.decode("utf-8"))
     except Exception as exc:
         raise AuthStateError("DPAPI could not decrypt authentication cookies") from exc
@@ -449,7 +478,9 @@ def mark_session_validated(
     fingerprint = _account_fingerprint(username)
     with _StateLock(path, settings.lock_timeout_seconds):
         state = _load_state(path, fingerprint, _utc_now())
-        if not _unprotect_cookie_rows(state.get("cookie_blob_dpapi_b64")):
+        if not _unprotect_cookie_rows(
+            state.get("cookie_blob_dpapi_b64"), settings.protector
+        ):
             raise AuthStateError("authentication state has no protected session cookies")
         state["last_auth_utc"] = _utc_now().isoformat().replace("+00:00", "Z")
         _save_state(path, state)
@@ -476,7 +507,9 @@ def ensure_authenticated(
         now = _utc_now()
         state = _load_state(path, fingerprint, now)
         local_generation = _session_generation(requests_session)
-        rows = _unprotect_cookie_rows(state.get("cookie_blob_dpapi_b64"))
+        rows = _unprotect_cookie_rows(
+            state.get("cookie_blob_dpapi_b64"), settings.protector
+        )
         # Stored cookies are reusable for as long as they exist: the 25-minute
         # cooldown is a login-rate guard, not a session-expiry signal.  The real
         # expiry lives in the `t` JWT (checked by the platform client) and in the
@@ -531,7 +564,9 @@ def ensure_authenticated(
             cookie_rows = _requests_cookie_rows(requests_session)
             state["last_auth_utc"] = now.isoformat().replace("+00:00", "Z")
             state["generation"] = int(state["generation"]) + 1
-            state["cookie_blob_dpapi_b64"] = _protect_cookie_rows(cookie_rows)
+            state["cookie_blob_dpapi_b64"] = _protect_cookie_rows(
+                cookie_rows, settings.protector
+            )
             _save_state(path, state)
             _mark_session(requests_session, int(state["generation"]))
             return AuthResult(
@@ -562,7 +597,9 @@ async def ensure_authenticated_async(
         now = _utc_now()
         state = _load_state(path, fingerprint, now)
         local_generation = _session_generation(aiohttp_session)
-        rows = _unprotect_cookie_rows(state.get("cookie_blob_dpapi_b64"))
+        rows = _unprotect_cookie_rows(
+            state.get("cookie_blob_dpapi_b64"), settings.protector
+        )
         can_restore = bool(rows) and (
             (
                 not effective_force
@@ -614,7 +651,9 @@ async def ensure_authenticated_async(
             cookie_rows = _aiohttp_cookie_rows(aiohttp_session)
             state["last_auth_utc"] = now.isoformat().replace("+00:00", "Z")
             state["generation"] = int(state["generation"]) + 1
-            state["cookie_blob_dpapi_b64"] = _protect_cookie_rows(cookie_rows)
+            state["cookie_blob_dpapi_b64"] = _protect_cookie_rows(
+                cookie_rows, settings.protector
+            )
             _save_state(path, state)
             _mark_session(aiohttp_session, int(state["generation"]))
             return AuthResult(

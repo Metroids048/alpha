@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from alpha_mining.parser.fastplus_gate import check_expression
+
 from .expression_normalization import extract_fields, extract_functions
 from .field_catalog import FieldCatalog
 from .operator_registry import BLOCKED_FUNCTIONS, FUNCTIONS, GROUPS
@@ -25,10 +27,18 @@ class PreflightValidator:
         self.min_ts_corr_window = max(1, int(min_ts_corr_window))
 
     def issues(self, expression: str) -> tuple[ValidationIssue, ...]:
-        text = str(expression or "").strip().lower()
+        raw = str(expression or "").strip()
+        text = raw.lower()
         out: list[ValidationIssue] = []
         if not text:
             return (ValidationIssue("EMPTY", "empty expression"),)
+
+        # FastPlus: syntax / arity / Matrix-Vector-Group type checks (soft if missing).
+        fp = check_expression(raw)
+        if fp.available and not fp.ok:
+            out.append(ValidationIssue("FASTPLUS", fp.diagnostic))
+            return tuple(out)
+
         if any(x in text for x in ("http://", "https://", "www.", ".com")):
             out.append(ValidationIssue("URL_TOKEN", "URL-like token"))
         blocked = sorted(set(extract_functions(text)) & BLOCKED_FUNCTIONS)

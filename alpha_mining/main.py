@@ -257,6 +257,8 @@ def _cmd_consultant_generate(args: argparse.Namespace) -> int:
     candidates = generator.generate(
         hypothesis_id=args.hypothesis_id,
         family=args.family,
+        mechanism=args.mechanism,
+        horizon=args.horizon,
         fields=args.fields or ["close", "volume"],
         parent_expression=args.parent_expression,
     )
@@ -917,6 +919,8 @@ def _build_parser() -> argparse.ArgumentParser:
         )
         command_parser.add_argument("--hypothesis-id", default="manual")
         command_parser.add_argument("--family", default="exploration")
+        command_parser.add_argument("--mechanism", default="balanced")
+        command_parser.add_argument("--horizon", default="medium")
         command_parser.add_argument("--field", action="append", dest="fields")
         command_parser.add_argument("--parent-expression", default="")
         command_parser.add_argument("--database", default="research_memory.sqlite")

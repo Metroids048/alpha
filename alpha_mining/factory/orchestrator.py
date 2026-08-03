@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import hashlib
+import inspect
 import json
+import re
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -13,6 +14,12 @@ from typing import Any, Protocol
 from alpha_mining.domain.expression_normalization import expression_identity, operator_topology
 from alpha_mining.domain.operator_registry import BASE_VARS
 from alpha_mining.description.pipeline import DescriptionPipeline
+from alpha_mining.factory.contracts import (
+    SimulationCheckpoint,
+    SimulationOutcomeUnknown,
+    validate_simulation_result,
+)
+from alpha_mining.factory.simulation_requests import RequestLease, SimulationRequestStore
 from alpha_mining.generator.baseline_first import BaselineOutcome, classify_baseline
 from alpha_mining.generator.consultant_generator import ConsultantGenerator
 from alpha_mining.integration.phase4 import expression_id_for
@@ -37,7 +44,13 @@ class SimulationResult:
 
 class SimulationService(Protocol):
     def simulate(
-        self, *, expression: str, settings: dict[str, Any], alpha_type: str = "REGULAR"
+        self,
+        *,
+        expression: str,
+        settings: dict[str, Any],
+        alpha_type: str = "REGULAR",
+        checkpoint: SimulationCheckpoint | None = None,
+        checkpoint_sink: Any | None = None,
     ) -> SimulationResult: ...
 
 
@@ -60,18 +73,34 @@ class FactoryCycleSummary:
     near_pass: int
     baseline_pass: int
     failed: int
+    unknown: int = 0
     descriptions_validated: int = 0
     deferred_reason: str = ""
+    generation_state: str = "READY"
 
 
 class FactoryOrchestrator:
-    def __init__(self, database: str | Path, simulation: SimulationService) -> None:
+    def __init__(
+        self,
+        database: str | Path,
+        simulation: SimulationService,
+        *,
+        lease_timeout_seconds: float = 900.0,
+        candidate_service: Any | None = None,
+    ) -> None:
         self.database = Path(database)
         SqliteRunLog(self.database).initialize_schema()
         migrate(self.database)
         self.simulation = simulation
-        self.generator = ConsultantGenerator()
+        self._candidate_service = candidate_service
+        # Keep self.generator only when no external service is injected (backward compat)
+        if candidate_service is None:
+            self.generator = ConsultantGenerator()
         self._generation_deferral_reason = ""
+        self._generation_state = "READY"
+        self.requests = SimulationRequestStore(
+            self.database, lease_timeout_seconds=lease_timeout_seconds
+        )
 
     def _catalog_unavailable_reason(self, mappings: list[tuple[Any, ...]]) -> str | None:
         max_age_seconds = 24 * 60 * 60
@@ -199,6 +228,13 @@ class FactoryOrchestrator:
 
     def _research_specs(self) -> list[ResearchSpec]:
         with sqlite3.connect(self.database) as con:
+            active_count = int(
+                con.execute(
+                    """SELECT COUNT(*) FROM hypotheses h
+                       JOIN research_topics t ON t.topic_id=h.topic_id
+                       WHERE COALESCE(h.status,'active')='active' AND COALESCE(t.active,1)=1"""
+                ).fetchone()[0]
+            )
             rows = con.execute(
                 """SELECT h.hypothesis_id,COALESCE(t.category,'UNCLASSIFIED'),
                           COALESCE(h.mechanism,h.statement_en,h.statement_cn),
@@ -209,7 +245,15 @@ class FactoryOrchestrator:
                    WHERE COALESCE(h.status,'active')='active' AND COALESCE(t.active,1)=1
                    ORDER BY h.created_at,h.hypothesis_id,m.field_quality_score DESC,m.data_field"""
             ).fetchall()
+        if active_count == 0:
+            self._generation_state = "NO_RESEARCH_SPECS"
+            self._generation_deferral_reason = "no active research specifications are available"
+            self._record_factory_event(
+                "NO_RESEARCH_SPECS", self._generation_deferral_reason
+            )
+            return []
         if reason := self._catalog_unavailable_reason(rows):
+            self._generation_state = "CATALOG_UNAVAILABLE"
             self._generation_deferral_reason = reason
             self._record_factory_event(
                 "CATALOG_UNAVAILABLE",
@@ -235,8 +279,9 @@ class FactoryOrchestrator:
                 )
         if grouped:
             return list(grouped.values())
-        self._generation_deferral_reason = "no active research specifications are available"
-        self._record_factory_event("CATALOG_UNAVAILABLE", self._generation_deferral_reason)
+        self._generation_state = "NO_RESEARCH_SPECS"
+        self._generation_deferral_reason = "no usable research specifications are available"
+        self._record_factory_event("NO_RESEARCH_SPECS", self._generation_deferral_reason)
         return []
 
     def _record_factory_event(self, category: str, detail: str) -> None:
@@ -336,71 +381,14 @@ class FactoryOrchestrator:
                 )
 
     def _claim(self, expression: str, settings: dict[str, Any]) -> bool:
-        identity = expression_identity(expression)
-        if not identity.parameter_skeleton or not identity.field_skeleton:
-            return False
-        payload = {"type": "REGULAR", "regular": expression, "settings": settings}
-        encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-        request_hash = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
-        now = _utc_now()
-        with sqlite3.connect(self.database) as con:
-            historical = con.execute(
-                """SELECT 1 FROM expression_identities
-                   WHERE exact_hash=? LIMIT 1""",
-                (identity.exact_hash,),
-            ).fetchone()
-            if historical:
-                return False
-            # Clear stale FAILED entries so UNIQUE constraints don't block retries.
-            con.execute(
-                "DELETE FROM factory_candidate_claims WHERE exact_hash=? AND status='FAILED'",
-                (identity.exact_hash,),
-            )
-            # simulation_requests: UNIQUE on request_hash — stale FAILEDs block
-            # INSERT OR IGNORE, causing rowcount=0 and silent skip of all candidates.
-            con.execute(
-                "DELETE FROM simulation_requests WHERE request_hash=? AND status='FAILED'",
-                (request_hash,),
-            )
-            claim = con.execute(
-                """INSERT OR IGNORE INTO factory_candidate_claims
-                (expression_text,exact_hash,parameter_skeleton,field_skeleton,request_hash,status,created_at,updated_at)
-                VALUES (?,?,?,?,?,'CLAIMED',?,?)""",
-                (
-                    expression,
-                    identity.exact_hash,
-                    identity.parameter_skeleton,
-                    identity.field_skeleton,
-                    request_hash,
-                    now,
-                    now,
-                ),
-            )
-            if claim.rowcount != 1:
-                return False
-            request = con.execute(
-                """INSERT OR IGNORE INTO simulation_requests
-                (request_hash,payload_json,status,created_at,updated_at)
-                VALUES (?,?,'CLAIMED',?,?)""",
-                (request_hash, encoded, now, now),
-            )
-            if request.rowcount != 1:
-                con.execute(
-                    "DELETE FROM factory_candidate_claims WHERE request_hash=?",
-                    (request_hash,),
-                )
-                return False
-        return True
+        """Compatibility wrapper; the store owns the transaction."""
 
-    def _set_claim_status(self, expression: str, status: str) -> None:
-        with sqlite3.connect(self.database) as con:
-            con.execute(
-                "UPDATE factory_candidate_claims SET status=?,updated_at=? WHERE exact_hash=?",
-                (status, _utc_now(), expression_identity(expression).exact_hash),
-            )
+        return self.requests.claim(expression, settings).claimed
 
-    def _record(
+    def _write_success(
         self,
+        con: sqlite3.Connection,
+        *,
         spec: ResearchSpec,
         expression: str,
         settings: dict[str, Any],
@@ -410,55 +398,64 @@ class FactoryOrchestrator:
         expression_id = expression_id_for(expression)
         identity = expression_identity(expression)
         now = _utc_now()
-        with sqlite3.connect(self.database) as con:
-            con.execute(
-                """INSERT OR IGNORE INTO expressions
-                (expression_id,expression_text,normalized_text,structure_sig,hypothesis_id,
-                 generation_strategy,generation_layer,created_at)
-                VALUES (?,?,?,?,?,?,?,?)""",
-                (
-                    expression_id,
-                    expression,
-                    "".join(expression.lower().split()),
-                    operator_topology(expression),
-                    None if spec.fallback else spec.hypothesis_id,
-                    "consultant_generator",
-                    "group_rank_disabled",
-                    now,
-                ),
-            )
-            con.execute(
-                """INSERT OR IGNORE INTO expression_identities
-                (expression_id,exact_hash,parameter_skeleton,field_skeleton,created_at)
-                VALUES (?,?,?,?,?)""",
-                (
-                    expression_id,
-                    identity.exact_hash,
-                    identity.parameter_skeleton,
-                    identity.field_skeleton,
-                    now,
-                ),
-            )
-            con.execute(
-                """INSERT INTO simulation_runs
-                (utc_iso,expression_id,alpha_id,expression,status,queue_status,sharpe,fitness,turnover,fail_reason,region,universe,delay)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                (
-                    now,
-                    expression_id,
-                    result.alpha_id,
-                    expression,
-                    result.status,
-                    outcome.value if outcome else "UNKNOWN",
-                    result.metrics.get("sharpe"),
-                    result.metrics.get("fitness"),
-                    result.metrics.get("turnover"),
-                    "" if outcome is BaselineOutcome.PASS else (outcome.value if outcome else result.status),
-                    settings.get("region", "USA"),
-                    settings.get("universe", "TOP3000"),
-                    settings.get("delay", 1),
-                ),
-            )
+        con.execute(
+            """INSERT OR IGNORE INTO expressions
+            (expression_id,expression_text,normalized_text,structure_sig,hypothesis_id,
+             generation_strategy,generation_layer,created_at)
+            VALUES (?,?,?,?,?,?,?,?)""",
+            (
+                expression_id,
+                expression,
+                "".join(expression.lower().split()),
+                operator_topology(expression),
+                None if spec.fallback else spec.hypothesis_id,
+                "consultant_generator",
+                "group_rank_disabled",
+                now,
+            ),
+        )
+        con.execute(
+            """INSERT OR IGNORE INTO expression_identities
+            (expression_id,exact_hash,parameter_skeleton,field_skeleton,created_at)
+            VALUES (?,?,?,?,?)""",
+            (
+                expression_id,
+                identity.exact_hash,
+                identity.parameter_skeleton,
+                identity.field_skeleton,
+                now,
+            ),
+        )
+        con.execute(
+            """INSERT INTO simulation_runs
+            (utc_iso,expression_id,alpha_id,expression,status,queue_status,sharpe,fitness,turnover,
+             fail_reason,region,universe,delay)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                now,
+                expression_id,
+                str(result.alpha_id).strip(),
+                expression,
+                result.status,
+                outcome.value if outcome else "UNKNOWN",
+                result.metrics.get("sharpe"),
+                result.metrics.get("fitness"),
+                result.metrics.get("turnover"),
+                "" if outcome is BaselineOutcome.PASS else (outcome.value if outcome else result.status),
+                settings.get("region", "USA"),
+                settings.get("universe", "TOP3000"),
+                settings.get("delay", 1),
+            ),
+        )
+
+    def _record_arm(
+        self,
+        spec: ResearchSpec,
+        expression: str,
+        settings: dict[str, Any],
+        result: SimulationResult,
+        outcome: BaselineOutcome | None,
+    ) -> None:
         if "sharpe" in result.metrics:
             checks = {
                 str(item.get("name") or "").upper(): str(item.get("result") or item.get("status") or "UNKNOWN").upper()
@@ -486,56 +483,149 @@ class FactoryOrchestrator:
                 final_submits=0,
             )
 
-    def _pending_requests(self, limit: int) -> list[tuple[str, str, dict[str, Any]]]:
-        """Read claimed-but-unrun simulation requests oldest-first."""
-        if limit <= 0:
-            return []
-        with sqlite3.connect(self.database) as con:
-            rows = con.execute(
-                """SELECT request_hash,payload_json FROM simulation_requests
-                   WHERE status='PENDING' ORDER BY created_at LIMIT ?""",
-                (int(limit),),
-            ).fetchall()
-        pending: list[tuple[str, str, dict[str, Any]]] = []
-        for request_hash, payload_json in rows:
-            try:
-                payload = json.loads(payload_json)
-            except (TypeError, ValueError):
-                continue
-            if not isinstance(payload, dict):
-                continue
-            expression = str(payload.get("regular") or "").strip()
-            settings = payload.get("settings")
-            if not expression or not isinstance(settings, dict):
-                continue
-            pending.append((str(request_hash), expression, settings))
-        return pending
+    @staticmethod
+    def _sanitize_error(exc: BaseException | str) -> str:
+        text = str(exc)
+        return re.sub(
+            r"(?i)\b(password|passwd|token|cookie|authorization)\s*[:=]\s*[^\s,;]+",
+            lambda match: f"{match.group(1)}=[REDACTED]",
+            text,
+        )[:1000]
 
-    def _set_request_status(self, request_hash: str, status: str) -> None:
-        with sqlite3.connect(self.database) as con:
-            con.execute(
-                "UPDATE simulation_requests SET status=?,updated_at=? WHERE request_hash=?",
-                (status, _utc_now(), request_hash),
+    def _call_simulation(self, lease: RequestLease) -> SimulationResult:
+        simulate = self.simulation.simulate
+        parameters = inspect.signature(simulate).parameters.values()
+        supports_checkpoint = any(
+            parameter.name == "checkpoint" or parameter.kind is inspect.Parameter.VAR_KEYWORD
+            for parameter in parameters
+        )
+        kwargs: dict[str, Any] = {
+            "expression": lease.expression,
+            "settings": lease.settings,
+            "alpha_type": "REGULAR",
+        }
+        if supports_checkpoint:
+            kwargs.update(
+                checkpoint=SimulationCheckpoint(
+                    progress_location=lease.progress_location,
+                    alpha_id=lease.alpha_id,
+                ),
+                checkpoint_sink=lambda checkpoint: self.requests.checkpoint(
+                    lease.request_hash,
+                    lease_started_at=lease.lease_started_at,
+                    progress_location=checkpoint.progress_location,
+                    alpha_id=checkpoint.alpha_id,
+                ),
             )
+        return simulate(**kwargs)
 
-    def _drain_pending_requests(
-        self, *, batch_size: int, threshold: float
-    ) -> tuple[int, int, int, int, int]:
-        """Simulate requests already claimed by an earlier cycle.
+    def _execute_lease(
+        self, spec: ResearchSpec, lease: RequestLease, threshold: float
+    ) -> dict[str, int]:
+        counters = {
+            "simulated": 0,
+            "far_fail": 0,
+            "near_pass": 0,
+            "baseline_pass": 0,
+            "failed": 0,
+            "unknown": 0,
+            "descriptions_validated": 0,
+        }
+        try:
+            result = self._call_simulation(lease)
+        except SimulationOutcomeUnknown as exc:
+            detail = self._sanitize_error(f"{type(exc).__name__}: {exc}")
+            self.requests.finalize_failure(
+                lease.request_hash,
+                lease_started_at=lease.lease_started_at,
+                status="UNKNOWN",
+                error=detail,
+            )
+            counters["unknown"] = 1
+            print(f"[factory] {lease.request_hash[:8]} UNKNOWN: {detail}")
+            return counters
+        except Exception as exc:
+            detail = self._sanitize_error(f"{type(exc).__name__}: {exc}")
+            finalized = self.requests.finalize_failure(
+                lease.request_hash, lease_started_at=lease.lease_started_at, error=detail
+            )
+            counters["failed" if finalized else "unknown"] = 1
+            terminal = "FAILED" if finalized else "UNKNOWN"
+            print(f"[factory] {lease.request_hash[:8]} {terminal}: {detail}")
+            return counters
 
-        A request row survives a crash or an authentication outage after its
-        candidate was claimed, so the work is already paid for in dedup terms.
-        Re-running it here keeps a restarted loop from stalling on an empty
-        candidate batch while unrun requests accumulate.
+        validation = validate_simulation_result(result)
+        if not validation.valid:
+            detail = self._sanitize_error(
+                f"{validation.reason}; status={validation.normalized_status}"
+            )
+            finalized = self.requests.finalize_failure(
+                lease.request_hash, lease_started_at=lease.lease_started_at, error=detail
+            )
+            counters["failed" if finalized else "unknown"] = 1
+            terminal = "FAILED" if finalized else "UNKNOWN"
+            print(f"[factory] {lease.request_hash[:8]} {terminal}: {detail}")
+            return counters
 
-        Returns (simulated, far_fail, near_pass, baseline_pass, failed).
-        """
+        sharpe = result.metrics.get("sharpe")
+        outcome = (
+            classify_baseline(sharpe=float(sharpe), live_threshold=threshold)
+            if sharpe is not None
+            else None
+        )
+        finalized = self.requests.finalize_success(
+            lease.request_hash,
+            alpha_id=result.alpha_id,
+            lease_started_at=lease.lease_started_at,
+            write_success=lambda con: self._write_success(
+                con,
+                spec=spec,
+                expression=lease.expression,
+                settings=lease.settings,
+                result=result,
+                outcome=outcome,
+            ),
+        )
+        if not finalized:
+            counters["unknown"] = 1
+            print(f"[factory] {lease.request_hash[:8]} UNKNOWN: execution lease was lost")
+            return counters
+        counters["simulated"] = 1
+        counters["far_fail"] = int(outcome is BaselineOutcome.FAR_FAIL)
+        counters["near_pass"] = int(outcome is BaselineOutcome.NEAR_PASS)
+        counters["baseline_pass"] = int(outcome is BaselineOutcome.PASS)
+        try:
+            self._record_arm(spec, lease.expression, lease.settings, result, outcome)
+        except Exception as exc:
+            print(f"[factory] warning: arm metrics unavailable: {type(exc).__name__}")
+        try:
+            counters["descriptions_validated"] = int(
+                self._prepare_description(
+                    spec=spec,
+                    expression=lease.expression,
+                    settings=lease.settings,
+                    result=result,
+                )
+            )
+        except Exception as exc:
+            print(f"[factory] warning: description preparation failed: {type(exc).__name__}")
+        print(
+            f"[factory] {lease.request_hash[:8]} {validation.normalized_status} "
+            f"sharpe={sharpe} alpha_id={result.alpha_id}"
+        )
+        return counters
 
-        pending = self._pending_requests(batch_size)
-        if not pending:
-            return (0, 0, 0, 0, 0)
-        simulated = far_fail = near_pass = passed = failed = 0
-        spec = ResearchSpec(
+    def run_simulate(self, *, batch_size: int) -> FactoryCycleSummary:
+        generated = simulated = far_fail = near_pass = passed = failed = unknown = 0
+        descriptions_validated = 0
+        self._generation_deferral_reason = ""
+        self._generation_state = "READY"
+        threshold = self._live_sharpe_threshold()
+        self._backfill_identities()
+        limit = max(0, int(batch_size))
+        pending = self.requests.acquire(limit)
+        attempted = len(pending)
+        fallback_spec = ResearchSpec(
             hypothesis_id="",
             family="PENDING_BACKLOG",
             mechanism="restored pending simulation request",
@@ -544,114 +634,134 @@ class FactoryOrchestrator:
             dataset="UNKNOWN",
             fallback=True,
         )
-        print(f"[factory] draining {len(pending)} pending simulation_requests")
-        for request_hash, expression, settings in pending:
-            try:
-                result = self.simulation.simulate(
-                    expression=expression, settings=settings, alpha_type="REGULAR"
-                )
-            except Exception as exc:
-                failed += 1
-                self._set_request_status(request_hash, "FAILED")
-                self._set_claim_status(expression, "FAILED")
-                print(f"[factory] {request_hash[:8]} FAILED: {type(exc).__name__}: {exc}")
-                continue
-            # A platform rejection is *returned*, not raised: the gateway yields a
-            # result with an empty alpha id and a FAILED/ERROR/REJECTED status.
-            # Counting that as simulated would mark the request COMPLETE and hide
-            # a rejected expression behind a success.
-            if not str(result.alpha_id or "").strip():
-                failed += 1
-                self._set_request_status(request_hash, "FAILED")
-                self._set_claim_status(expression, "FAILED")
-                print(f"[factory] {request_hash[:8]} REJECTED status={result.status}")
-                continue
-            simulated += 1
-            sharpe = result.metrics.get("sharpe")
-            outcome = (
-                classify_baseline(sharpe=float(sharpe), live_threshold=threshold)
-                if sharpe is not None
-                else None
-            )
-            far_fail += int(outcome is BaselineOutcome.FAR_FAIL)
-            near_pass += int(outcome is BaselineOutcome.NEAR_PASS)
-            passed += int(outcome is BaselineOutcome.PASS)
-            self._record(spec, expression, settings, result, outcome)
-            self._set_request_status(request_hash, "COMPLETE")
-            self._set_claim_status(expression, "SIMULATED")
-            print(
-                f"[factory] {request_hash[:8]} {result.status} "
-                f"sharpe={sharpe} alpha_id={result.alpha_id}"
-            )
-        return (simulated, far_fail, near_pass, passed, failed)
+        if pending:
+            print(f"[factory] draining {len(pending)} recoverable simulation_requests")
+        for lease in pending:
+            counts = self._execute_lease(fallback_spec, lease, threshold)
+            simulated += counts["simulated"]
+            far_fail += counts["far_fail"]
+            near_pass += counts["near_pass"]
+            passed += counts["baseline_pass"]
+            failed += counts["failed"]
+            unknown += counts["unknown"]
+            descriptions_validated += counts["descriptions_validated"]
 
-    def run_simulate(self, *, batch_size: int) -> FactoryCycleSummary:
-        generated = simulated = far_fail = near_pass = passed = failed = 0
-        descriptions_validated = 0
-        self._generation_deferral_reason = ""
-        threshold = self._live_sharpe_threshold()
-        self._backfill_identities()
-        drained = self._drain_pending_requests(batch_size=batch_size, threshold=threshold)
-        simulated += drained[0]
-        far_fail += drained[1]
-        near_pass += drained[2]
-        passed += drained[3]
-        failed += drained[4]
-        candidate_specs = [
-            (spec, candidate)
-            for spec in self._research_specs()
-            for candidate in self.generator.generate(
-                hypothesis_id=spec.hypothesis_id,
-                family=spec.family,
-                fields=spec.fields,
-            )
-        ]
-        for spec, candidate in candidate_specs:
-            if simulated >= max(0, int(batch_size)):
-                break
-            settings = SettingsOptimizer(max_local_trials=4).stage1_default(spec.family)
-            if not self._claim(candidate.expression, settings):
-                continue
-            generated += 1
-            try:
-                result = self.simulation.simulate(
-                    expression=candidate.expression, settings=settings, alpha_type="REGULAR"
+        # --- Candidate generation ---
+        if self._candidate_service is not None:
+            remaining = max(0, limit - attempted)
+            from alpha_mining.generation.service import CandidateGenerationBatch
+            batch: CandidateGenerationBatch = self._candidate_service.generate(limit=remaining)
+            self._generation_state = batch.generation_state
+            self._generation_deferral_reason = batch.deferred_reason
+            exact_duplicates = 0
+            for proposal in batch.candidates:
+                if attempted >= limit:
+                    break
+                settings = SettingsOptimizer(max_local_trials=4).stage1_default(
+                    proposal.strategy_family
                 )
-                simulated += 1
-                sharpe = result.metrics.get("sharpe")
-                outcome = (
-                    classify_baseline(sharpe=float(sharpe), live_threshold=threshold)
-                    if sharpe is not None
-                    else None
+                claim = self.requests.claim(
+                    proposal.expression,
+                    settings,
+                    context={
+                        "candidate_id": proposal.candidate_id,
+                        "topic_id": proposal.topic_id,
+                        "hypothesis_id": proposal.hypothesis_id,
+                        "research_family": proposal.research_family,
+                        "strategy_family": proposal.strategy_family,
+                        "mutation_type": proposal.mutation_type,
+                        "mechanism": proposal.mechanism,
+                        "dataset": proposal.dataset,
+                        "parent_template": proposal.parent_template,
+                        "generator_source": proposal.generator_source,
+                        "exact_hash": proposal.exact_hash,
+                        "parameter_skeleton": proposal.parameter_skeleton,
+                        "field_skeleton": proposal.field_skeleton,
+                    },
                 )
-                far_fail += int(outcome is BaselineOutcome.FAR_FAIL)
-                near_pass += int(outcome is BaselineOutcome.NEAR_PASS)
-                passed += int(outcome is BaselineOutcome.PASS)
-                self._record(spec, candidate.expression, settings, result, outcome)
-                self._set_claim_status(candidate.expression, "SIMULATED")
-                descriptions_validated += int(
-                    self._prepare_description(
-                        spec=spec,
-                        expression=candidate.expression,
-                        settings=settings,
-                        result=result,
-                    )
+                if not claim.claimed:
+                    exact_duplicates += int(claim.reason == "exact_hash_exists")
+                    continue
+                generated += 1
+                leases = self.requests.acquire(1, request_hash=claim.request_hash)
+                if not leases:
+                    continue
+                attempted += 1
+                spec = ResearchSpec(
+                    hypothesis_id=proposal.hypothesis_id,
+                    family=proposal.research_family,
+                    mechanism=proposal.mechanism,
+                    horizon="medium",
+                    fields=(proposal.dataset,),
+                    dataset=proposal.dataset,
+                    fallback=False,
                 )
-            except Exception:
-                failed += 1
-                self._set_claim_status(candidate.expression, "FAILED")
-                with sqlite3.connect(self.database) as con:
-                    con.execute(
-                        "UPDATE simulation_requests SET status='FAILED',updated_at=? WHERE payload_json LIKE ?",
-                        (_utc_now(), f'%"regular":"{candidate.expression}"%'),
-                    )
+                counts = self._execute_lease(spec, leases[0], threshold)
+                simulated += counts["simulated"]
+                far_fail += counts["far_fail"]
+                near_pass += counts["near_pass"]
+                passed += counts["baseline_pass"]
+                failed += counts["failed"]
+                unknown += counts["unknown"]
+                descriptions_validated += counts["descriptions_validated"]
+        else:
+            # Fallback: original ConsultantGenerator path (no external service)
+            candidate_specs = [
+                (spec, candidate)
+                for spec in self._research_specs()
+                for candidate in self.generator.generate(
+                    hypothesis_id=spec.hypothesis_id,
+                    family=spec.family,
+                    mechanism=spec.mechanism,
+                    horizon=spec.horizon,
+                    fields=spec.fields,
+                )
+            ]
+            exact_duplicates = 0
+            for spec, candidate in candidate_specs:
+                if attempted >= limit:
+                    break
+                settings = SettingsOptimizer(max_local_trials=4).stage1_default(spec.family)
+                claim = self.requests.claim(candidate.expression, settings)
+                if not claim.claimed:
+                    exact_duplicates += int(claim.reason == "exact_hash_exists")
+                    continue
+                generated += 1
+                leases = self.requests.acquire(1, request_hash=claim.request_hash)
+                if not leases:
+                    continue
+                attempted += 1
+                counts = self._execute_lease(spec, leases[0], threshold)
+                simulated += counts["simulated"]
+                far_fail += counts["far_fail"]
+                near_pass += counts["near_pass"]
+                passed += counts["baseline_pass"]
+                failed += counts["failed"]
+                unknown += counts["unknown"]
+                descriptions_validated += counts["descriptions_validated"]
+            if (
+                "candidate_specs" in dir()
+                and candidate_specs
+                and generated == 0
+                and attempted == 0
+                and exact_duplicates == len(candidate_specs)
+            ):
+                self._generation_state = "CANDIDATE_SPACE_EXHAUSTED"
+                self._generation_deferral_reason = (
+                    "all generated candidate Exact Hash identities already exist"
+                )
+                self._record_factory_event(
+                    "CANDIDATE_SPACE_EXHAUSTED", self._generation_deferral_reason
+                )
         return FactoryCycleSummary(
-            generated,
-            simulated,
-            far_fail,
-            near_pass,
-            passed,
-            failed,
-            descriptions_validated,
-            self._generation_deferral_reason,
+            generated=generated,
+            simulated=simulated,
+            far_fail=far_fail,
+            near_pass=near_pass,
+            baseline_pass=passed,
+            failed=failed,
+            unknown=unknown,
+            descriptions_validated=descriptions_validated,
+            deferred_reason=self._generation_deferral_reason,
+            generation_state=self._generation_state,
         )

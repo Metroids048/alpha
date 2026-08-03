@@ -63,16 +63,25 @@ def cycle_exit_code(summary: object) -> int:
     """
 
     failed = int(getattr(summary, "failed", 0) or 0)
+    unknown = int(getattr(summary, "unknown", 0) or 0)
     generated = int(getattr(summary, "generated", 0) or 0)
     simulated = int(getattr(summary, "simulated", 0) or 0)
+    generation_state = str(getattr(summary, "generation_state", "READY") or "READY")
     # Real progress outranks a generation deferral: draining pending requests is
     # useful work even when a stale catalog blocks new candidate generation, so
     # the outer loop must not apply catalog backoff to a cycle that simulated.
     if simulated > 0:
         return 0
-    if str(getattr(summary, "deferred_reason", "") or "").strip():
+    if generation_state == "CANDIDATE_SPACE_EXHAUSTED":
+        return 9
+    if generation_state == "CATALOG_UNAVAILABLE":
         return 8
-    return 1 if failed > 0 or (generated == 0 and simulated == 0) else 0
+    if (
+        generation_state == "READY"
+        and str(getattr(summary, "deferred_reason", "") or "").strip()
+    ):
+        return 8
+    return 1 if failed > 0 or unknown > 0 or (generated == 0 and simulated == 0) else 0
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -113,6 +122,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     from alpha_mining.factory.orchestrator import FactoryOrchestrator
     from alpha_mining.platform.gateway import PlatformGateway
     from alpha_mining.platform.access import CircuitOpen
+    from alpha_mining.generation.service import CandidateGenerationService
 
     batch_size = int(args.target_simulate_batch or args.run_payload_cap)
     gateway = PlatformGateway(
@@ -121,10 +131,40 @@ def main(argv: Sequence[str] | None = None) -> int:
         lock_path=args.lock_path,
         min_interval=max(0.0, float(args.min_interval)),
     )
+
+    # Initialize LLM-powered candidate generation
+    llm_generator = None
     try:
-        summary = FactoryOrchestrator(args.database, gateway).run_simulate(
-            batch_size=batch_size
+        from alpha_mining.llm import create_runtime_providers
+        from alpha_mining.generator.expression import ExpressionGenerator
+        from alpha_mining.generator.llm_consultant_bridge import LLMConsultantBridge
+
+        providers = create_runtime_providers()
+
+        # For now, ExpressionGenerator will be initialized per-hypothesis inside the bridge
+        # because it needs catalog/validator which are hypothesis-specific
+        # We just pass the LLM providers to the bridge
+        llm_generator = LLMConsultantBridge(
+            database=args.database,
+            llm=providers.llm,
+            max_per_hypothesis=8,
         )
+
+        print("[factory] LLM generation enabled: DeepSeek + ExpressionGenerator")
+    except Exception as exc:
+        print(f"[factory] WARNING: LLM initialization failed: {exc}")
+        print("[factory] Falling back to ConsultantGenerator (template-based)")
+        llm_generator = None
+
+    candidate_service = CandidateGenerationService(
+        args.database,
+        generator=llm_generator,  # Will use ConsultantGenerator if None
+    )
+
+    try:
+        summary = FactoryOrchestrator(
+            args.database, gateway, candidate_service=candidate_service
+        ).run_simulate(batch_size=batch_size)
     except CircuitOpen as exc:
         print(f"[factory] RATE_LIMITED: {exc}")
         return 5
@@ -147,9 +187,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             pass
         return recovery_exit_code(exc)
     print(f"[factory] {json.dumps(summary.__dict__, sort_keys=True)}")
-    if summary.deferred_reason:
+    if summary.generation_state == "CANDIDATE_SPACE_EXHAUSTED":
+        print(f"[factory] CANDIDATE_SPACE_EXHAUSTED: {summary.deferred_reason}")
+        print("[factory] no simulation was submitted; the outer loop will use long backoff")
+    elif summary.generation_state == "CATALOG_UNAVAILABLE":
         print(f"[factory] CATALOG_UNAVAILABLE: {summary.deferred_reason}")
         print("[factory] generation deferred; the outer loop will persist the reason and use catalog backoff")
+    elif summary.generation_state == "NO_RESEARCH_SPECS":
+        print(f"[factory] NO_RESEARCH_SPECS: {summary.deferred_reason}")
     elif summary.generated == 0 and summary.simulated == 0:
         print(
             "[factory] EMPTY_CANDIDATE_BATCH: no new simulation request was claimed; "

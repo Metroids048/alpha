@@ -48,6 +48,7 @@ alpha50.csv
 
 # Plans
 .claude/plans/
+.claude/settings.local.json
 
 # Local forensics backups (exceed GitHub 100MB limit)
 work/codex_crash_forensics_*/logs_2*_backup.sqlite
@@ -164,3 +165,12 @@ AI原始记录/
 **/*.pem
 **/*.key
 # AI-KNOWLEDGE-MANAGED-END
+
+# local nested git backup (do not push)
+alpha-backup-before-filter.git/
+alpha系统/教程/2026-07-30 02-06-24_右上角的功能.xvid.aac.mp4
+
+# large local binaries (GitHub push timeout / size limits)
+alpha系统/教程/*.mp4
+alpha系统/brain_simulater.exe
+alpha-backup-before-filter.git/

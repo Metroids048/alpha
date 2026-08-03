@@ -127,7 +127,7 @@ def yearly_sharpes_from_daily_returns(
         mean = sum(rets) / len(rets)
         variance = sum((r - mean) ** 2 for r in rets) / len(rets)
         std = math.sqrt(variance)
-        if std == 0.0:
+        if not math.isfinite(std) or math.isclose(std, 0.0, abs_tol=1e-12):
             continue
         sharpe = (mean / std) * math.sqrt(_TRADING_DAYS_PER_YEAR)
         if math.isfinite(sharpe):

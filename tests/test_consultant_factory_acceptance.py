@@ -412,22 +412,26 @@ def test_generator_emits_fourteen_group_rank_free_mechanism_variants() -> None:
     from alpha_mining.generator.consultant_generator import ConsultantGenerator
 
     candidates = ConsultantGenerator(max_per_hypothesis=99).generate(
-        hypothesis_id="h1", family="fundamental", fields=["revenue", "close"]
+        hypothesis_id="h1",
+        family="fundamental",
+        mechanism="profitability surprise",
+        horizon="medium",
+        fields=["revenue", "close"],
     )
     assert [item.mutation_type for item in candidates] == [
-        "medium_horizon_momentum",
-        "short_horizon_reversal",
         "change_to_acceleration",
         "historical_surprise",
-        "volatility_regime",
-        "relative_flow",
-        "cross_signal_divergence",
-        "smoothed_delta",
-        "vol_ratio_regimes",
-        "rank_spread_horizons",
         "normalized_level",
+        "medium_horizon_momentum",
+        "smoothed_delta",
         "decayed_momentum",
         "information_ratio",
+        "short_horizon_reversal",
+        "cross_signal_divergence",
+        "rank_spread_horizons",
+        "volatility_regime",
+        "relative_flow",
+        "vol_ratio_regimes",
         "range_signal",
     ]
     assert all("group_rank" not in item.expression for item in candidates)

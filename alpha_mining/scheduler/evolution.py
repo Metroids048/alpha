@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 import sqlite3
 from datetime import datetime, timezone
+from pathlib import Path
 
 from alpha_mining.storage.sqlite_store import SqliteRunLog
 
@@ -21,7 +22,9 @@ def recompute_topic_stats(db: SqliteRunLog) -> int:
                 t.topic_id,
                 COUNT(e.expression_id)                              AS total_generated,
                 COUNT(sr.id)                                        AS total_simulated,
-                SUM(CASE WHEN sr.status='metric_pass' OR sr.status='submitted' THEN 1 ELSE 0 END)
+                SUM(CASE WHEN sr.status IN ('metric_pass','submitted')
+                         OR sr.queue_status='PASS'
+                         THEN 1 ELSE 0 END)
                                                                     AS total_passed,
                 SUM(CASE WHEN sr.status='submitted' THEN 1 ELSE 0 END)
                                                                     AS total_submitted,
@@ -102,8 +105,11 @@ def update_sampling_weights(db: SqliteRunLog, *, exploration_bonus: float = 1.0)
 class EvolutionEngine:
     """Orchestrate periodic topic_stats refresh and UCB weight updates."""
 
-    def __init__(self, db: SqliteRunLog, *, exploration_bonus: float = 1.0) -> None:
-        self.db = db
+    def __init__(self, db: SqliteRunLog | str | Path, *, exploration_bonus: float = 1.0) -> None:
+        if isinstance(db, SqliteRunLog):
+            self.db = db
+        else:
+            self.db = SqliteRunLog(Path(db))
         self.exploration_bonus = exploration_bonus
 
     def run(self) -> dict[str, int]:

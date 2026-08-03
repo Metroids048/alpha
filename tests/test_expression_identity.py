@@ -31,7 +31,11 @@ def test_consultant_generator_does_not_invent_base_fields() -> None:
     from alpha_mining.generator.consultant_generator import ConsultantGenerator
 
     candidates = ConsultantGenerator().generate(
-        hypothesis_id="h1", family="fundamental", fields=("revenue",)
+        hypothesis_id="h1",
+        family="fundamental",
+        mechanism="profitability surprise",
+        horizon="medium",
+        fields=("revenue",),
     )
 
     assert candidates

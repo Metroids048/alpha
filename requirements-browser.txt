@@ -1,0 +1,11 @@
+# Optional browser automation dependencies for alpha_mining.auth.browser_login
+# Not required for core pipeline functionality.
+#
+# Installation:
+#   python -m pip install -r requirements-browser.txt
+#   python -m playwright install chromium
+#
+# Usage: Only needed when using browser_login.py for authenticated crawling.
+
+-r requirements.txt
+playwright>=1.40,<2
