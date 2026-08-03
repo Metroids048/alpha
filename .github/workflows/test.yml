@@ -28,8 +28,9 @@ jobs:
         run: python -m pip install -r requirements-test.txt
       - name: Compile Python sources
         run: >-
-          python -m compileall -q alpha_mining run_pipeline_cycle.py
-          run_pipeline_loop.py run_pipeline_supervisor.py 生成Alpha候选.py 启动Alpha主线.py
+          python -m compileall -q alpha_mining tools
+          生成Alpha.py 提交Alpha.py 验证提交链路.py
+          auto_alpha_pipeline_rebuilt_v50.py
       - name: Prepare test diagnostics
         shell: pwsh
         run: |

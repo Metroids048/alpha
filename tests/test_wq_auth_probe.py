@@ -1,8 +1,20 @@
 from __future__ import annotations
 
-from types import SimpleNamespace
+import importlib.util
+from pathlib import Path
+from types import ModuleType, SimpleNamespace
 
-import test_wq_auth
+
+def _load_wq_auth_check() -> ModuleType:
+    path = Path(__file__).resolve().parents[1] / "tools" / "ops" / "wq_auth_check.py"
+    spec = importlib.util.spec_from_file_location("wq_auth_check", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+wq_auth_check = _load_wq_auth_check()
 
 
 class _Response:
@@ -23,8 +35,8 @@ class _Session:
 
 def _run_probe(monkeypatch, *, proxy: str | None, profile: str = "current") -> _Session:
     session = _Session()
-    monkeypatch.setattr(test_wq_auth, "requests", SimpleNamespace(Session=lambda: session))
-    monkeypatch.setattr(test_wq_auth, "HTTPBasicAuth", lambda *_args: object())
+    monkeypatch.setattr(wq_auth_check, "requests", SimpleNamespace(Session=lambda: session))
+    monkeypatch.setattr(wq_auth_check, "HTTPBasicAuth", lambda *_args: object())
     monkeypatch.setattr(
         "alpha_mining.common.load_workspace_env", lambda *_args, **_kwargs: None
     )
@@ -34,7 +46,7 @@ def _run_probe(monkeypatch, *, proxy: str | None, profile: str = "current") -> _
         monkeypatch.delenv("HTTPS_PROXY", raising=False)
     else:
         monkeypatch.setenv("HTTPS_PROXY", proxy)
-    assert test_wq_auth.main(("--profile", profile)) == 0
+    assert wq_auth_check.main(("--profile", profile)) == 0
     return session
 
 

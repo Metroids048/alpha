@@ -14,6 +14,7 @@
 - `tests/`：冻结工作流与历史回归测试。
 - `World quant/`：仅 Markdown 知识资料。
 - `docs/`、`文档/历史资料/`：文档与历史资料。
-- `tools/`：离线工具。
+- `tools/`：离线工具；`tools/ops/` 为运维/诊断脚本。
+- `auto_alpha_pipeline_rebuilt_v50.py`：测试回归单体（非日常操作入口）。
 
-本地 SQLite、认证状态、浏览器配置、Cookie 和运行数据均保持 Git 忽略，不进入代码历史。
+本地 SQLite、认证状态、浏览器配置、Cookie 和运行数据均保持 Git 忽略，不进入代码历史。运行产物统一放在 `数据/本地运行产物/`（报告 / 状态 / 数据库 / 备份）。

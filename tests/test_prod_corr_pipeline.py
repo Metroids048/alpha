@@ -456,9 +456,9 @@ def test_local_model_cannot_override_platform_fail():
 # ---------------------------------------------------------------------------
 
 def test_runtime_uses_vnext_factory_engine():
-    """The active entry point must use the fail-closed vNext factory runtime."""
-    cycle_path = Path(__file__).parent.parent / "run_pipeline_cycle.py"
-    assert cycle_path.exists(), "run_pipeline_cycle.py missing"
-    content = cycle_path.read_text(encoding="utf-8")
-    assert "alpha_mining.factory.runtime" in content
-    assert "auto_alpha_pipeline_rebuilt_v50" not in content
+    """The active entry point must use the fail-closed quality workflow / factory path."""
+    entry_path = Path(__file__).parent.parent / "生成Alpha.py"
+    assert entry_path.exists(), "生成Alpha.py missing"
+    content = entry_path.read_text(encoding="utf-8")
+    assert "QualityAlphaWorkflow" in content or "alpha_mining.factory" in content
+    assert "import auto_alpha_pipeline_rebuilt_v50" not in content

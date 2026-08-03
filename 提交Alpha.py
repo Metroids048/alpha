@@ -165,7 +165,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="持续循环批量提交Alpha到WorldQuant平台")
     parser.add_argument("--input", default="待提交Alpha列表.csv", help="输入CSV文件")
     parser.add_argument("--history", default="已处理Alpha历史.csv", help="历史记录文件")
-    parser.add_argument("--database", default="research_memory.sqlite", help="研究数据库")
+    parser.add_argument("--database", default="数据/本地运行产物/数据库/research_memory.sqlite", help="研究数据库")
     parser.add_argument("--config", default="alpha_mining/config.yaml", help="配置文件路径")
     parser.add_argument("--auth-state", default=".wq_auth_state.json", help="认证状态文件")
     parser.add_argument("--profile-dir", default=".wq_browser_profile", help="浏览器配置目录")

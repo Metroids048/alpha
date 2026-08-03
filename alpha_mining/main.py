@@ -75,19 +75,17 @@ def _cmd_observe_feedback(args: argparse.Namespace) -> int:
 
 
 def _cmd_pipeline(args: argparse.Namespace) -> int:
-    """Delegate to the top-level compatibility entry without package imports."""
-    from alpha_mining.common import subprocess_no_window_kwargs
-
-    script = Path(__file__).resolve().parents[1] / "run_pipeline_cycle.py"
-    if not script.is_file():
-        print(f"ERROR: missing compatibility entry: {script}", file=sys.stderr)
-        return 1
-    completed = subprocess.run(
-        [sys.executable, str(script), *(args.pipeline_args or [])],
-        cwd=str(script.parent),
-        **subprocess_no_window_kwargs(),
+    """Retired compatibility entry — frozen workflow uses root scripts."""
+    del args  # argparse remainder ignored; command is fail-closed
+    print(
+        "ERROR: `python -m alpha_mining pipeline` is retired.\n"
+        "Use the frozen workflow instead:\n"
+        "  python 生成Alpha.py\n"
+        "  python 提交Alpha.py\n"
+        "Optional CLI topics remain available via: python -m alpha_mining --help",
+        file=sys.stderr,
     )
-    return int(completed.returncode)
+    return 2
 
 
 def _cmd_gates_sync(args: argparse.Namespace) -> int:
@@ -759,7 +757,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     p_pipeline = sub.add_parser(
         "pipeline",
-        help="Delegate to the preserved top-level legacy pipeline entry.",
+        help="Retired: prints guidance to use 生成Alpha.py / 提交Alpha.py.",
     )
     p_pipeline.add_argument("pipeline_args", nargs=argparse.REMAINDER)
     p_pipeline.set_defaults(func=_cmd_pipeline)

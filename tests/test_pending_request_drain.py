@@ -229,24 +229,3 @@ def test_stage1_default_carries_every_platform_required_setting() -> None:
     assert settings["instrumentType"] == "EQUITY"
     assert settings["language"] == "FASTEXPR"
     assert settings["unitHandling"] == "VERIFY"
-
-
-def test_catalog_cache_staleness_detects_missing_invalid_and_expired(tmp_path: Path) -> None:
-    import time
-
-    from run_pipeline_loop import CATALOG_CACHE_FILENAMES, _catalog_cache_stale
-
-    assert _catalog_cache_stale(tmp_path), "absent caches are stale"
-
-    now = time.time()
-    for filename in CATALOG_CACHE_FILENAMES:
-        (tmp_path / filename).write_text(json.dumps({"cached_at": now}), encoding="utf-8")
-    assert not _catalog_cache_stale(tmp_path), "freshly written caches are usable"
-
-    (tmp_path / CATALOG_CACHE_FILENAMES[0]).write_text(
-        json.dumps({"cached_at": now - 48 * 3600}), encoding="utf-8"
-    )
-    assert _catalog_cache_stale(tmp_path), "an expired cache is stale"
-
-    (tmp_path / CATALOG_CACHE_FILENAMES[0]).write_text("not json", encoding="utf-8")
-    assert _catalog_cache_stale(tmp_path), "an unparseable cache is stale"

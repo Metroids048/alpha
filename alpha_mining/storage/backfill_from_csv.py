@@ -21,8 +21,11 @@ from alpha_mining.domain.expression_normalization import (
 
 
 ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_DATABASE = ROOT / "research_memory.sqlite"
-DEFAULT_SOURCES = (ROOT / "总alpha.csv", ROOT / "通过门槛的alpha.csv")
+DEFAULT_DATABASE = ROOT / "数据" / "本地运行产物" / "数据库" / "research_memory.sqlite"
+DEFAULT_SOURCES = (
+    ROOT / "数据" / "本地运行产物" / "报告" / "总alpha.csv",
+    ROOT / "数据" / "本地运行产物" / "报告" / "通过门槛的alpha.csv",
+)
 
 
 @dataclass

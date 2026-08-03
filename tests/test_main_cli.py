@@ -199,21 +199,23 @@ class TestObserveFeedbackCommand(unittest.TestCase):
 class TestPipelineCommand(unittest.TestCase):
     def test_delegates_to_compatibility_subprocess(self):
         from alpha_mining.main import main
+        from io import StringIO
+        from contextlib import redirect_stderr
 
-        completed = MagicMock(returncode=0)
-        with patch("alpha_mining.main.subprocess.run", return_value=completed) as run:
+        buf = StringIO()
+        with redirect_stderr(buf):
             rc = main(["pipeline"])
-        self.assertEqual(rc, 0)
-        self.assertTrue(str(run.call_args.args[0][1]).endswith("run_pipeline_cycle.py"))
+        self.assertEqual(rc, 2)
+        self.assertIn("生成Alpha.py", buf.getvalue())
 
     def test_propagates_compatibility_exit_code(self):
         from alpha_mining.main import main
+        from io import StringIO
+        from contextlib import redirect_stderr
 
-        with patch(
-            "alpha_mining.main.subprocess.run", return_value=MagicMock(returncode=3)
-        ):
+        with redirect_stderr(StringIO()):
             rc = main(["pipeline"])
-        self.assertEqual(rc, 3)
+        self.assertEqual(rc, 2)
 
 
 class TestMainModuleEntry(unittest.TestCase):

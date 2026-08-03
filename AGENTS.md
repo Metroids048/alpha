@@ -20,7 +20,8 @@
 
 ## 3. Repository map
 
-- Application entry: `alpha_mining/main.py`, root runners (`run_pipeline_*.py`, `auto_alpha_pipeline_rebuilt_v50.py`)
+- Application entry: frozen root scripts `生成Alpha.py` → `待提交Alpha列表.csv` → `提交Alpha.py`; package CLI `python -m alpha_mining`; regression monolith `auto_alpha_pipeline_rebuilt_v50.py` (tests only, not operator UX)
+- Ops diagnostics: `tools/ops/` (check/diagnose/fix/setup helpers)
 - Core domain: `alpha_mining/` (generator, factory, description, platform, submitter, scheduler, storage)
 - Tests: `tests/`
 - Config / state: local sqlite/json/csv artifacts; `.env` / cookies are sensitive

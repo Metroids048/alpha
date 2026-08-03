@@ -136,11 +136,14 @@ __pycache__/
 !数据/运行状态/
 !数据/日志/
 !数据/导出结果/
+!数据/本地运行产物/
 数据/平台缓存/*
 数据/候选队列/*
 数据/运行状态/*
 数据/日志/*
 数据/导出结果/*
+数据/本地运行产物/*
+!数据/本地运行产物/README.md
 !数据/**/.gitkeep
 
 # Legacy generated artifacts retained locally but not versioned.
@@ -174,3 +177,11 @@ alpha系统/教程/2026-07-30 02-06-24_右上角的功能.xvid.aac.mp4
 alpha系统/教程/*.mp4
 alpha系统/brain_simulater.exe
 alpha-backup-before-filter.git/
+
+# Structure cleanup: caches, backups, dated archives, local submission history
+.mypy_cache/
+.ruff_cache/
+*.backup_*
+*.csv.backup*
+/archive_*/
+/已提交Alpha历史.csv

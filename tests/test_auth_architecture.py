@@ -7,13 +7,9 @@ from pathlib import Path
 def test_production_root_entries_do_not_post_authentication_directly() -> None:
     root = Path(__file__).resolve().parents[1]
     production_entries = [
-        root / "brain_batch_resim.py",
-        root / "brain_scan_pipeline.py",
-        root / "run_pipeline_cycle.py",
-        root / "run_pipeline_loop.py",
-        root / "run_pipeline_supervisor.py",
-        root / "生成Alpha候选.py",
-        root / "启动Alpha主线.py",
+        root / "生成Alpha.py",
+        root / "提交Alpha.py",
+        root / "验证提交链路.py",
     ]
 
     production_modules = [
@@ -25,7 +21,7 @@ def test_production_root_entries_do_not_post_authentication_directly() -> None:
     violations = [
         path.relative_to(root).as_posix()
         for path in (*production_entries, *production_modules)
-        if "/authentication" in path.read_text(encoding="utf-8")
+        if path.is_file() and "/authentication" in path.read_text(encoding="utf-8")
     ]
 
     assert violations == []
@@ -72,9 +68,15 @@ def test_central_aiohttp_login_callback_posts_once() -> None:
 
 
 def test_retired_direct_auth_entries_fail_closed() -> None:
+    """Retired root auth/resim entries must stay gone after freeze retirement."""
     root = Path(__file__).resolve().parents[1]
-
-    for name in ("brain_batch_resim.py", "brain_scan_pipeline.py"):
-        source = (root / name).read_text(encoding="utf-8")
-        assert "已停用" in source
-        assert "return 2" in source
+    for name in (
+        "brain_batch_resim.py",
+        "brain_scan_pipeline.py",
+        "run_pipeline_cycle.py",
+        "run_pipeline_loop.py",
+        "run_pipeline_supervisor.py",
+        "生成Alpha候选.py",
+        "启动Alpha主线.py",
+    ):
+        assert not (root / name).exists(), f"retired entry unexpectedly present: {name}"

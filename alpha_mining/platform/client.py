@@ -138,7 +138,7 @@ class ReadOnlyPlatformClient:
             if not password:
                 raise PlatformReadError(
                     "no stored session and WQ_PASSWORD is not configured; "
-                    "import fresh cookies via: python import_cookie_now.py"
+                    "import fresh cookies via: python tools/ops/import_cookie_now.py"
                 )
             self._pace()
             basic_auth = HTTPBasicAuth(username, password)
