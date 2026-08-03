@@ -455,6 +455,22 @@ CREATE TABLE IF NOT EXISTS research_arm_observation_windows (
  updated_at TEXT NOT NULL,
  PRIMARY KEY (arm_key)
 );
+        """,
+    ),
+    (
+        18,
+        """
+ALTER TABLE candidate_outcomes ADD COLUMN quality_status TEXT NOT NULL DEFAULT '';
+ALTER TABLE candidate_outcomes ADD COLUMN quality_reasons_json TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE candidate_outcomes ADD COLUMN self_correlation TEXT NOT NULL DEFAULT '';
+ALTER TABLE candidate_outcomes ADD COLUMN prod_correlation TEXT NOT NULL DEFAULT '';
+ALTER TABLE candidate_outcomes ADD COLUMN knowledge_refs_json TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE candidate_outcomes ADD COLUMN parent_candidate_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE candidate_outcomes ADD COLUMN repair_action TEXT NOT NULL DEFAULT '';
+ALTER TABLE candidate_outcomes ADD COLUMN operator_topology TEXT NOT NULL DEFAULT '';
+ALTER TABLE candidate_outcomes ADD COLUMN region TEXT NOT NULL DEFAULT '';
+ALTER TABLE candidate_outcomes ADD COLUMN universe_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE candidate_outcomes ADD COLUMN delay TEXT NOT NULL DEFAULT '';
 """,
     ),
 )

@@ -12,12 +12,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from alpha_mining.storage.migrations import migrate
+
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-_VALID_OUTCOMES = frozenset(("PASS", "NEAR_PASS", "FAR_FAIL", "FAILED", "UNKNOWN"))
+_VALID_OUTCOMES = frozenset(("PASS", "READY_TO_SUBMIT", "WAITING_CHECKS", "NEAR_PASS", "FAR_FAIL", "FAILED", "UNKNOWN"))
 
 
 class CandidateFeedbackStore:
@@ -25,6 +27,7 @@ class CandidateFeedbackStore:
 
     def __init__(self, database: str | Path) -> None:
         self.database = Path(database)
+        migrate(self.database)
         self._ensure_table()
 
     def _ensure_table(self) -> None:
@@ -85,6 +88,17 @@ class CandidateFeedbackStore:
         checks: list[Any] | None = None,
         error_category: str = "",
         error_message: str = "",
+        quality_status: str = "",
+        quality_reasons: list[str] | tuple[str, ...] | None = None,
+        self_correlation: str = "",
+        prod_correlation: str = "",
+        knowledge_refs: list[str] | tuple[str, ...] | None = None,
+        parent_candidate_id: str = "",
+        repair_action: str = "",
+        operator_topology: str = "",
+        region: str = "",
+        universe_name: str = "",
+        delay: str | int = "",
     ) -> None:
         if outcome not in _VALID_OUTCOMES:
             raise ValueError(f"Invalid outcome {outcome!r}; must be one of {sorted(_VALID_OUTCOMES)}")
@@ -95,13 +109,18 @@ class CandidateFeedbackStore:
                    (request_hash, candidate_id, topic_id, hypothesis_id, research_family,
                     strategy_family, mechanism, dataset, parent_template, exact_hash,
                     parameter_skeleton, field_skeleton, outcome, sharpe, fitness, turnover,
-                    checks_json, error_category, error_message, observed_at)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    checks_json, error_category, error_message, observed_at, quality_status,
+                    quality_reasons_json, self_correlation, prod_correlation, knowledge_refs_json,
+                    parent_candidate_id, repair_action, operator_topology, region, universe_name, delay)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
                     request_hash, candidate_id, topic_id, hypothesis_id, research_family,
                     strategy_family, mechanism, dataset, parent_template, exact_hash,
                     parameter_skeleton, field_skeleton, outcome, sharpe, fitness, turnover,
-                    json.dumps(checks or []), error_category, error_message, now,
+                    json.dumps(checks or []), error_category, error_message, now, quality_status,
+                    json.dumps(list(quality_reasons or [])), self_correlation, prod_correlation,
+                    json.dumps(list(knowledge_refs or [])), parent_candidate_id, repair_action,
+                    operator_topology, region, universe_name, str(delay),
                 ),
             )
 
