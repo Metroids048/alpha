@@ -34,7 +34,7 @@ engine = RepairEngine()
         ("INCOMPATIBLE_UNIT", "INCOMPATIBLE_UNIT"),
         ("SPARSE_SIGNAL", "SPARSE_SIGNAL"),
         ("CONCENTRATED_WEIGHT", "CONCENTRATED_WEIGHT"),
-        ("unknown junk", "LOW_SHARPE"),
+        ("unknown junk", "UNKNOWN"),
     ],
 )
 def test_classify_maps_platform_tokens(text: str, expected: str):
@@ -50,7 +50,14 @@ def test_classify_all_returns_multiple_categories():
 
 def test_classify_all_empty_fallback():
     categories = engine.classify_all("totally unknown")
-    assert categories == ["LOW_SHARPE"]
+    assert categories == ["UNKNOWN"]
+
+
+def test_unknown_failure_does_not_trigger_inline_repair():
+    result = engine.repair("ts_rank(close, 21)", "UNKNOWN")
+    assert result.failure_category == "UNKNOWN"
+    assert result.repaired_expression is None
+    assert result.needs_regen is True
 
 
 # ─── repair results ──────────────────────────────────────────────────────────

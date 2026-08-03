@@ -505,6 +505,8 @@ def migrate(path: str | Path) -> None:
         for version, sql in MIGRATIONS:
             if version in applied:
                 continue
+            if version == 19:
+                _ensure_research_arm_prerequisites(connection)
             try:
                 connection.executescript(
                     f"BEGIN IMMEDIATE;\n{sql}\n"
@@ -565,6 +567,37 @@ def migrate(path: str | Path) -> None:
             connection.commit()
     finally:
         connection.close()
+
+
+def _ensure_research_arm_prerequisites(connection: sqlite3.Connection) -> None:
+    """Recover legacy DBs that claim migration 8 but lack its tables."""
+
+    tables = {
+        str(row[0])
+        for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    }
+    if "research_arm_metrics" not in tables:
+        connection.execute(
+            """CREATE TABLE IF NOT EXISTS research_arm_metrics (
+               arm_key TEXT PRIMARY KEY, family TEXT NOT NULL, dataset TEXT NOT NULL,
+               field_family TEXT NOT NULL, mechanism TEXT NOT NULL, operator_topology TEXT NOT NULL,
+               region TEXT NOT NULL, universe_name TEXT NOT NULL, delay TEXT NOT NULL,
+               simulation_count INTEGER NOT NULL DEFAULT 0, base_pass_count INTEGER NOT NULL DEFAULT 0,
+               near_pass_count INTEGER NOT NULL DEFAULT 0, sharpe_values_json TEXT NOT NULL DEFAULT '[]',
+               self_corr_pass_count INTEGER NOT NULL DEFAULT 0, prod_corr_pass_count INTEGER NOT NULL DEFAULT 0,
+               final_submit_count INTEGER NOT NULL DEFAULT 0, consecutive_low_windows INTEGER NOT NULL DEFAULT 0,
+               sampling_weight REAL NOT NULL DEFAULT 1.0, updated_at TEXT NOT NULL
+            )"""
+        )
+    if "research_arm_observation_windows" not in tables:
+        connection.execute(
+            """CREATE TABLE IF NOT EXISTS research_arm_observation_windows (
+               arm_key TEXT NOT NULL PRIMARY KEY,
+               current_window_count INTEGER NOT NULL DEFAULT 0,
+               current_window_base_pass_count INTEGER NOT NULL DEFAULT 0,
+               updated_at TEXT NOT NULL
+            )"""
+        )
 
 
 def backup_and_migrate(path: str | Path, backup_path: str | Path | None = None) -> Path | None:

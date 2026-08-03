@@ -156,6 +156,108 @@ class MetadataCache:
             raise MetadataCacheError("平台元数据缓存不得为空")
         return cls(root, operators, fields, datasets, info)
 
+    @classmethod
+    def from_platform_disk_cache(
+        cls,
+        cache_dir: Path | str,
+        *,
+        max_age_hours: float = 24,
+        allow_stale: bool = False,
+    ) -> "MetadataCache":
+        """Load the existing three-file platform cache protocol.
+
+        This is intentionally separate from :meth:`load`: four-file Chinese
+        JSON snapshots remain supported for offline tools, but production
+        generation uses the synchronizer's established ``.alpha_*`` files.
+        """
+
+        root = Path(cache_dir)
+        names = {
+            "datasets": ".alpha_datasets_cache.json",
+            "fields": ".alpha_datafields_cache.json",
+            "operators": ".alpha_operators_cache.json",
+        }
+        missing = [filename for filename in names.values() if not (root / filename).is_file()]
+        if missing:
+            raise MetadataCacheMissing("platform catalog cache missing: " + ", ".join(missing))
+        payloads: dict[str, dict[str, Any]] = {}
+        for key, filename in names.items():
+            try:
+                payloads[key] = _mapping(json.loads((root / filename).read_text(encoding="utf-8")), filename)
+            except (OSError, json.JSONDecodeError) as exc:
+                raise MetadataCacheError(f"cannot read {filename}: {exc}") from exc
+
+        datasets_payload = payloads["datasets"]
+        dataset_rows = datasets_payload.get("records") or []
+        dataset_ids = [str(value).strip() for value in datasets_payload.get("dataset_ids") or [] if str(value).strip()]
+        datasets: dict[str, DatasetMetadata] = {}
+        for row in dataset_rows:
+            if isinstance(row, dict) and str(row.get("id") or "").strip():
+                dataset_id = str(row.get("id")).strip()
+                datasets[dataset_id] = DatasetMetadata(
+                    dataset_id=dataset_id,
+                    name=str(row.get("name") or dataset_id),
+                    category=str(row.get("category") or "unknown").lower(),
+                )
+        for dataset_id in dataset_ids:
+            datasets.setdefault(dataset_id, DatasetMetadata(dataset_id, dataset_id, "unknown"))
+        if not datasets:
+            raise MetadataCacheError("platform dataset cache has no dataset IDs")
+
+        fields: dict[str, FieldMetadata] = {}
+        for row in payloads["fields"].get("rows") or []:
+            if not isinstance(row, dict):
+                continue
+            field_id = str(row.get("id") or "").strip()
+            nested_dataset = row.get("dataset") if isinstance(row.get("dataset"), dict) else {}
+            dataset_id = str(row.get("_ds") or row.get("dataset_id") or nested_dataset.get("id") or "").strip()
+            if not field_id or not dataset_id:
+                continue
+            if dataset_id not in datasets:
+                datasets[dataset_id] = DatasetMetadata(dataset_id, dataset_id, "unknown")
+            fields[field_id] = FieldMetadata(
+                field_id=field_id,
+                dataset_id=dataset_id,
+                field_type=str(row.get("type") or row.get("dataType") or "UNKNOWN").upper(),
+                category=str(row.get("category") or "unknown").lower(),
+                description=str(row.get("description") or ""),
+            )
+        if not fields:
+            raise MetadataCacheError("platform data-field cache has no usable rows")
+
+        operator_records = payloads["operators"].get("records")
+        if not isinstance(operator_records, list):
+            raise MetadataCacheMissing("operator metadata records are unavailable")
+        operators: dict[str, OperatorMetadata] = {}
+        for row in operator_records:
+            if not isinstance(row, dict):
+                continue
+            name = str(row.get("name") or row.get("id") or "").strip().lower()
+            signature = str(row.get("signature") or "").strip()
+            arity = _operator_arity(row, signature)
+            if not name or arity is None:
+                raise MetadataCacheError(f"operator metadata is incomplete for {name or '<unknown>'}")
+            operators[name] = OperatorMetadata(name, signature or name, arity, str(row.get("description") or ""))
+        if not operators:
+            raise MetadataCacheError("platform operator cache has no complete records")
+
+        cached_at = max(float(payload.get("cached_at") or 0.0) for payload in payloads.values())
+        if cached_at <= 0:
+            raise MetadataCacheError("platform catalog cache has no cached_at timestamp")
+        fetched_at = datetime.fromtimestamp(cached_at, timezone.utc)
+        age_hours = (datetime.now(timezone.utc) - fetched_at).total_seconds() / 3600
+        if age_hours > float(max_age_hours) and not allow_stale:
+            raise MetadataCacheStale(f"platform catalog cache is stale: {age_hours:.1f} hours")
+        context = payloads["operators"]
+        info = {
+            "fetched_at": fetched_at.isoformat().replace("+00:00", "Z"),
+            "region": context.get("region") or payloads["fields"].get("region") or "",
+            "universe": context.get("universe") or payloads["fields"].get("universe") or "",
+            "delay": context.get("delay") if context.get("delay") is not None else payloads["fields"].get("delay"),
+            "source": "platform_catalog",
+        }
+        return cls(root, operators, fields, datasets, info)
+
 
 def _mapping(value: Any, label: str) -> dict[str, Any]:
     if not isinstance(value, dict):
@@ -178,3 +280,20 @@ def _parse_time(value: str) -> datetime:
     if parsed.tzinfo is None:
         raise MetadataCacheError("缓存信息 fetched_at 必须包含时区")
     return parsed.astimezone(timezone.utc)
+
+
+def _operator_arity(row: dict[str, Any], signature: str) -> int | None:
+    try:
+        value = int(row["arity"])
+    except (KeyError, TypeError, ValueError):
+        value = -1
+    if value >= 0:
+        return value
+    if "(" not in signature or not signature.endswith(")"):
+        return None
+    arguments = signature.split("(", 1)[1][:-1].strip()
+    if not arguments:
+        return 0
+    if any(token in arguments for token in ("...", "*", "[", "]")):
+        return None
+    return len([part for part in arguments.split(",") if part.strip()])

@@ -136,7 +136,7 @@ class CandidateFeedbackStore:
         with sqlite3.connect(self.database) as con:
             row = con.execute(
                 """SELECT COUNT(*),
-                          SUM(CASE WHEN outcome='PASS' THEN 1 ELSE 0 END)
+                          SUM(CASE WHEN outcome IN ('PASS','READY_TO_SUBMIT') THEN 1 ELSE 0 END)
                    FROM candidate_outcomes WHERE strategy_family=?""",
                 (strategy_family,),
             ).fetchone()

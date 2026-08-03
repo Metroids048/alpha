@@ -44,6 +44,64 @@ class QualityDecision:
         return self.status is QualityStatus.READY_TO_SUBMIT
 
 
+_METRIC_CHECKS = frozenset({"LOW_SHARPE", "LOW_FITNESS", "HIGH_TURNOVER", "LOW_TURNOVER"})
+
+
+def _canonical_check_name(value: Any) -> str:
+    name = str(value or "").upper()
+    return "PROD_CORRELATION" if name == "PRODUCTION_CORRELATION" else name
+
+
+def normalize_platform_checks(checks: list[Mapping[str, Any]] | tuple[Mapping[str, Any], ...]) -> dict[str, str]:
+    """Return canonical check names and fail-closed statuses."""
+
+    return {
+        _canonical_check_name(check.get("name")): str(
+            check.get("result") or check.get("status") or "MISSING"
+        ).upper()
+        for check in checks
+        if isinstance(check, Mapping) and str(check.get("name") or "").strip()
+    }
+
+
+def blocking_check_reasons(
+    checks: list[Mapping[str, Any]] | tuple[Mapping[str, Any], ...],
+    *,
+    mandatory_checks: tuple[str, ...] | None = None,
+    prod_exception: bool = False,
+) -> tuple[QualityStatus | None, tuple[str, ...]]:
+    """Classify non-metric platform gates without granting implicit passes."""
+
+    by_name = normalize_platform_checks(checks)
+    required = {_canonical_check_name(name) for name in (mandatory_checks or ())}
+    required.update(
+        _canonical_check_name(check.get("name"))
+        for check in checks
+        if isinstance(check, Mapping) and check.get("mandatory") is True
+    )
+    required.add("SELF_CORRELATION")
+    if not prod_exception:
+        required.add("PROD_CORRELATION")
+    missing = sorted(name for name in required if name not in by_name)
+    if missing:
+        return QualityStatus.WAITING_CHECKS, tuple(f"{name}_MISSING" for name in missing)
+
+    waiting = sorted(
+        name for name, value in by_name.items()
+        if (name not in _METRIC_CHECKS or name in required)
+        and value in {"MISSING", "UNKNOWN", "PENDING", "WAITING"}
+    )
+    if waiting:
+        return QualityStatus.WAITING_CHECKS, tuple(f"{name}_{by_name[name]}" for name in waiting)
+    failed = sorted(
+        name for name, value in by_name.items()
+        if (name not in _METRIC_CHECKS or name in required) and value != "PASS"
+    )
+    if failed:
+        return QualityStatus.FAR_FAIL, tuple(f"{name}_{by_name[name]}" for name in failed)
+    return None, ()
+
+
 def evaluate_quality(
     *,
     alpha_id: str,
@@ -64,44 +122,16 @@ def evaluate_quality(
     if not str(alpha_id or "").strip():
         return QualityDecision(QualityStatus.FAR_FAIL, ("ALPHA_ID_MISSING",), effective)
 
-    by_name = {
-        str(check.get("name") or "").upper(): str(check.get("result") or check.get("status") or "MISSING").upper()
-        for check in checks
-        if isinstance(check, Mapping) and str(check.get("name") or "").strip()
-    }
-    required = {str(name).upper() for name in (mandatory_checks or ())}
-    required.update(
-        str(check.get("name") or "").upper()
-        for check in checks
-        if isinstance(check, Mapping) and check.get("mandatory") is True
+    required_for_gate = mandatory_checks
+    if not prod_correlation_required:
+        required_for_gate = tuple(name for name in (mandatory_checks or ()) if str(name).upper() != "PROD_CORRELATION")
+    gate_status, gate_reasons = blocking_check_reasons(
+        checks,
+        mandatory_checks=required_for_gate,
+        prod_exception=prod_corr_exception_confirmed or not prod_correlation_required,
     )
-    required.add("SELF_CORRELATION")
-    if prod_correlation_required and not prod_corr_exception_confirmed:
-        required.add("PROD_CORRELATION")
-    elif prod_corr_exception_confirmed:
-        required.discard("PROD_CORRELATION")
-    missing = sorted(name for name in required if name not in by_name)
-    if missing:
-        return QualityDecision(
-            QualityStatus.WAITING_CHECKS,
-            tuple(f"{name}_MISSING" for name in missing),
-            effective,
-        )
-
-    hard_fail_names = {
-        name
-        for name in required
-        if by_name.get(name) != "PASS" and name not in {"LOW_SHARPE", "LOW_FITNESS", "HIGH_TURNOVER", "LOW_TURNOVER"}
-    }
-    for name, value in by_name.items():
-        if name in {"CATALOG", "SYNTAX", "DATA_COVERAGE"} and value in {"FAIL", "FAILED", "REJECTED"}:
-            hard_fail_names.add(name)
-    if hard_fail_names:
-        return QualityDecision(
-            QualityStatus.FAR_FAIL,
-            tuple(f"{name}_{by_name.get(name, 'FAIL')}" for name in sorted(hard_fail_names)),
-            effective,
-        )
+    if gate_status is not None:
+        return QualityDecision(gate_status, gate_reasons, effective)
 
     sharpe = _metric(metrics, "sharpe")
     fitness = _metric(metrics, "fitness")

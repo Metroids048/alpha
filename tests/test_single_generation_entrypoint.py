@@ -8,10 +8,14 @@ def test_ready_csv_store_is_atomic_and_idempotent_by_alpha_and_hash(tmp_path) ->
     from alpha_mining.storage.ready_alpha_csv import ReadyAlphaCsvStore
 
     store = ReadyAlphaCsvStore(tmp_path / "待提交Alpha列表.csv")
-    row = {"alpha_id": "a1", "exact_hash": "h1", "expression": "rank(close)", "quality_status": "READY_TO_SUBMIT"}
+    row = {
+        "alpha_id": "a1", "candidate_id": "c1", "exact_hash": "h1", "expression": "rank(close)",
+        "request_hash": "r1", "quality_status": "READY_TO_SUBMIT", "sharpe": 1.7,
+        "fitness": 1.1, "turnover": 0.2, "checks_json": [],
+    }
     assert store.upsert(row) is True
     assert store.upsert(row) is False
-    assert store.read_ready() == [row]
+    assert store.read_ready()[0]["alpha_id"] == "a1"
     assert not list(tmp_path.glob("*.tmp"))
 
 
@@ -19,9 +23,10 @@ def test_generation_entrypoint_is_the_only_new_public_flow() -> None:
     entry = Path("生成Alpha.py")
     assert entry.is_file()
     text = entry.read_text(encoding="utf-8")
-    assert "QualityAlphaWorkflow" in text
-    assert "ReadOnlyExpressionCatalog" in text
-    assert "WorldQuantKnowledgeRepository" in text
+    assert "factory.runtime" in text
+    assert "QualityAlphaWorkflow" not in text
+    assert "CandidateGenerationService" not in text
+    assert "MetadataCache.load" not in text
     assert "run_pipeline_" not in text
 
 

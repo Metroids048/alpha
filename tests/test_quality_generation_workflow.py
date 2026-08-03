@@ -1,73 +1,66 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from types import SimpleNamespace
 
 from alpha_mining.factory.orchestrator import SimulationResult
-from alpha_mining.generation.service import CandidateGenerationBatch, CandidateProposal
 
 
-def _proposal() -> CandidateProposal:
-    return CandidateProposal(
-        candidate_id="candidate-1", topic_id="topic", hypothesis_id="hypothesis", research_family="momentum",
-        strategy_family="momentum", mutation_type="new", mechanism="momentum", dataset="ds",
-        expression="rank(close)", parent_template="template", generator_source="test", exact_hash="hash-1",
-        parameter_skeleton="param", field_skeleton="field", knowledge_refs=("worldquant:test#1",),
-    )
+def _write_catalog(root) -> None:
+    import json
+    import time
+
+    now = time.time()
+    context = {"cached_at": now, "region": "USA", "universe": "TOP3000", "delay": 1, "source": "platform_catalog"}
+    (root / ".alpha_datasets_cache.json").write_text(json.dumps({**context, "dataset_ids": ["pv1"], "records": [{"id": "pv1", "name": "pv1"}]}), encoding="utf-8")
+    (root / ".alpha_datafields_cache.json").write_text(json.dumps({**context, "rows": [{"id": "price_close", "_ds": "pv1", "type": "MATRIX"}]}), encoding="utf-8")
+    (root / ".alpha_operators_cache.json").write_text(json.dumps({**context, "operators": ["rank"], "records": [{"name": "rank", "signature": "rank(x)", "arity": 1}]}), encoding="utf-8")
 
 
-class _Generation:
-    def generate(self, *, limit: int):
-        return CandidateGenerationBatch((_proposal(),), ("topic",), ("momentum",), {}, "READY", "")
+class _Gateway:
+    calls = 0
 
-
-class _Executor:
-    def __init__(self):
-        self.calls = 0
-
-    def execute_candidate(self, proposal, settings):
+    def simulate(self, *, expression, settings, alpha_type="REGULAR", checkpoint=None, checkpoint_sink=None):
         self.calls += 1
-        from alpha_mining.factory.quality_workflow import CandidateExecutionResult
-        return CandidateExecutionResult(
-            request_hash="request-1",
-            result=SimulationResult(
-                alpha_id="alpha-1", status="COMPLETE",
-                metrics={"sharpe": 1.8, "fitness": 1.1, "turnover": 0.2},
-                checks=[
-                    {"name": "LOW_SHARPE", "result": "PASS", "mandatory": True},
-                    {"name": "SELF_CORRELATION", "result": "PASS", "mandatory": True},
-                    {"name": "PROD_CORRELATION", "result": "PASS", "mandatory": True},
-                ], raw={},
-            ),
+        return SimulationResult(
+            alpha_id="alpha-1", status="COMPLETE",
+            metrics={"sharpe": 1.8, "fitness": 1.1, "turnover": 0.2},
+            checks=[
+                {"name": "LOW_SHARPE", "result": "PASS", "mandatory": True},
+                {"name": "SELF_CORRELATION", "result": "PASS", "mandatory": True},
+                {"name": "PROD_CORRELATION", "result": "PASS", "mandatory": True},
+            ], raw={},
         )
 
 
-def test_workflow_applies_frozen_caps_and_writes_only_ready_rows(tmp_path) -> None:
-    from alpha_mining.factory.quality_workflow import QualityAlphaWorkflow, QualityGenerationConfig
-    from alpha_mining.generation.feedback import CandidateFeedbackStore
+def test_active_generation_cycle_writes_only_ready_csv(tmp_path) -> None:
+    from alpha_mining.factory.runtime import GenerationCycleConfig, run_generation_cycle
     from alpha_mining.storage.ready_alpha_csv import ReadyAlphaCsvStore
     from alpha_mining.storage.migrations import migrate
 
-    database = tmp_path / "workflow.sqlite"
+    database = tmp_path / "factory.sqlite"
     migrate(database)
-    executor = _Executor()
-    workflow = QualityAlphaWorkflow(
-        generation_service=_Generation(), executor=executor,
-        feedback_store=CandidateFeedbackStore(database), ready_store=ReadyAlphaCsvStore(tmp_path / "待提交Alpha列表.csv"),
-        config=QualityGenerationConfig(),
+    _write_catalog(tmp_path)
+    candidate = SimpleNamespace(expression="rank(price_close)", family="momentum", source="v50", score=1.0)
+    source_catalog = SimpleNamespace(field_dataset={"price_close": "pv1"})
+    gateway = _Gateway()
+    summary = run_generation_cycle(
+        GenerationCycleConfig(database, tmp_path / "待提交Alpha列表.csv", tmp_path, tmp_path / "auth.json", tmp_path / "lock"),
+        candidate_source=lambda: ([candidate], source_catalog), gateway=gateway,
     )
 
-    summary = workflow.run_cycle()
+    assert summary.ready == 1
+    assert gateway.calls == 1
+    row = ReadyAlphaCsvStore(tmp_path / "待提交Alpha列表.csv").read_ready()[0]
+    assert row["alpha_id"] == "alpha-1"
+    import csv
+    with (tmp_path / "待提交Alpha列表.csv").open(encoding="utf-8-sig", newline="") as handle:
+        assert next(csv.reader(handle)) == list(ReadyAlphaCsvStore.FIELDS)
 
-    assert summary.generated == summary.simulated == summary.ready == 1
-    assert executor.calls == 1
-    assert ReadyAlphaCsvStore(tmp_path / "待提交Alpha列表.csv").read_ready()[0]["alpha_id"] == "alpha-1"
 
+def test_quality_workflow_module_is_not_active() -> None:
+    from pathlib import Path
 
-def test_workflow_never_exceeds_frozen_config_bounds() -> None:
-    from alpha_mining.factory.quality_workflow import QualityGenerationConfig
-
-    config = QualityGenerationConfig(max_initial_candidates=99, max_cycle_simulations=99, concurrency=9)
-
-    assert config.max_initial_candidates == 3
-    assert config.max_cycle_simulations == 12
-    assert config.concurrency == 1
+    entry = Path("生成Alpha.py").read_text(encoding="utf-8")
+    runtime = Path("alpha_mining/factory/runtime.py").read_text(encoding="utf-8")
+    assert "QualityAlphaWorkflow" not in entry + runtime
+    assert "CandidateGenerationService" not in entry + runtime

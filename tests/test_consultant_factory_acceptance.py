@@ -352,20 +352,26 @@ def test_factory_release_requires_ledger_freeze_and_confirmation(tmp_path: Path)
 
 
 def test_cycle_entry_uses_vnext_factory_runtime() -> None:
-    source = (Path(__file__).parents[1] / "run_pipeline_cycle.py").read_text(encoding="utf-8")
-    assert "alpha_mining.factory.runtime" in source
+    root = Path(__file__).parents[1]
+    source = (root / "生成Alpha.py").read_text(encoding="utf-8")
+    runtime = (root / "alpha_mining" / "factory" / "runtime.py").read_text(encoding="utf-8")
+    assert "factory.runtime" in source
+    assert "generate_candidates" in runtime
+    assert "QualityAlphaWorkflow" not in source + runtime
+    assert "CandidateGenerationService" not in source + runtime
     assert "import auto_alpha_pipeline_rebuilt_v50" not in source
-    legacy = (Path(__file__).parents[1] / "auto_alpha_pipeline_rebuilt_v50.py").read_text(encoding="utf-8")
+    legacy = (root / "auto_alpha_pipeline_rebuilt_v50.py").read_text(encoding="utf-8")
     assert "FactoryControl" in legacy
 
 
 def test_all_active_wrappers_enforce_factory_control() -> None:
     root = Path(__file__).parents[1]
-    for name in ("run_pipeline_supervisor.py", "run_pipeline_loop.py"):
-        assert "FactoryControl" in (root / name).read_text(encoding="utf-8"), name
-    assert "alpha_mining.factory.runtime" in (root / "run_pipeline_cycle.py").read_text(encoding="utf-8")
-    legacy_sync = (root / "更新alpha数据.py").read_text(encoding="utf-8")
-    assert "legacy CSV platform sync is disabled" in legacy_sync
+    gen = (root / "生成Alpha.py").read_text(encoding="utf-8")
+    submit = (root / "提交Alpha.py").read_text(encoding="utf-8")
+    assert "alpha_mining" in gen
+    assert "SubmissionGuard" in submit or "submitter" in submit or "alpha_mining" in submit
+    for name in ("run_pipeline_supervisor.py", "run_pipeline_loop.py", "run_pipeline_cycle.py"):
+        assert not (root / name).exists(), f"retired wrapper still present: {name}"
 
 
 def test_browser_cookie_is_ignored_and_not_in_git_index() -> None:

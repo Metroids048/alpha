@@ -43,6 +43,41 @@ def test_missing_check_is_waiting_not_ready() -> None:
     assert "SELF_CORRELATION_MISSING" in decision.reasons
 
 
+def test_mandatory_metric_check_failure_blocks_ready() -> None:
+    from alpha_mining.quality.decision import QualityStatus, evaluate_quality
+
+    decision = evaluate_quality(
+        alpha_id="alpha-1",
+        status="COMPLETE",
+        metrics={"sharpe": 1.70, "fitness": 1.05, "turnover": 0.25},
+        checks=[
+            {"name": "LOW_SHARPE", "result": "FAIL", "mandatory": True},
+            {"name": "SELF_CORRELATION", "result": "PASS", "mandatory": True},
+            {"name": "PROD_CORRELATION", "result": "PASS", "mandatory": True},
+        ],
+    )
+
+    assert decision.status is QualityStatus.FAR_FAIL
+    assert "LOW_SHARPE_FAIL" in decision.reasons
+
+
+def test_production_correlation_alias_satisfies_required_gate() -> None:
+    from alpha_mining.quality.decision import QualityStatus, evaluate_quality
+
+    decision = evaluate_quality(
+        alpha_id="alpha-1",
+        status="COMPLETE",
+        metrics={"sharpe": 1.70, "fitness": 1.05, "turnover": 0.25},
+        checks=[
+            {"name": "LOW_SHARPE", "result": "PASS", "mandatory": True},
+            {"name": "SELF_CORRELATION", "result": "PASS", "mandatory": True},
+            {"name": "PRODUCTION_CORRELATION", "result": "PASS", "mandatory": True},
+        ],
+    )
+
+    assert decision.status is QualityStatus.READY_TO_SUBMIT
+
+
 def test_only_one_repairable_metric_can_be_near_pass() -> None:
     from alpha_mining.quality.decision import QualityStatus, evaluate_quality
 

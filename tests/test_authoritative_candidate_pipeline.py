@@ -11,11 +11,7 @@ from __future__ import annotations
 import inspect
 import random
 import sqlite3
-import tempfile
-import textwrap
 from pathlib import Path
-from typing import Any
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -37,19 +33,21 @@ def _seed_research(db: Path) -> None:
     """Insert minimal research data so _research_specs() returns rows."""
     with sqlite3.connect(db) as con:
         con.execute(
-            "INSERT OR IGNORE INTO research_topics (topic_id,category,active) VALUES ('t1','momentum',1)"
+            "INSERT OR IGNORE INTO research_topics "
+            "(topic_id,topic_name_cn,topic_name_en,category,created_at,active) "
+            "VALUES ('t1','动量','momentum','momentum',datetime('now'),1)"
         )
         con.execute(
-            "INSERT OR IGNORE INTO hypotheses (hypothesis_id,topic_id,statement_en,mechanism,horizon,status) "
-            "VALUES ('h1','t1','Test momentum hypothesis','momentum reversal','medium','active')"
+            "INSERT OR IGNORE INTO hypotheses (hypothesis_id,topic_id,statement_cn,statement_en,mechanism,horizon,created_at,status) "
+            "VALUES ('h1','t1','测试动量假设','Test momentum hypothesis','momentum reversal','medium',datetime('now'),'active')"
         )
         con.execute(
-            "INSERT OR IGNORE INTO hypotheses (hypothesis_id,topic_id,statement_en,mechanism,horizon,status) "
-            "VALUES ('h2','t1','Test volatility hypothesis','volatility risk','medium','active')"
+            "INSERT OR IGNORE INTO hypotheses (hypothesis_id,topic_id,statement_cn,statement_en,mechanism,horizon,created_at,status) "
+            "VALUES ('h2','t1','测试波动假设','Test volatility hypothesis','volatility risk','medium',datetime('now'),'active')"
         )
         con.execute(
-            "INSERT OR IGNORE INTO hypotheses (hypothesis_id,topic_id,statement_en,mechanism,horizon,status) "
-            "VALUES ('h3','t1','Test fundamental hypothesis','fundamental value','medium','active')"
+            "INSERT OR IGNORE INTO hypotheses (hypothesis_id,topic_id,statement_cn,statement_en,mechanism,horizon,created_at,status) "
+            "VALUES ('h3','t1','测试基本面假设','Test fundamental hypothesis','fundamental value','medium',datetime('now'),'active')"
         )
         for h, f, ds in [
             ("h1", "returns", "ds1"),
@@ -65,87 +63,33 @@ def _seed_research(db: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Test 2 – CandidateGenerationService injectable into FactoryOrchestrator
+# Test 2 – Active runtime authority
 # ---------------------------------------------------------------------------
 
-class TestCandidateServiceInjection:
-    def test_factory_orchestrator_accepts_candidate_service_kwarg(self):
+class TestActiveRuntimeAuthority:
+    def test_factory_orchestrator_owns_execution_boundary(self):
         from alpha_mining.factory.orchestrator import FactoryOrchestrator
         sig = inspect.signature(FactoryOrchestrator.__init__)
-        assert "candidate_service" in sig.parameters, (
-            "FactoryOrchestrator.__init__ must accept candidate_service keyword argument"
-        )
+        assert "candidate_service" not in sig.parameters
+        assert hasattr(FactoryOrchestrator, "execute_candidate")
 
-    def test_injected_fake_service_is_called(self):
-        from alpha_mining.factory.orchestrator import FactoryOrchestrator
-        from alpha_mining.generation.service import CandidateGenerationService
+    def test_active_entry_uses_v50_bridge_only(self):
+        from pathlib import Path
 
-        with tempfile.TemporaryDirectory() as td:
-            db = _make_db(Path(td))
-            _seed_research(db)
-            # Fake service that records calls
-            calls = []
-
-            class FakeService:
-                def generate(self, *, limit: int):
-                    calls.append(limit)
-                    from alpha_mining.generation.service import CandidateGenerationBatch
-                    return CandidateGenerationBatch(
-                        candidates=(),
-                        selected_topic_ids=(),
-                        selected_families=(),
-                        rejected_by_reason={},
-                        generation_state="READY",
-                        deferred_reason="",
-                    )
-
-            fake_sim = MagicMock()
-            fake_sim.simulate.return_value = MagicMock(
-                alpha_id="", status="error", checks=[], sharpe=None,
-                fitness=None, turnover=None, progress_location="",
-            )
-
-            orch = FactoryOrchestrator(db, fake_sim, candidate_service=FakeService())
-            orch.run_simulate(batch_size=2)
-            assert calls, "CandidateGenerationService.generate() must be called"
-
-    def test_orchestrator_does_not_call_consultant_generator_directly(self):
-        """When a candidate_service is injected, ConsultantGenerator.generate must not be called."""
-        from alpha_mining.factory.orchestrator import FactoryOrchestrator
-        from alpha_mining.generation.service import CandidateGenerationBatch
-
-        with tempfile.TemporaryDirectory() as td:
-            db = _make_db(Path(td))
-            _seed_research(db)
-
-            consultant_calls = []
-
-            class FakeService:
-                def generate(self, *, limit: int):
-                    return CandidateGenerationBatch(
-                        candidates=(),
-                        selected_topic_ids=(),
-                        selected_families=(),
-                        rejected_by_reason={},
-                        generation_state="READY",
-                        deferred_reason="",
-                    )
-
-            fake_sim = MagicMock()
-            fake_sim.simulate.return_value = MagicMock(
-                alpha_id="", status="error", checks=[], sharpe=None,
-                fitness=None, turnover=None, progress_location="",
-            )
-
-            orch = FactoryOrchestrator(db, fake_sim, candidate_service=FakeService())
-            # Patch ConsultantGenerator.generate to detect if it's called
-            if hasattr(orch, "generator"):
-                original = orch.generator.generate
-                orch.generator.generate = lambda **kw: (consultant_calls.append(kw) or [])
-            orch.run_simulate(batch_size=2)
-            assert not consultant_calls, (
-                "When candidate_service is injected, ConsultantGenerator.generate must not be called directly"
-            )
+        entry = Path("生成Alpha.py").read_text(encoding="utf-8")
+        runtime = Path("alpha_mining/factory/runtime.py").read_text(encoding="utf-8")
+        source = entry + runtime
+        for forbidden in (
+            "CandidateGenerationService",
+            "QualityAlphaWorkflow",
+            "MetadataCache.load(",
+            "run_full(",
+            "run_continuous(",
+            "submitter",
+            "subprocess",
+        ):
+            assert forbidden not in source
+        assert "adapt_v50_candidate" in runtime
 
 
 # ---------------------------------------------------------------------------
@@ -153,19 +97,18 @@ class TestCandidateServiceInjection:
 # ---------------------------------------------------------------------------
 
 class TestMultiFamilyDiversity:
-    def test_generation_service_produces_multiple_families(self):
-        from alpha_mining.generation.service import CandidateGenerationService, CandidateProposal
+    def test_generation_service_produces_multiple_families(self, tmp_path):
+        from alpha_mining.generation.service import CandidateGenerationService
 
-        with tempfile.TemporaryDirectory() as td:
-            db = _make_db(Path(td))
-            _seed_research(db)
-            svc = CandidateGenerationService(db, rng=random.Random(42))
-            batch = svc.generate(limit=9)
-            if len(batch.candidates) >= 3:
-                families = {c.strategy_family for c in batch.candidates}
-                assert len(families) >= 2, (
-                    f"With 3+ candidates, must span >= 2 strategy families; got {families}"
-                )
+        db = _make_db(tmp_path)
+        _seed_research(db)
+        svc = CandidateGenerationService(db, rng=random.Random(42))
+        batch = svc.generate(limit=9)
+        if len(batch.candidates) >= 3:
+            families = {c.strategy_family for c in batch.candidates}
+            assert len(families) >= 2, (
+                f"With 3+ candidates, must span >= 2 strategy families; got {families}"
+            )
 
     def test_candidate_proposal_has_strategy_family_field(self):
         from alpha_mining.generation.service import CandidateProposal
@@ -286,43 +229,41 @@ class TestRequestContextRecovery:
             "SimulationRequestStore.claim must accept a context keyword argument"
         )
 
-    def test_context_persisted_and_recovered(self):
+    def test_context_persisted_and_recovered(self, tmp_path):
         from alpha_mining.factory.simulation_requests import SimulationRequestStore
-        with tempfile.TemporaryDirectory() as td:
-            db = _make_db(Path(td))
-            store = SimulationRequestStore(db)
-            ctx = {
-                "candidate_id": "c1", "topic_id": "t1", "hypothesis_id": "h1",
-                "research_family": "momentum", "strategy_family": "momentum",
-                "mechanism": "reversal", "dataset": "ds1", "parent_template": "tmpl1",
-                "exact_hash": "abc123", "parameter_skeleton": "sk1",
-                "field_skeleton": "fsk1", "generator_source": "ConsultantGenerator",
-            }
-            claim = store.claim(
-                "rank(ts_rank(returns,21))",
-                {"neutralization": "market", "decay": 6},
-                context=ctx,
-            )
-            assert claim.claimed, f"Claim failed: {claim.reason}"
-            leases = store.acquire(1, request_hash=claim.request_hash)
-            assert leases, "Should acquire a lease"
-            lease = leases[0]
-            assert lease.context.get("candidate_id") == "c1", (
-                f"Context not preserved. Got: {lease.context}"
-            )
-            assert lease.context.get("strategy_family") == "momentum"
+        db = _make_db(tmp_path)
+        store = SimulationRequestStore(db)
+        ctx = {
+            "candidate_id": "c1", "topic_id": "t1", "hypothesis_id": "h1",
+            "research_family": "momentum", "strategy_family": "momentum",
+            "mechanism": "reversal", "dataset": "ds1", "parent_template": "tmpl1",
+            "exact_hash": "abc123", "parameter_skeleton": "sk1",
+            "field_skeleton": "fsk1", "generator_source": "v50",
+        }
+        claim = store.claim(
+            "rank(ts_rank(returns,21))",
+            {"neutralization": "market", "decay": 6},
+            context=ctx,
+        )
+        assert claim.claimed, f"Claim failed: {claim.reason}"
+        leases = store.acquire(1, request_hash=claim.request_hash)
+        assert leases, "Should acquire a lease"
+        lease = leases[0]
+        assert lease.context.get("candidate_id") == "c1", (
+            f"Context not preserved. Got: {lease.context}"
+        )
+        assert lease.context.get("strategy_family") == "momentum"
 
-    def test_legacy_request_without_context_uses_fallback(self):
+    def test_legacy_request_without_context_uses_fallback(self, tmp_path):
         """Requests created before migration have no context; lease must not crash."""
         from alpha_mining.factory.simulation_requests import SimulationRequestStore
-        with tempfile.TemporaryDirectory() as td:
-            db = _make_db(Path(td))
-            store = SimulationRequestStore(db)
-            claim = store.claim("rank(ts_rank(volume,21))", {"neutralization": "market"})
-            assert claim.claimed
-            leases = store.acquire(1, request_hash=claim.request_hash)
-            assert leases
-            assert isinstance(leases[0].context, dict)
+        db = _make_db(tmp_path)
+        store = SimulationRequestStore(db)
+        claim = store.claim("rank(ts_rank(volume,21))", {"neutralization": "market"})
+        assert claim.claimed
+        leases = store.acquire(1, request_hash=claim.request_hash)
+        assert leases
+        assert isinstance(leases[0].context, dict)
 
 
 # ---------------------------------------------------------------------------
@@ -334,50 +275,47 @@ class TestFailureFeedbackPersistence:
         from alpha_mining.generation.feedback import CandidateFeedbackStore
         assert CandidateFeedbackStore is not None
 
-    def test_all_outcomes_persistable(self):
+    def test_all_outcomes_persistable(self, tmp_path):
         from alpha_mining.generation.feedback import CandidateFeedbackStore
-        with tempfile.TemporaryDirectory() as td:
-            db = _make_db(Path(td))
-            store = CandidateFeedbackStore(db)
-            for outcome in ("PASS", "NEAR_PASS", "FAR_FAIL", "FAILED", "UNKNOWN"):
-                store.record(
-                    request_hash=f"hash_{outcome}",
-                    outcome=outcome,
-                    sharpe=0.5 if outcome == "PASS" else None,
-                    field_skeleton=f"sk_{outcome}",
-                    strategy_family="momentum",
-                    topic_id="t1",
-                )
-
-    def test_duplicate_finalize_is_idempotent(self):
-        from alpha_mining.generation.feedback import CandidateFeedbackStore
-        with tempfile.TemporaryDirectory() as td:
-            db = _make_db(Path(td))
-            store = CandidateFeedbackStore(db)
-            for _ in range(3):
-                store.record(
-                    request_hash="hash_dup",
-                    outcome="PASS",
-                    sharpe=0.8,
-                    field_skeleton="sk1",
-                    strategy_family="momentum",
-                    topic_id="t1",
-                )
-
-    def test_unknown_not_overwritten_by_failed(self):
-        from alpha_mining.generation.feedback import CandidateFeedbackStore
-        with tempfile.TemporaryDirectory() as td:
-            db = _make_db(Path(td))
-            store = CandidateFeedbackStore(db)
-            store.record("hash_u", "UNKNOWN", sharpe=None, field_skeleton="sk1",
-                         strategy_family="m", topic_id="t1")
-            # Attempt to overwrite with FAILED — must be ignored (idempotent first-write wins)
-            store.record("hash_u", "FAILED", sharpe=None, field_skeleton="sk1",
-                         strategy_family="m", topic_id="t1")
-            outcomes = store.outcomes_for_request("hash_u")
-            assert outcomes == "UNKNOWN", (
-                f"UNKNOWN outcome must not be overwritten; got {outcomes!r}"
+        db = _make_db(tmp_path)
+        store = CandidateFeedbackStore(db)
+        for outcome in ("PASS", "NEAR_PASS", "FAR_FAIL", "FAILED", "UNKNOWN"):
+            store.record(
+                request_hash=f"hash_{outcome}",
+                outcome=outcome,
+                sharpe=0.5 if outcome == "PASS" else None,
+                field_skeleton=f"sk_{outcome}",
+                strategy_family="momentum",
+                topic_id="t1",
             )
+
+    def test_duplicate_finalize_is_idempotent(self, tmp_path):
+        from alpha_mining.generation.feedback import CandidateFeedbackStore
+        db = _make_db(tmp_path)
+        store = CandidateFeedbackStore(db)
+        for _ in range(3):
+            store.record(
+                request_hash="hash_dup",
+                outcome="PASS",
+                sharpe=0.8,
+                field_skeleton="sk1",
+                strategy_family="momentum",
+                topic_id="t1",
+            )
+
+    def test_unknown_not_overwritten_by_failed(self, tmp_path):
+        from alpha_mining.generation.feedback import CandidateFeedbackStore
+        db = _make_db(tmp_path)
+        store = CandidateFeedbackStore(db)
+        store.record("hash_u", "UNKNOWN", sharpe=None, field_skeleton="sk1",
+                     strategy_family="m", topic_id="t1")
+        # Attempt to overwrite with FAILED — must be ignored (idempotent first-write wins)
+        store.record("hash_u", "FAILED", sharpe=None, field_skeleton="sk1",
+                     strategy_family="m", topic_id="t1")
+        outcomes = store.outcomes_for_request("hash_u")
+        assert outcomes == "UNKNOWN", (
+            f"UNKNOWN outcome must not be overwritten; got {outcomes!r}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -385,17 +323,29 @@ class TestFailureFeedbackPersistence:
 # ---------------------------------------------------------------------------
 
 class TestFeedbackInfluencesGeneration:
-    def test_low_pass_family_weight_decreases_after_feedback(self):
+    def test_low_pass_family_weight_decreases_after_feedback(self, tmp_path):
         from alpha_mining.scheduler.arm_metrics import ResearchArmTracker, ArmDimensions
-        with tempfile.TemporaryDirectory() as td:
-            db = _make_db(Path(td))
-            tracker = ResearchArmTracker(db)
-            arm = ArmDimensions(
-                family="low_yield", dataset="ds1", field_family="price",
-                mechanism="reversal", operator_topology="rank", region="*",
-                universe="TOP3000", delay="1",
-            )
-            # Record enough observations to trigger low-yield window (20+, all failing)
+        db = _make_db(tmp_path)
+        tracker = ResearchArmTracker(db)
+        arm = ArmDimensions(
+            family="low_yield", dataset="ds1", field_family="price",
+            mechanism="reversal", operator_topology="rank", region="*",
+            universe="TOP3000", delay="1",
+        )
+        # Record enough observations to trigger low-yield window (20+, all failing)
+        stats = tracker.record_window(
+            arm,
+            sharpes=[-0.1] * 20,
+            base_passes=[False] * 20,
+            near_passes=[False] * 20,
+            self_corr_passes=0,
+            prod_corr_passes=0,
+            final_submits=0,
+        )
+        assert stats.sampling_weight <= 1.0
+
+        # After 3 consecutive low windows, weight must drop
+        for _ in range(2):
             stats = tracker.record_window(
                 arm,
                 sharpes=[-0.1] * 20,
@@ -405,40 +355,24 @@ class TestFeedbackInfluencesGeneration:
                 prod_corr_passes=0,
                 final_submits=0,
             )
-            assert stats.sampling_weight <= 1.0
+        assert stats.sampling_weight == 0.1
 
-            # After 3 consecutive low windows, weight must drop
-            for _ in range(2):
-                stats = tracker.record_window(
-                    arm,
-                    sharpes=[-0.1] * 20,
-                    base_passes=[False] * 20,
-                    near_passes=[False] * 20,
-                    self_corr_passes=0,
-                    prod_corr_passes=0,
-                    final_submits=0,
-                )
-            assert stats.sampling_weight < 1.0, (
-                f"After 3 consecutive low windows, sampling_weight must be < 1.0; got {stats.sampling_weight}"
-            )
-
-    def test_record_observation_increments_window(self):
+    def test_record_observation_increments_window(self, tmp_path):
         from alpha_mining.scheduler.arm_metrics import ResearchArmTracker, ArmDimensions
-        with tempfile.TemporaryDirectory() as td:
-            db = _make_db(Path(td))
-            tracker = ResearchArmTracker(db)
-            arm = ArmDimensions(
-                family="test", dataset="ds1", field_family="price",
-                mechanism="momentum", operator_topology="rank", region="*",
-                universe="TOP3000", delay="1",
-            )
-            # record_observation should exist
-            assert hasattr(tracker, "record_observation"), (
-                "ResearchArmTracker must have record_observation() method"
-            )
-            tracker.record_observation(arm, base_pass=True, sharpe=0.5, near_pass=True)
-            stats = tracker.stats(arm)
-            assert stats.simulation_count >= 1, "record_observation must persist to DB"
+        db = _make_db(tmp_path)
+        tracker = ResearchArmTracker(db)
+        arm = ArmDimensions(
+            family="test", dataset="ds1", field_family="price",
+            mechanism="momentum", operator_topology="rank", region="*",
+            universe="TOP3000", delay="1",
+        )
+        # record_observation should exist
+        assert hasattr(tracker, "record_observation"), (
+            "ResearchArmTracker must have record_observation() method"
+        )
+        tracker.record_observation(arm, base_pass=True, sharpe=0.5, near_pass=True)
+        stats = tracker.stats(arm)
+        assert stats.simulation_count == 1, "record_observation must be immediately visible"
 
 
 # ---------------------------------------------------------------------------
@@ -446,40 +380,56 @@ class TestFeedbackInfluencesGeneration:
 # ---------------------------------------------------------------------------
 
 class TestEvolutionEnginePassStats:
-    def test_queue_status_pass_counted_by_evolution_engine(self):
+    def test_queue_status_pass_counted_by_evolution_engine(self, tmp_path):
         from alpha_mining.scheduler.evolution import EvolutionEngine
-        with tempfile.TemporaryDirectory() as td:
-            db = _make_db(Path(td))
-            _seed_research(db)
-            with sqlite3.connect(db) as con:
-                con.execute(
-                    "INSERT OR IGNORE INTO simulation_runs "
-                    "(run_id,alpha_id,status,queue_status,sharpe,created_at) "
-                    "VALUES ('r1','a1','COMPLETE','PASS',0.8,datetime('now'))"
-                )
-            engine = EvolutionEngine(db)
-            weights = engine.topic_weights()
-            # Should not crash; if topic/family tracking works, PASS counts should be visible
-            assert isinstance(weights, dict)
+        db = _make_db(tmp_path)
+        _seed_research(db)
+        with sqlite3.connect(db) as con:
+            con.execute(
+                "INSERT OR IGNORE INTO expressions "
+                "(expression_id,expression_text,normalized_text,hypothesis_id,generation_strategy,generation_layer,created_at) "
+                "VALUES ('e1','rank(returns)','rank(returns)','h1','test','factory',datetime('now'))"
+            )
+            con.execute(
+                "INSERT INTO simulation_runs "
+                "(utc_iso,alpha_id,expression,expression_id,status,queue_status,sharpe) "
+                "VALUES (datetime('now'),'a1','rank(returns)','e1','COMPLETE','PASS',0.8)"
+            )
+        engine = EvolutionEngine(db)
+        engine.run()
+        with sqlite3.connect(db) as con:
+            row = con.execute(
+                "SELECT total_simulated,total_passed_gate,pass_rate FROM topic_stats WHERE topic_id='t1'"
+            ).fetchone()
+        assert row == (1, 1, 1.0)
 
-    def test_factory_queue_status_pass_not_zero_rate(self):
+    def test_factory_queue_status_pass_not_zero_rate(self, tmp_path):
         """Factory-written PASS simulations must produce non-zero pass rate in EvolutionEngine."""
         from alpha_mining.scheduler.evolution import EvolutionEngine
-        with tempfile.TemporaryDirectory() as td:
-            db = _make_db(Path(td))
-            _seed_research(db)
-            with sqlite3.connect(db) as con:
-                for i in range(5):
-                    con.execute(
-                        f"INSERT OR IGNORE INTO simulation_runs "
-                        f"(run_id,alpha_id,topic_id,status,queue_status,sharpe,created_at) "
-                        f"VALUES ('r{i}','a{i}','t1','COMPLETE','PASS',{0.5+i*0.1},datetime('now'))"
-                    )
-            engine = EvolutionEngine(db)
-            weights = engine.topic_weights()
-            # topic t1 should have a positive weight (PASS results exist)
-            # This test verifies PASS simulations are counted, not silently ignored
-            assert isinstance(weights, dict)
+        db = _make_db(tmp_path)
+        _seed_research(db)
+        with sqlite3.connect(db) as con:
+            for i in range(5):
+                expression_id = f"e{i}"
+                con.execute(
+                    "INSERT INTO expressions "
+                    "(expression_id,expression_text,normalized_text,hypothesis_id,generation_strategy,generation_layer,created_at) "
+                    "VALUES (?,?,?,?,?,?,datetime('now'))",
+                    (expression_id, f"rank(returns{i})", f"rank(returns{i})", "h1", "test", "factory"),
+                )
+                con.execute(
+                    "INSERT INTO simulation_runs "
+                    "(utc_iso,alpha_id,expression,expression_id,status,queue_status,sharpe) "
+                    "VALUES (datetime('now'),?,?,?,?,?,?)",
+                    (f"a{i}", f"rank(returns{i})", expression_id, "COMPLETE", "PASS", 0.5 + i * 0.1),
+                )
+        engine = EvolutionEngine(db)
+        engine.run()
+        with sqlite3.connect(db) as con:
+            row = con.execute(
+                "SELECT pass_rate FROM topic_stats WHERE topic_id='t1'"
+            ).fetchone()
+        assert row and row[0] == 1.0
 
 
 # ---------------------------------------------------------------------------
@@ -530,31 +480,7 @@ class TestProductionLoopNoCsvDependency:
             "CandidateGenerationService must not reference 候选Alpha.csv"
         )
 
-    def test_factory_works_without_csv_files(self):
-        """Deleting the CSV must not break candidate generation or simulation."""
-        from alpha_mining.factory.orchestrator import FactoryOrchestrator
-        from alpha_mining.generation.service import CandidateGenerationBatch
-
-        with tempfile.TemporaryDirectory() as td:
-            db = _make_db(Path(td))
-            _seed_research(db)
-            # Explicitly ensure no CSV files exist in the temp dir
-            for f in Path(td).glob("*.csv"):
-                f.unlink()
-
-            class FakeService:
-                def generate(self, *, limit: int):
-                    return CandidateGenerationBatch(
-                        candidates=(), selected_topic_ids=(), selected_families=(),
-                        rejected_by_reason={}, generation_state="READY", deferred_reason="",
-                    )
-
-            fake_sim = MagicMock()
-            fake_sim.simulate.return_value = MagicMock(
-                alpha_id="", status="error", checks=[], sharpe=None,
-                fitness=None, turnover=None, progress_location="",
-            )
-            orch = FactoryOrchestrator(db, fake_sim, candidate_service=FakeService())
-            # Must not raise even when no CSV files exist
-            summary = orch.run_simulate(batch_size=2)
-            assert summary is not None
+    def test_factory_runtime_has_no_legacy_csv_queue_dependency(self):
+        runtime = Path("alpha_mining/factory/runtime.py").read_text(encoding="utf-8")
+        assert "CandidateCsvQueue" not in runtime
+        assert "候选Alpha.csv" not in runtime
