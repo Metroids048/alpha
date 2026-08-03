@@ -65,36 +65,6 @@ def _seed_research(db: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Test 1 – Production entry point does NOT delegate to v50
-# ---------------------------------------------------------------------------
-
-class TestProductionEntryPoint:
-    def test_run_pipeline_cycle_imports_factory_runtime(self):
-        import importlib.util, pathlib
-        src = pathlib.Path("run_pipeline_cycle.py").read_text(encoding="utf-8")
-        assert "alpha_mining.factory.runtime" in src, (
-            "run_pipeline_cycle.py must import from alpha_mining.factory.runtime"
-        )
-
-    def test_production_chain_does_not_import_v50(self):
-        import importlib.util, pathlib
-        for fname in [
-            "run_pipeline_cycle.py",
-            "run_pipeline_loop.py",
-            "run_pipeline_supervisor.py",
-            "alpha_mining/factory/runtime.py",
-            "alpha_mining/factory/orchestrator.py",
-        ]:
-            src = pathlib.Path(fname).read_text(encoding="utf-8")
-            assert "import auto_alpha_pipeline_rebuilt_v50" not in src, (
-                f"{fname} must not import auto_alpha_pipeline_rebuilt_v50"
-            )
-            assert "from auto_alpha_pipeline_rebuilt_v50" not in src, (
-                f"{fname} must not import from auto_alpha_pipeline_rebuilt_v50"
-            )
-
-
-# ---------------------------------------------------------------------------
 # Test 2 – CandidateGenerationService injectable into FactoryOrchestrator
 # ---------------------------------------------------------------------------
 

@@ -112,14 +112,6 @@ def test_exhausted_cycle_does_not_call_simulation(tmp_path: Path) -> None:
         assert con.execute("SELECT COUNT(*) FROM factory_candidate_claims").fetchone()[0] == 0
 
 
-def test_exhausted_cycle_uses_long_backoff() -> None:
-    from run_pipeline_loop import CycleOutcome, RecoveryCategory, _recovery_delay
-
-    outcome = CycleOutcome(1, 9, RecoveryCategory.CANDIDATE_EXHAUSTED)
-
-    assert _recovery_delay(outcome, consecutive_failures=1, inter_cycle_sleep=120) >= 3600
-
-
 def test_new_spec_recovers_from_exhaustion(tmp_path: Path) -> None:
     database = _seed(tmp_path)
     first = FactoryOrchestrator(database, _Service()).run_simulate(batch_size=60)

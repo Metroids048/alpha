@@ -307,8 +307,7 @@ def test_generation_reports_an_exhausted_metadata_constrained_pool(
 
 def test_offline_packages_have_no_platform_or_http_dependency() -> None:
     root = Path(__file__).resolve().parents[1]
-    sources = [root / "生成Alpha候选.py"]
-    sources.extend((root / "alpha_mining" / "offline").glob("*.py"))
+    sources = list((root / "alpha_mining" / "offline").glob("*.py"))
     # Note: alpha_mining/generation is a shared module (offline + factory)
     # so we exclude it from strict offline-only checks
     sources.append(root / "alpha_mining" / "storage" / "csv_queue.py")

@@ -1,6 +1,0 @@
-候选ID,表达式,策略家族,生成时间
-exact_copy_1,"group_neutralize(ts_zscore(anl14_stddev_ebitda_fy4/cap,126)*rank(ts_mean(volume,63)/adv20),sector)",arch_hybrid_z_liq,2026-08-02 23:10:00
-exact_copy_2,"group_neutralize(ts_zscore(anl14_median_ebitda_fy5/cap,126)*rank(ts_mean(volume,63)/adv20),market)",arch_hybrid_z_liq,2026-08-02 23:10:00
-exact_copy_3,"group_neutralize(ts_zscore(anl14_median_ebitda_fy4/cap,126)*rank(ts_mean(volume,63)/adv20),sector)",arch_hybrid_z_liq,2026-08-02 23:10:00
-exact_copy_4,"group_neutralize(ts_zscore(ts_delta(anl10_analyst_innovation_eps_normal_decrease_fy1,126)/cap,126)*rank(ts_mean(volume,63)/adv20),sector)",arch_delta_liquid,2026-08-02 23:10:00
-exact_copy_5,"group_neutralize(ts_zscore(ts_delta(anl10_analyst_innovation_eps_normal_increase_fy2,126)/cap,126)*rank(ts_mean(volume,63)/adv20),sector)",arch_delta_liquid,2026-08-02 23:10:00
