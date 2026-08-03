@@ -38,6 +38,11 @@ class CandidateProposal:
     exact_hash: str
     parameter_skeleton: str
     field_skeleton: str
+    knowledge_refs: tuple[str, ...] = ()
+    economic_rationale: str = ""
+    expected_signal: str = ""
+    expected_turnover_behavior: str = ""
+    repair_origin: str = ""
 
 
 @dataclass(frozen=True)
@@ -216,6 +221,13 @@ class CandidateGenerationService:
                     exact_hash=identity.exact_hash,
                     parameter_skeleton=identity.parameter_skeleton,
                     field_skeleton=identity.field_skeleton,
+                    knowledge_refs=tuple(getattr(candidate, "knowledge_refs", ()) or ()),
+                    economic_rationale=str(getattr(candidate, "economic_rationale", "") or ""),
+                    expected_signal=str(getattr(candidate, "expected_signal", "") or ""),
+                    expected_turnover_behavior=str(
+                        getattr(candidate, "expected_turnover_behavior", "") or ""
+                    ),
+                    repair_origin=str(getattr(candidate, "repair_origin", "") or ""),
                 )
                 accepted.append(proposal)
 

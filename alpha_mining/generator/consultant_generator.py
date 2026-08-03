@@ -18,6 +18,12 @@ class ConsultantCandidate:
     mutation_type: str
     expression: str
     parent_id: str = ""
+    economic_rationale: str = ""
+    knowledge_refs: tuple[str, ...] = ()
+    expected_signal: str = ""
+    expected_turnover_behavior: str = ""
+    repair_origin: str = ""
+    degraded: bool = False
 
 
 class ConsultantGenerator:
