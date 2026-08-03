@@ -243,7 +243,38 @@ def test_missing_cache_stops_with_sync_instruction(tmp_path: Path, capsys) -> No
     )
 
     assert result == 2
-    assert "同步平台元数据.py" in capsys.readouterr().err
+    assert "离线模式不会自动联网" in capsys.readouterr().err
+
+
+def test_partial_runtime_catalog_generates_offline_candidates(tmp_path: Path) -> None:
+    from alpha_mining.offline.service import run_offline_generation
+
+    now = datetime.now(timezone.utc).timestamp()
+    (tmp_path / ".alpha_datasets_cache.json").write_text(
+        json.dumps({"cached_at": now, "dataset_ids": ["pv1"]}), encoding="utf-8"
+    )
+    (tmp_path / ".alpha_datafields_cache.json").write_text(
+        json.dumps(
+            {
+                "cached_at": now,
+                "rows": [
+                    {"id": "close", "_ds": "pv1", "type": "MATRIX", "category": {"id": "pv"}, "description": "closing price"},
+                    {"id": "volume", "_ds": "pv1", "type": "MATRIX", "category": {"id": "pv"}, "description": "daily volume"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    summary = run_offline_generation(
+        cache_dir=tmp_path,
+        queue_path=tmp_path / "queue.csv",
+        events_path=tmp_path / "events.csv",
+        count=3,
+    )
+
+    assert summary.added == 3
+    assert summary.queue_path.is_file()
 
 
 def test_stale_cache_requires_explicit_continue(tmp_path: Path) -> None:

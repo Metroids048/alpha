@@ -11,10 +11,16 @@ from typing import Any
 
 from alpha_mining.domain.expression_normalization import expression_identity, extract_fields
 from alpha_mining.domain.operator_registry import BASE_VARS
+from alpha_mining.generator.consultant_generator import KnowledgeUsageMode
 
 
-def generate_candidates() -> tuple[list[Any], Any]:
-    """Invoke only the preserved v50 candidate-generation boundary."""
+def generate_candidates(*, knowledge_database: str | os.PathLike[str] | None = None) -> tuple[list[Any], Any]:
+    """Return knowledge-primary candidates plus the preserved v50 fallback.
+
+    The LLM path is deliberately opt-in because it can make an external model
+    call.  A missing capability remains an honest v50 ``NONE`` source rather
+    than a deterministic candidate carrying fabricated knowledge citations.
+    """
     module = importlib.import_module("auto_alpha_pipeline_rebuilt_v50")
     config_type = getattr(module, "PipelineConfig")
     pipeline_type = getattr(module, "WorldQuantAlphaPipeline")
@@ -31,7 +37,53 @@ def generate_candidates() -> tuple[list[Any], Any]:
             enable_fields_disk_cache=True,
         )
     )
-    return pipeline.generate_candidates()
+    candidates, catalog = pipeline.generate_candidates()
+    if knowledge_database is None or os.environ.get("ALPHA_ENABLE_KNOWLEDGE_LLM") != "1":
+        return candidates, catalog
+    return _knowledge_primary_candidates(candidates, catalog, database=knowledge_database), catalog
+
+
+def _knowledge_primary_candidates(
+    candidates: list[Any],
+    catalog: Any,
+    *,
+    database: str | os.PathLike[str],
+) -> list[Any]:
+    if not os.environ.get("DEEPSEEK_API_KEY"):
+        return candidates
+    from alpha_mining.generator.llm_consultant_bridge import LLMConsultantBridge
+    from alpha_mining.knowledge.worldquant_repository import WorldQuantKnowledgeRepository
+    from alpha_mining.llm.deepseek import DeepSeekStructuredLLM
+
+    llm = DeepSeekStructuredLLM()
+    generated: list[Any] = []
+    try:
+        bridge = LLMConsultantBridge(
+            database=database,
+            llm=llm,
+            knowledge_repository=WorldQuantKnowledgeRepository(),
+            max_per_hypothesis=1,
+        )
+        for index, candidate in enumerate(candidates[:3]):
+            expression = str(getattr(candidate, "expression", "") or "")
+            fields = tuple(field for field in extract_fields(expression) if field not in BASE_VARS)
+            if not fields:
+                continue
+            family = _normalise_family(str(getattr(candidate, "family", "") or "v50"))
+            source = str(getattr(candidate, "source", "") or "v50")
+            generated.extend(bridge.generate(
+                hypothesis_id=f"v50:{index}", family=family, mechanism=source,
+                horizon="medium", fields=fields, dataset=_dataset_for(fields, catalog),
+            ))
+    finally:
+        llm.close()
+    return [*generated, *candidates]
+
+
+def _dataset_for(fields: tuple[str, ...], catalog: Any) -> str:
+    mapping = getattr(catalog, "field_dataset", {}) or {}
+    datasets = {str(mapping.get(field) or "").strip() for field in fields}
+    return next(iter(datasets)) if len(datasets) == 1 else ""
 
 
 @dataclass(frozen=True)
@@ -53,6 +105,10 @@ class FactoryCandidateProposal:
     repair_origin: str = ""
     parent_candidate_id: str = ""
     knowledge_refs: tuple[str, ...] = ()
+    knowledge_usage_mode: str = KnowledgeUsageMode.NONE.value
+    context_refs: tuple[str, ...] = ()
+    knowledge_context_hash: str = ""
+    degraded: bool = False
 
 
 def adapt_v50_candidate(candidate: Any, catalog: Any) -> FactoryCandidateProposal:
@@ -99,9 +155,20 @@ def adapt_v50_candidate(candidate: Any, catalog: Any) -> FactoryCandidateProposa
         parameter_skeleton=identity.parameter_skeleton,
         field_skeleton=identity.field_skeleton,
         field_family=dataset,
+        generator_source=source,
+        knowledge_refs=tuple(getattr(candidate, "knowledge_refs", ()) or ()),
+        knowledge_usage_mode=_usage_mode(candidate),
+        context_refs=tuple(getattr(candidate, "context_refs", ()) or ()),
+        knowledge_context_hash=str(getattr(candidate, "knowledge_context_hash", "") or ""),
+        degraded=bool(getattr(candidate, "degraded", False)),
     )
 
 
 def _normalise_family(value: str) -> str:
     normalised = re.sub(r"[^a-z0-9]+", "_", value.lower()).strip("_")
     return normalised or "v50"
+
+
+def _usage_mode(candidate: Any) -> str:
+    value = getattr(candidate, "knowledge_usage_mode", KnowledgeUsageMode.NONE)
+    return str(getattr(value, "value", value) or KnowledgeUsageMode.NONE.value)

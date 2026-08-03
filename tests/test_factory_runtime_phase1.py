@@ -268,6 +268,139 @@ def test_catalog_deferral_has_a_dedicated_recovery_exit_code() -> None:
     assert cycle_exit_code(completed) == 0
 
 
+def test_runtime_main_loads_workspace_env_before_running_cycle(monkeypatch, tmp_path: Path) -> None:
+    import alpha_mining.factory.runtime as runtime
+
+    events: list[str] = []
+
+    def fake_load_workspace_env() -> None:
+        events.append("env")
+
+    def fake_run_generation_cycle(config) -> object:
+        events.append("cycle")
+        assert events == ["env", "cycle"]
+        return runtime.GenerationCycleSummary(0, 0, 0, 0, 0, 0, 0, 0, 0, "COMPLETE")
+
+    monkeypatch.setattr(runtime, "load_workspace_env", fake_load_workspace_env)
+    monkeypatch.setattr(runtime, "run_generation_cycle", fake_run_generation_cycle)
+
+    assert runtime.main(["--once", "--database", str(tmp_path / "runtime.sqlite")]) == 0
+    assert events == ["env", "cycle"]
+
+
+def test_runtime_cycle_keeps_catalog_failure_fail_closed(monkeypatch, tmp_path: Path) -> None:
+    import alpha_mining.factory.runtime as runtime
+    from alpha_mining.offline.metadata import MetadataCacheError
+
+    source_calls: list[str] = []
+
+    def unavailable_catalog(*_args, **_kwargs):
+        raise MetadataCacheError("catalog unavailable in test")
+
+    def candidate_source():
+        source_calls.append("candidate_source")
+        return [], None
+
+    monkeypatch.setattr(runtime, "_load_catalog", unavailable_catalog)
+    summary = runtime.run_generation_cycle(
+        runtime.GenerationCycleConfig(
+            database=tmp_path / "runtime.sqlite",
+            output=tmp_path / "待提交Alpha列表.csv",
+            cache_dir=tmp_path,
+            auth_state_file=tmp_path / "auth.json",
+            lock_path=tmp_path / "lock",
+        ),
+        candidate_source=candidate_source,
+    )
+
+    assert summary.state == "CATALOG_UNAVAILABLE"
+    assert source_calls == []
+
+
+def test_default_candidate_source_passes_runtime_database_to_knowledge_boundary(monkeypatch, tmp_path: Path) -> None:
+    import alpha_mining.factory.runtime as runtime
+
+    captured = {}
+    monkeypatch.setattr(runtime, "generate_candidates", lambda **kwargs: (captured.update(kwargs) or ([], None)))
+    config = runtime.GenerationCycleConfig(
+        database=tmp_path / "runtime.sqlite", output=tmp_path / "ready.csv", cache_dir=tmp_path,
+        auth_state_file=tmp_path / "auth.json", lock_path=tmp_path / "lock",
+    )
+
+    assert runtime._default_candidate_source(config) == ([], None)
+    assert captured == {"knowledge_database": config.database}
+
+
+def test_arm_budget_excludes_exploration_weight_when_higher_weight_exists(monkeypatch, tmp_path: Path) -> None:
+    import alpha_mining.factory.runtime as runtime
+    from alpha_mining.factory.v50_adapter import FactoryCandidateProposal
+
+    def proposal(candidate_id: str, family: str) -> FactoryCandidateProposal:
+        return FactoryCandidateProposal(candidate_id, "rank(close)", "", "", family, family, "m", "d", "m", candidate_id, "p", "f", "d")
+
+    class Tracker:
+        def stats(self, arm):
+            return type("Stats", (), {"sampling_weight": {"explore": 0.1, "limited": 0.25, "normal": 1.0}[arm.family]})()
+
+    admitted = runtime._apply_arm_budget(
+        [proposal("explore", "explore"), proposal("limited-a", "limited"), proposal("limited-b", "limited"), proposal("normal", "normal")],
+        Tracker(),
+    )
+
+    assert [item.candidate_id for item in admitted] == ["limited-a", "normal"]
+
+
+def test_arm_budget_uses_one_deterministic_exploration_slot_when_all_low() -> None:
+    import alpha_mining.factory.runtime as runtime
+    from alpha_mining.factory.v50_adapter import FactoryCandidateProposal
+
+    def proposal(candidate_id: str) -> FactoryCandidateProposal:
+        return FactoryCandidateProposal(candidate_id, "rank(close)", "", "", "low", "low", "m", "d", "m", candidate_id, "p", "f", "d")
+
+    class Tracker:
+        def stats(self, _arm):
+            return type("Stats", (), {"sampling_weight": 0.1})()
+
+    admitted = runtime._apply_arm_budget([proposal("z"), proposal("a")], Tracker())
+    assert [item.candidate_id for item in admitted] == ["a"]
+
+
+def test_catalog_unavailable_loop_waits_and_retries_until_round_limit(monkeypatch, tmp_path: Path) -> None:
+    import alpha_mining.factory.runtime as runtime
+
+    summaries = iter(
+        [
+            runtime.GenerationCycleSummary(0, 0, 0, 0, 0, 0, 0, 0, 0, "CATALOG_UNAVAILABLE", "429"),
+            runtime.GenerationCycleSummary(0, 0, 1, 0, 0, 0, 0, 0, 0, "COMPLETE"),
+        ]
+    )
+    sleeps: list[float] = []
+    monkeypatch.setattr(runtime, "run_generation_cycle", lambda _config: next(summaries))
+    monkeypatch.setattr(runtime.time, "sleep", sleeps.append)
+
+    code = runtime.run_generation_loop(
+        runtime.GenerationCycleConfig(
+            database=tmp_path / "runtime.sqlite",
+            output=tmp_path / "待提交Alpha列表.csv",
+            cache_dir=tmp_path,
+            auth_state_file=tmp_path / "auth.json",
+            lock_path=tmp_path / "lock",
+        ),
+        max_rounds=2,
+        interval_seconds=3,
+    )
+
+    assert code == 0
+    assert sleeps == [3.0]
+
+
+def test_catalog_error_includes_recovery_action() -> None:
+    from alpha_mining.factory.runtime import _catalog_recovery_hint
+
+    assert "catalog-sync" in _catalog_recovery_hint(RuntimeError("operator cache missing"))
+    assert "platform probe" in _catalog_recovery_hint(RuntimeError("CircuitOpen: HTTP 429"))
+
+
 def test_factory_write_access_defaults_off_and_requires_confirmation(tmp_path: Path) -> None:
     import pytest
     from alpha_mining.factory.control import FactoryControl

@@ -50,7 +50,9 @@ def run_offline_generation(
 
     requested = max(0, int(count))
     try:
-        metadata = MetadataCache.load(cache_dir, max_age_hours=cache_max_age_hours)
+        metadata = MetadataCache.load_for_offline_generation(
+            cache_dir, max_age_hours=cache_max_age_hours
+        )
     except MetadataCacheStale:
         if not allow_stale_cache:
             raise
@@ -59,7 +61,7 @@ def run_offline_generation(
             UserWarning,
             stacklevel=2,
         )
-        metadata = MetadataCache.load(
+        metadata = MetadataCache.load_for_offline_generation(
             cache_dir, max_age_hours=cache_max_age_hours, allow_stale=True
         )
 

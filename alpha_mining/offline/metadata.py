@@ -157,6 +157,123 @@ class MetadataCache:
         return cls(root, operators, fields, datasets, info)
 
     @classmethod
+    def load_for_offline_generation(
+        cls,
+        cache_dir: Path | str,
+        *,
+        max_age_hours: float = 168,
+        allow_stale: bool = False,
+    ) -> "MetadataCache":
+        """Load a full offline snapshot or the local runtime field snapshot.
+
+        The fallback supplies only the syntax subset used by the deterministic
+        offline generator. Live-only paths still require the complete
+        synchronized operator catalog.
+        """
+
+        try:
+            return cls.load(
+                cache_dir,
+                max_age_hours=max_age_hours,
+                allow_stale=allow_stale,
+            )
+        except MetadataCacheMissing as full_snapshot_error:
+            try:
+                return cls.from_partial_platform_disk_cache(
+                    cache_dir,
+                    max_age_hours=max_age_hours,
+                    allow_stale=allow_stale,
+                )
+            except MetadataCacheMissing as partial_snapshot_error:
+                raise MetadataCacheMissing(
+                    f"{full_snapshot_error}; {partial_snapshot_error}"
+                ) from partial_snapshot_error
+
+    @classmethod
+    def from_partial_platform_disk_cache(
+        cls,
+        cache_dir: Path | str,
+        *,
+        max_age_hours: float = 168,
+        allow_stale: bool = False,
+    ) -> "MetadataCache":
+        """Load local dataset/field snapshots for the network-free generator.
+
+        This is deliberately not accepted by :meth:`from_platform_disk_cache`:
+        the complete operator response remains mandatory for production paths.
+        """
+
+        root = Path(cache_dir)
+        names = {
+            "datasets": ".alpha_datasets_cache.json",
+            "fields": ".alpha_datafields_cache.json",
+        }
+        missing = [filename for filename in names.values() if not (root / filename).is_file()]
+        if missing:
+            raise MetadataCacheMissing("local offline catalog missing: " + ", ".join(missing))
+        payloads: dict[str, dict[str, Any]] = {}
+        for key, filename in names.items():
+            try:
+                payloads[key] = _mapping(json.loads((root / filename).read_text(encoding="utf-8")), filename)
+            except (OSError, json.JSONDecodeError) as exc:
+                raise MetadataCacheError(f"cannot read {filename}: {exc}") from exc
+
+        datasets_payload = payloads["datasets"]
+        datasets: dict[str, DatasetMetadata] = {}
+        for row in datasets_payload.get("records") or []:
+            if isinstance(row, dict) and str(row.get("id") or "").strip():
+                dataset_id = str(row["id"]).strip()
+                datasets[dataset_id] = DatasetMetadata(
+                    dataset_id,
+                    str(row.get("name") or dataset_id),
+                    _category_text(row.get("category")),
+                )
+        for value in datasets_payload.get("dataset_ids") or []:
+            dataset_id = str(value).strip()
+            if dataset_id:
+                datasets.setdefault(dataset_id, DatasetMetadata(dataset_id, dataset_id, "unknown"))
+        if not datasets:
+            raise MetadataCacheError("local offline dataset cache has no dataset IDs")
+
+        fields: dict[str, FieldMetadata] = {}
+        for row in payloads["fields"].get("rows") or []:
+            if not isinstance(row, dict):
+                continue
+            field_id = str(row.get("id") or "").strip()
+            nested_dataset = row.get("dataset") if isinstance(row.get("dataset"), dict) else {}
+            dataset_id = str(row.get("_ds") or row.get("dataset_id") or nested_dataset.get("id") or "").strip()
+            if not field_id or not dataset_id:
+                continue
+            datasets.setdefault(dataset_id, DatasetMetadata(dataset_id, dataset_id, "unknown"))
+            description = str(row.get("description") or "")
+            fields[field_id] = FieldMetadata(
+                field_id,
+                dataset_id,
+                str(row.get("type") or row.get("dataType") or "UNKNOWN").upper(),
+                _offline_field_category(field_id, dataset_id, row.get("category"), description),
+                description,
+            )
+        if not fields:
+            raise MetadataCacheError("local offline data-field cache has no usable rows")
+
+        cached_at = min(float(payload.get("cached_at") or 0.0) for payload in payloads.values())
+        if cached_at <= 0:
+            raise MetadataCacheError("local offline catalog has no cached_at timestamp")
+        fetched_at = datetime.fromtimestamp(cached_at, timezone.utc)
+        age_hours = (datetime.now(timezone.utc) - fetched_at).total_seconds() / 3600
+        if age_hours > float(max_age_hours) and not allow_stale:
+            raise MetadataCacheStale(f"local offline catalog is stale: {age_hours:.1f} hours")
+        context = payloads["fields"]
+        info = {
+            "fetched_at": fetched_at.isoformat().replace("+00:00", "Z"),
+            "region": context.get("region") or "USA",
+            "universe": context.get("universe") or "TOP3000",
+            "delay": context.get("delay") if context.get("delay") is not None else 1,
+            "source": "local_offline_field_snapshot",
+        }
+        return cls(root, _offline_generator_operators(), fields, datasets, info)
+
+    @classmethod
     def from_platform_disk_cache(
         cls,
         cache_dir: Path | str,
@@ -263,6 +380,62 @@ def _mapping(value: Any, label: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise MetadataCacheError(f"{label} 必须为 JSON 对象")
     return value
+
+
+def _category_text(value: Any) -> str:
+    if isinstance(value, dict):
+        value = value.get("id") or value.get("name") or "unknown"
+    return str(value or "unknown").strip().lower()
+
+
+def _offline_field_category(field_id: str, dataset_id: str, raw_category: Any, description: str) -> str:
+    """Map broad cached labels to the deterministic offline family labels."""
+
+    raw = _category_text(raw_category)
+    identity = f"{field_id} {dataset_id} {description}".lower()
+    if raw in {"pv", "price-volume", "price_volume"}:
+        if any(token in identity for token in ("volume", "adv", "turnover", "liquidity")):
+            return "liquidity"
+        if any(token in identity for token in ("return", "volatility", "beta", "risk")):
+            return "volatility"
+        return "price"
+    if raw in {"analyst", "estimate", "estimates"}:
+        return "expectation"
+    if raw in {"fundamental", "fundamentals"}:
+        if any(token in identity for token in ("margin", "return on", "return_on", "quality", "cashflow")):
+            return "quality"
+        if any(token in identity for token in ("valuation", "book", "yield", "enterprise value", "price to")):
+            return "valuation"
+        return "fundamental"
+    if raw in {"event", "news", "sentiment"}:
+        return "event"
+    return raw
+
+
+def _offline_generator_operators() -> dict[str, OperatorMetadata]:
+    """The deterministic generator's intentionally small local grammar."""
+
+    records = (
+        ("abs", "abs(x)", 1),
+        ("add", "add(x, y)", 2),
+        ("divide", "divide(x, y)", 2),
+        ("multiply", "multiply(x, y)", 2),
+        ("rank", "rank(x)", 1),
+        ("subtract", "subtract(x, y)", 2),
+        ("ts_decay_linear", "ts_decay_linear(x, d)", 2),
+        ("ts_delta", "ts_delta(x, d)", 2),
+        ("ts_max", "ts_max(x, d)", 2),
+        ("ts_mean", "ts_mean(x, d)", 2),
+        ("ts_min", "ts_min(x, d)", 2),
+        ("ts_rank", "ts_rank(x, d)", 2),
+        ("ts_std_dev", "ts_std_dev(x, d)", 2),
+        ("ts_sum", "ts_sum(x, d)", 2),
+        ("ts_zscore", "ts_zscore(x, d)", 2),
+    )
+    return {
+        name: OperatorMetadata(name, signature, arity, "offline generator grammar")
+        for name, signature, arity in records
+    }
 
 
 def _required_text(row: dict[str, Any], key: str, label: str) -> str:

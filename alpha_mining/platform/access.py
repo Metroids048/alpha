@@ -261,6 +261,15 @@ class PlatformAccessController:
                 backoff = max(0.0, base + self.jitter(0.0, max(1.0, base * 0.5)))
                 retry_seconds = backoff
             until = now + timedelta(seconds=retry_seconds)
+        elif state.state == "HALF_OPEN" and code in {401, 403}:
+            # A failed recovery probe must release HALF_OPEN. Otherwise one
+            # stale session can permanently block every future probe, even
+            # after the operator imports a fresh browser session.
+            index = min(state.recovery_attempts, max(0, len(self.fallback_backoff_seconds) - 1))
+            base = self.fallback_backoff_seconds[index] if self.fallback_backoff_seconds else 60.0
+            backoff = max(0.0, base + self.jitter(0.0, max(1.0, base * 0.5)))
+            retry_seconds = max(retry_seconds, backoff)
+            until = now + timedelta(seconds=retry_seconds)
         with sqlite3.connect(self.database) as con:
             con.execute("BEGIN IMMEDIATE")
             con.execute(
@@ -287,9 +296,15 @@ class PlatformAccessController:
             elif code == 401:
                 fields.extend(["last_401=?", "reason=?"])
                 values.extend([_iso(now), "http_401"])
+                if state.state == "HALF_OPEN":
+                    fields.extend(["state=?", "opened_at=?", "retry_after_until=?"])
+                    values.extend(["RATE_LIMITED", _iso(now), _iso(until)])
             elif code == 403:
                 fields.extend(["last_403=?", "reason=?"])
                 values.extend([_iso(now), "http_403"])
+                if state.state == "HALF_OPEN":
+                    fields.extend(["state=?", "opened_at=?", "retry_after_until=?"])
+                    values.extend(["RATE_LIMITED", _iso(now), _iso(until)])
             elif 200 <= code < 300 and state.state == "HALF_OPEN":
                 fields.extend(["state='CLOSED'", "retry_after_until=NULL", "recovery_attempts=0", "reason='recovery_probe_passed'"])
             if 200 <= code < 300 and permit.endpoint_class == "authentication":

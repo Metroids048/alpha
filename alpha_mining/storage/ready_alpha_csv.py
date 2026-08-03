@@ -15,6 +15,7 @@ class ReadyAlphaCsvStore:
         "strategy_family", "source", "dataset", "generator_source", "settings_json",
         "sharpe", "fitness", "turnover", "self_correlation", "prod_correlation",
         "checks_json", "quality_status", "quality_reasons_json", "request_hash", "simulated_at",
+        "knowledge_usage_mode", "knowledge_refs_json", "context_refs_json", "knowledge_context_hash", "degraded",
     )
     def __init__(self, path: str | Path = "待提交Alpha列表.csv") -> None:
         self.path = Path(path)
@@ -68,7 +69,7 @@ class ReadyAlphaCsvStore:
         normalized = {field: "" for field in self.FIELDS}
         for key, value in values.items():
             if key in normalized:
-                if key in {"settings_json", "checks_json", "quality_reasons_json"} and not isinstance(value, str):
+                if key in {"settings_json", "checks_json", "quality_reasons_json", "knowledge_refs_json", "context_refs_json"} and not isinstance(value, str):
                     normalized[key] = json.dumps(value, sort_keys=True)
                 else:
                     normalized[key] = str(value)

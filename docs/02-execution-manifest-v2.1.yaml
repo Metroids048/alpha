@@ -1,0 +1,105 @@
+version: "2.1"
+baseline:
+  branch: main
+  commit: "2263f69c25d6194378ccafcbcc53c434fe7b36ed"
+  entrypoint: "生成Alpha.py -> alpha_mining.factory.runtime.main"
+  preflight:
+    - "git branch --show-current"
+    - "git rev-parse HEAD"
+    - "git status --short"
+    - "生成Alpha.py --help"
+  stop_on_entry_mismatch: true
+execution_order:
+  - S-003
+  - S-001
+  - S-002
+  - S-004
+  - S-005
+issues:
+  - id: P-001
+    root_cause: RC-001
+    solution: S-001
+    target: "WorldQuant retrieval uses relevant body evidence only"
+  - id: P-002
+    root_cause: RC-002
+    solution: S-002
+    target: "knowledge provenance distinguishes live use from deterministic fallback"
+  - id: P-003
+    root_cause: RC-003
+    solution: S-003
+    target: "all platform checks are fail-closed for READY"
+  - id: P-004
+    root_cause: RC-004
+    solution: S-004
+    target: "arm weights constrain active runtime call budget"
+  - id: P-005
+    root_cause: RC-005
+    solution: S-005
+    target: "NEAR_PASS sequential Tune is bounded and fully persisted"
+solutions:
+  S-003:
+    files:
+      - alpha_mining/quality/decision.py
+      - tests/test_quality_decision.py
+    acceptance:
+      - "duplicate PASS/FAIL resolves to failure"
+      - "ProdCorr exception never waives another failure"
+  S-001:
+    files:
+      - alpha_mining/knowledge/worldquant_repository.py
+      - tests/test_worldquant_knowledge_integration.py
+    acceptance:
+      - "index/auth/engineering document types are excluded from idea retrieval"
+      - "positive relevance and context bounds are enforced"
+  S-002:
+    files:
+      - alpha_mining/generator/consultant_generator.py
+      - alpha_mining/generator/llm_consultant_bridge.py
+      - alpha_mining/factory/v50_adapter.py
+      - alpha_mining/factory/orchestrator.py
+      - alpha_mining/generation/feedback.py
+      - alpha_mining/storage/migrations.py
+      - alpha_mining/storage/ready_alpha_csv.py
+    acceptance:
+      - "deterministic fallback has no generating refs"
+      - "outcome and READY evidence retain context provenance"
+  S-004:
+    files:
+      - alpha_mining/factory/runtime.py
+      - tests/test_factory_runtime_phase1.py
+    acceptance:
+      - "low arm exclusion is applied before execute_candidate"
+      - "all-low state receives one deterministic exploration slot"
+  S-005:
+    files:
+      - alpha_mining/factory/runtime.py
+      - alpha_mining/factory/simulation_requests.py
+      - alpha_mining/simulate/settings_optimizer.py
+      - alpha_mining/storage/migrations.py
+      - tests/test_sequential_tune.py
+    budgets:
+      initial_candidates: 3
+      repair_parents: 2
+      children_per_parent: 4
+      cycle_simulations: 12
+      rolling_24h_simulations: 24
+      ready_per_cycle: 1
+      concurrency: 1
+    acceptance:
+      - "NEAR_PASS only"
+      - "STABILITY -> DECAY_COARSE -> DECAY_FINE"
+      - "reservation and terminal lineage persisted"
+forbidden:
+  - "QualityAlphaWorkflow restoration"
+  - "second authentication, simulation, READY, or submit path"
+  - "PyQt, BrainClient, SubmitWorker, exec(), alpha系统 runtime dependency"
+  - "auth/catalog bypass or fabricated READY result"
+verification:
+  targeted:
+    - "pytest -q tests/test_factory_runtime_phase1.py tests/test_quality_decision.py tests/test_quality_generation_workflow.py tests/test_v50_factory_generation_bridge.py tests/test_prod_corr_pipeline.py tests/test_simulation_request_state_machine.py tests/test_llm_consultant_contract.py tests/test_worldquant_knowledge_integration.py tests/test_sequential_tune.py"
+  full: "pytest -q"
+  compile: "python -m compileall -q alpha_mining 生成Alpha.py 提交Alpha.py"
+  diff: "git diff --check"
+runtime_failure_semantics:
+  catalog_unavailable: "fail closed; report real auth/cache state"
+  llm_unavailable: "no external fallback claim; candidate usage mode NONE or DETERMINISTIC_NO_KNOWLEDGE"

@@ -1,0 +1,40 @@
+{
+  "version": "2.1",
+  "baseline": "main@2263f69c25d6194378ccafcbcc53c434fe7b36ed",
+  "artifacts": {
+    "markdown": {
+      "path": "docs/02-frozen-solution-v2.1.md",
+      "line_count": 91,
+      "required_sections_present": [
+        "状态",
+        "根因和方案",
+        "实施顺序",
+        "S-003：质量判定",
+        "S-001：知识检索",
+        "S-002：知识真实性",
+        "S-004：研究臂预算",
+        "S-005：Sequential Tune",
+        "数据迁移",
+        "禁止项",
+        "验证证据",
+        "运行边界"
+      ]
+    },
+    "manifest": {
+      "path": "docs/02-execution-manifest-v2.1.yaml",
+      "line_count": 105,
+      "yaml_parsed": true,
+      "issue_ids": ["P-001", "P-002", "P-003", "P-004", "P-005"],
+      "solution_order": ["S-003", "S-001", "S-002", "S-004", "S-005"],
+      "forbidden_runtime_dependencies": true
+    }
+  },
+  "verification": {
+    "targeted_pytest": "69 passed",
+    "full_pytest": "passed in 47.8s",
+    "entry_help": "exit 0",
+    "compileall": "exit 0",
+    "diff_check": "exit 0"
+  },
+  "result": "PASS"
+}

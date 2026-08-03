@@ -125,7 +125,7 @@ class ReadOnlyPlatformClient:
         password = os.environ.get("WQ_PASSWORD", "")
         if not username:
             raise PlatformReadError(
-                "WQ_USERNAME is required to match the protected auth-state fingerprint"
+                "WQ_USERNAME is not configured; it must match the protected auth-state account"
             )
 
         # The platform authenticates via cookies (the `t` JWT cookie set by POST

@@ -43,6 +43,7 @@ def test_bridge_uses_generate_json_and_accepts_at_most_three_referenced_candidat
     assert len(candidates) == 3
     assert len(llm.calls) == 1
     assert candidates[0].knowledge_refs == ("worldquant:guide.md#1",)
+    assert candidates[0].knowledge_usage_mode.value == "LIVE_LLM_KNOWLEDGE"
     assert candidates[0].economic_rationale == "price momentum"
 
 
@@ -59,4 +60,6 @@ def test_bridge_fallback_is_deterministic_single_candidate_and_marked_degraded(t
 
     assert len(candidates) <= 1
     assert candidates and candidates[0].degraded is True
-    assert candidates[0].knowledge_refs
+    assert candidates[0].knowledge_refs == ()
+    assert candidates[0].context_refs == ("worldquant:guide.md#1",)
+    assert candidates[0].knowledge_usage_mode.value == "DETERMINISTIC_NO_KNOWLEDGE"

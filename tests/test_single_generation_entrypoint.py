@@ -30,6 +30,17 @@ def test_generation_entrypoint_is_the_only_new_public_flow() -> None:
     assert "run_pipeline_" not in text
 
 
+def test_generation_entry_defaults_to_production_runtime() -> None:
+    from alpha_mining.factory.runtime import main as production_main
+
+    spec = importlib.util.spec_from_file_location("generation_entry", Path("生成Alpha.py"))
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    assert module.main is production_main
+
+
 def test_production_candidate_service_rejects_unreferenced_candidates(tmp_path) -> None:
     import sqlite3
 

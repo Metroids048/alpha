@@ -56,7 +56,9 @@ def generate_candidate_pool(metadata: MetadataCache) -> list[GeneratedExpression
             continue
         primary = selected[0]
         secondary = selected[1] if len(selected) > 1 else fallback[(family_index + 1) % len(fallback)]
-        for variant in range(12):
+        # Vary both the base shape and bounded nesting depth so a long-running
+        # local queue can continue exploring structurally distinct candidates.
+        for variant in range(65):
             first = unary_time[(family_index + variant) % len(unary_time)]
             second = unary_time[(family_index * 2 + variant + 1) % len(unary_time)]
             third = unary_time[(family_index + variant * 3 + 2) % len(unary_time)]
@@ -78,6 +80,9 @@ def generate_candidate_pool(metadata: MetadataCache) -> list[GeneratedExpression
             else:
                 body = f"divide({third}({left},{w1}),add(abs({right}),1))" if "abs" in available else f"divide({third}({left},{w1}),add({right},1))"
             body = _family_transform(body, family_index, w1, available, unary_time)
+            for depth in range(variant // 13):
+                wrapper = unary_time[(family_index + variant + depth) % len(unary_time)]
+                body = f"{wrapper}({body},{w2})"
             expression = f"rank({body})"
             pool.append(
                 GeneratedExpression(

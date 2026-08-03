@@ -128,6 +128,32 @@ def test_failed_recovery_probes_remain_rate_limited_and_auto_recoverable(tmp_pat
     controller.before_request("identity", "GET", recovery_probe=True)
 
 
+def test_failed_401_recovery_probe_releases_half_open(tmp_path: Path) -> None:
+    from alpha_mining.platform.access import PlatformAccessController
+
+    clock = MutableClock()
+    controller = PlatformAccessController(
+        tmp_path / "state.sqlite",
+        tmp_path / "worldquant_api.lock",
+        clock=clock,
+        jitter=lambda _a, _b: 0,
+        fallback_backoff_seconds=(1, 2),
+    )
+    initial = controller.before_request("identity", "GET")
+    controller.record_response(initial, status_code=429, retry_after="1")
+    clock.value += timedelta(seconds=2)
+    probe = controller.before_request("identity", "GET", recovery_probe=True)
+    controller.record_response(probe, status_code=401)
+
+    state = controller.status()
+    assert state.state == "RATE_LIMITED"
+    assert state.reason == "http_401"
+    assert state.retry_after_until
+
+    clock.value += timedelta(seconds=2)
+    controller.before_request("identity", "GET", recovery_probe=True)
+
+
 def test_platform_request_events_never_store_credentials_or_headers(tmp_path: Path) -> None:
     from alpha_mining.platform.access import PlatformAccessController
 

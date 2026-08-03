@@ -106,7 +106,9 @@ class FactoryOrchestrator:
             self.database, lease_timeout_seconds=lease_timeout_seconds
         )
 
-    def execute_candidate(self, proposal: Any, settings: dict[str, Any]):
+    def execute_candidate(
+        self, proposal: Any, settings: dict[str, Any], *, allow_existing_identity: bool = False
+    ):
         """Execute one already-screened proposal through the sole request lifecycle.
 
         The caller owns quality classification; this boundary owns claiming,
@@ -123,8 +125,17 @@ class FactoryOrchestrator:
             "exact_hash": str(getattr(proposal, "exact_hash", "")),
             "parameter_skeleton": str(getattr(proposal, "parameter_skeleton", "")),
             "field_skeleton": str(getattr(proposal, "field_skeleton", "")),
+            "knowledge_usage_mode": str(getattr(proposal, "knowledge_usage_mode", "NONE")),
+            "knowledge_refs": list(getattr(proposal, "knowledge_refs", ()) or ()),
+            "context_refs": list(getattr(proposal, "context_refs", ()) or ()),
+            "knowledge_context_hash": str(getattr(proposal, "knowledge_context_hash", "")),
+            "degraded": bool(getattr(proposal, "degraded", False)),
+            "tune_parent_candidate_id": str(getattr(proposal, "parent_candidate_id", "")),
         }
-        claim = self.requests.claim(proposal.expression, settings, context=context)
+        claim = self.requests.claim(
+            proposal.expression, settings, context=context,
+            allow_existing_identity=allow_existing_identity,
+        )
         if not claim.claimed:
             return CandidateExecutionResult(claim.request_hash, error_category="CLAIM_REJECTED", error_message=claim.reason)
         leases = self.requests.acquire(1, request_hash=claim.request_hash)

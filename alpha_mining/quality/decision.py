@@ -55,13 +55,33 @@ def _canonical_check_name(value: Any) -> str:
 def normalize_platform_checks(checks: list[Mapping[str, Any]] | tuple[Mapping[str, Any], ...]) -> dict[str, str]:
     """Return canonical check names and fail-closed statuses."""
 
-    return {
-        _canonical_check_name(check.get("name")): str(
-            check.get("result") or check.get("status") or "MISSING"
-        ).upper()
-        for check in checks
-        if isinstance(check, Mapping) and str(check.get("name") or "").strip()
+    normalized: dict[str, str] = {}
+    for check in checks:
+        if not isinstance(check, Mapping) or not str(check.get("name") or "").strip():
+            continue
+        name = _canonical_check_name(check.get("name"))
+        status = str(check.get("result") or check.get("status") or "MISSING").upper()
+        normalized[name] = _worst_status(normalized.get(name), status)
+    return normalized
+
+
+def _worst_status(current: str | None, candidate: str) -> str:
+    """Merge duplicate platform observations without allowing a better result to hide a failure."""
+
+    if current is None:
+        return candidate
+    rank = {
+        "PASS": 0,
+        "MISSING": 1,
+        "UNKNOWN": 1,
+        "PENDING": 1,
+        "WAITING": 1,
+        "FAIL": 2,
+        "FAILED": 2,
+        "REJECTED": 2,
+        "ERROR": 2,
     }
+    return candidate if rank.get(candidate, 2) >= rank.get(current, 2) else current
 
 
 def blocking_check_reasons(
@@ -82,20 +102,24 @@ def blocking_check_reasons(
     required.add("SELF_CORRELATION")
     if not prod_exception:
         required.add("PROD_CORRELATION")
-    missing = sorted(name for name in required if name not in by_name)
+    ignored = {"PROD_CORRELATION"} if prod_exception else set()
+    missing = sorted(name for name in required if name not in by_name and name not in ignored)
     if missing:
         return QualityStatus.WAITING_CHECKS, tuple(f"{name}_MISSING" for name in missing)
 
     waiting = sorted(
         name for name, value in by_name.items()
-        if (name not in _METRIC_CHECKS or name in required)
+        if name not in ignored
+        and (name not in _METRIC_CHECKS or name in required)
         and value in {"MISSING", "UNKNOWN", "PENDING", "WAITING"}
     )
     if waiting:
         return QualityStatus.WAITING_CHECKS, tuple(f"{name}_{by_name[name]}" for name in waiting)
     failed = sorted(
         name for name, value in by_name.items()
-        if (name not in _METRIC_CHECKS or name in required) and value != "PASS"
+        if name not in ignored
+        and (name not in _METRIC_CHECKS or name in required)
+        and value != "PASS"
     )
     if failed:
         return QualityStatus.FAR_FAIL, tuple(f"{name}_{by_name[name]}" for name in failed)

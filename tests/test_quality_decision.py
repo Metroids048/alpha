@@ -61,6 +61,62 @@ def test_mandatory_metric_check_failure_blocks_ready() -> None:
     assert "LOW_SHARPE_FAIL" in decision.reasons
 
 
+def test_non_mandatory_platform_failure_blocks_ready() -> None:
+    from alpha_mining.quality.decision import QualityStatus, evaluate_quality
+
+    decision = evaluate_quality(
+        alpha_id="alpha-1",
+        status="COMPLETE",
+        metrics={"sharpe": 1.8, "fitness": 1.1, "turnover": 0.2},
+        checks=[
+            {"name": "LOW_SUB_UNIVERSE_SHARPE", "result": "FAIL"},
+            {"name": "SELF_CORRELATION", "result": "PASS"},
+            {"name": "PROD_CORRELATION", "result": "PASS"},
+        ],
+    )
+
+    assert decision.status is QualityStatus.FAR_FAIL
+    assert "LOW_SUB_UNIVERSE_SHARPE_FAIL" in decision.reasons
+
+
+def test_duplicate_platform_checks_use_worst_status() -> None:
+    from alpha_mining.quality.decision import QualityStatus, evaluate_quality
+
+    decision = evaluate_quality(
+        alpha_id="alpha-1",
+        status="COMPLETE",
+        metrics={"sharpe": 1.8, "fitness": 1.1, "turnover": 0.2},
+        checks=[
+            {"name": "SELF_CORRELATION", "result": "PASS"},
+            {"name": "SELF_CORRELATION", "result": "FAIL"},
+            {"name": "PROD_CORRELATION", "result": "PASS"},
+        ],
+    )
+
+    assert decision.status is QualityStatus.FAR_FAIL
+    assert "SELF_CORRELATION_FAIL" in decision.reasons
+
+
+def test_confirmed_prod_corr_exception_does_not_waive_other_failures() -> None:
+    from alpha_mining.quality.decision import QualityStatus, evaluate_quality
+
+    decision = evaluate_quality(
+        alpha_id="alpha-1",
+        status="COMPLETE",
+        metrics={"sharpe": 1.8, "fitness": 1.1, "turnover": 0.2},
+        checks=[
+            {"name": "PROD_CORRELATION", "result": "FAIL"},
+            {"name": "LOW_SUB_UNIVERSE_SHARPE", "result": "FAIL"},
+            {"name": "SELF_CORRELATION", "result": "PASS"},
+        ],
+        prod_corr_exception_confirmed=True,
+    )
+
+    assert decision.status is QualityStatus.FAR_FAIL
+    assert "PROD_CORRELATION_FAIL" not in decision.reasons
+    assert "LOW_SUB_UNIVERSE_SHARPE_FAIL" in decision.reasons
+
+
 def test_production_correlation_alias_satisfies_required_gate() -> None:
     from alpha_mining.quality.decision import QualityStatus, evaluate_quality
 
@@ -112,6 +168,9 @@ def test_migration_18_persists_quality_and_lineage_first_write_wins(tmp_path) ->
         self_correlation="PASS",
         prod_correlation="PASS",
         knowledge_refs=["worldquant:operators#rank"],
+        knowledge_usage_mode="LIVE_LLM_KNOWLEDGE",
+        context_refs=["worldquant:operators#rank", "worldquant:operators#decay"],
+        knowledge_context_hash="ctx-1",
         parent_candidate_id="parent-1",
         repair_action="decay_only",
         operator_topology="rank(ts_rank)",
@@ -125,7 +184,8 @@ def test_migration_18_persists_quality_and_lineage_first_write_wins(tmp_path) ->
         row = con.execute(
             """SELECT outcome,quality_status,quality_reasons_json,self_correlation,
                       prod_correlation,knowledge_refs_json,parent_candidate_id,repair_action,
-                      operator_topology,region,universe_name,delay
+                      operator_topology,region,universe_name,delay,knowledge_usage_mode,
+                      context_refs_json,knowledge_context_hash,degraded
                FROM candidate_outcomes WHERE request_hash='request-1'"""
         ).fetchone()
 
@@ -134,5 +194,6 @@ def test_migration_18_persists_quality_and_lineage_first_write_wins(tmp_path) ->
     assert "all hard gates passed" in row[2]
     assert row[3:] == (
         "PASS", "PASS", '["worldquant:operators#rank"]', "parent-1", "decay_only",
-        "rank(ts_rank)", "USA", "TOP3000", "1",
+        "rank(ts_rank)", "USA", "TOP3000", "1", "LIVE_LLM_KNOWLEDGE",
+        '["worldquant:operators#rank", "worldquant:operators#decay"]', "ctx-1", 0,
     )

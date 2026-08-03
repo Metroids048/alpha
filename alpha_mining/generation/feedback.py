@@ -99,6 +99,10 @@ class CandidateFeedbackStore:
         region: str = "",
         universe_name: str = "",
         delay: str | int = "",
+        knowledge_usage_mode: str = "NONE",
+        context_refs: list[str] | tuple[str, ...] | None = None,
+        knowledge_context_hash: str = "",
+        degraded: bool = False,
     ) -> None:
         if outcome not in _VALID_OUTCOMES:
             raise ValueError(f"Invalid outcome {outcome!r}; must be one of {sorted(_VALID_OUTCOMES)}")
@@ -111,8 +115,9 @@ class CandidateFeedbackStore:
                     parameter_skeleton, field_skeleton, outcome, sharpe, fitness, turnover,
                     checks_json, error_category, error_message, observed_at, quality_status,
                     quality_reasons_json, self_correlation, prod_correlation, knowledge_refs_json,
-                    parent_candidate_id, repair_action, operator_topology, region, universe_name, delay)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    parent_candidate_id, repair_action, operator_topology, region, universe_name, delay,
+                    knowledge_usage_mode, context_refs_json, knowledge_context_hash, degraded)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
                     request_hash, candidate_id, topic_id, hypothesis_id, research_family,
                     strategy_family, mechanism, dataset, parent_template, exact_hash,
@@ -121,6 +126,8 @@ class CandidateFeedbackStore:
                     json.dumps(list(quality_reasons or [])), self_correlation, prod_correlation,
                     json.dumps(list(knowledge_refs or [])), parent_candidate_id, repair_action,
                     operator_topology, region, universe_name, str(delay),
+                    str(knowledge_usage_mode), json.dumps(list(context_refs or [])),
+                    str(knowledge_context_hash), int(bool(degraded)),
                 ),
             )
 

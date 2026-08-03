@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 import hashlib
 import json
 import sqlite3
@@ -17,6 +18,25 @@ class SettingTrial:
     settings: dict[str, Any]
     parameter_delta: dict[str, Any]
     purpose: str = "ROBUSTNESS_ONLY"
+    stage: str = "OFAT"
+
+
+class TuneStage(str, Enum):
+    STABILITY = "STABILITY"
+    DECAY_COARSE = "DECAY_COARSE"
+    DECAY_FINE = "DECAY_FINE"
+
+
+@dataclass(frozen=True)
+class TunePlan:
+    candidate_id: str
+    base_settings: dict[str, Any]
+    max_trials: int
+    stages: tuple[TuneStage, ...] = (
+        TuneStage.STABILITY,
+        TuneStage.DECAY_COARSE,
+        TuneStage.DECAY_FINE,
+    )
 
 
 class SettingsOptimizer:
@@ -121,13 +141,94 @@ class SettingsOptimizer:
                 if key in {"decay", "truncation"}
                 else "ROBUSTNESS_ONLY"
             )
-            out.append(SettingTrial(f"ofat_{key}", settings, {key: value}, purpose))
+            out.append(SettingTrial(f"ofat_{key}", settings, {key: value}, purpose, "OFAT"))
         reserved = len(out)
         self._candidate_reserved[candidate_key] = (
             self._candidate_reserved.get(candidate_key, 0) + reserved
         )
         self.consumed = min(self.total_budget, self.consumed + reserved)
         return out
+
+    def tune_plan(self, base: dict[str, Any], *, candidate_id: str) -> TunePlan:
+        """Create a bounded, sequential OFAT plan rather than a product grid."""
+        return TunePlan(str(candidate_id), dict(base), min(4, self.per_candidate_budget))
+
+    @staticmethod
+    def stage_trials(stage: TuneStage, baseline: dict[str, Any]) -> list[SettingTrial]:
+        settings = dict(baseline)
+        if stage is TuneStage.STABILITY:
+            value = "INDUSTRY" if settings.get("neutralization") != "INDUSTRY" else "SUBINDUSTRY"
+            settings["neutralization"] = value
+            return [SettingTrial("ofat_neutralization", settings, {"neutralization": value}, "ROBUSTNESS_ONLY", stage.value)]
+        if stage is TuneStage.DECAY_COARSE:
+            current = int(settings.get("decay", 0) or 0)
+            values = [value for value in (2, 8) if value != current]
+            return [
+                SettingTrial(f"decay_coarse_{value}", {**settings, "decay": value}, {"decay": value}, "STABILITY_TURNOVER_ONLY", stage.value)
+                for value in values
+            ]
+        current = int(settings.get("decay", 0) or 0)
+        value = max(0, current - 1) if current > 1 else current + 1
+        return [SettingTrial(f"decay_fine_{value}", {**settings, "decay": value}, {"decay": value}, "STABILITY_TURNOVER_ONLY", stage.value)]
+
+    @staticmethod
+    def reserve_trial(
+        database: str | Path,
+        *,
+        candidate_id: str,
+        parent_candidate_id: str,
+        trial: SettingTrial,
+        rolling_limit: int,
+    ) -> str | None:
+        """Reserve a persisted Tune child before simulation; one process wins."""
+        from alpha_mining.storage.migrations import migrate
+
+        migrate(database)
+        now = datetime.now(timezone.utc)
+        created_at = now.isoformat().replace("+00:00", "Z")
+        cutoff = (now.timestamp() - 24 * 60 * 60)
+        cutoff_iso = datetime.fromtimestamp(cutoff, timezone.utc).isoformat().replace("+00:00", "Z")
+        trial_id = hashlib.sha256(
+            f"{candidate_id}\0{parent_candidate_id}\0{trial.stage}\0{json.dumps(trial.settings, sort_keys=True)}\0{created_at}".encode()
+        ).hexdigest()
+        with sqlite3.connect(database) as con:
+            con.execute("BEGIN IMMEDIATE")
+            used = int(con.execute(
+                "SELECT COUNT(*) FROM settings_trials WHERE created_at>=? AND terminal_status<>'CANCELLED'",
+                (cutoff_iso,),
+            ).fetchone()[0])
+            if used >= max(0, int(rolling_limit)):
+                con.rollback()
+                return None
+            con.execute(
+                """INSERT INTO settings_trials
+                (trial_id,expression_id,setting_profile,parameter_delta_json,metrics_json,checks_json,
+                 quality_score,robustness_score,simulation_cost,created_at,candidate_id,parent_candidate_id,
+                 tune_stage,settings_json,terminal_status)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (trial_id, candidate_id, trial.profile, json.dumps(trial.parameter_delta, sort_keys=True),
+                 "{}", "[]", None, None, 1.0, created_at, candidate_id, parent_candidate_id,
+                 trial.stage, json.dumps(trial.settings, sort_keys=True), "RESERVED"),
+            )
+        return trial_id
+
+    @staticmethod
+    def complete_reserved_trial(
+        database: str | Path,
+        *,
+        trial_id: str,
+        request_hash: str,
+        outcome: str,
+        metrics: dict[str, Any] | None = None,
+        checks: list[dict[str, Any]] | None = None,
+    ) -> None:
+        with sqlite3.connect(database) as con:
+            con.execute(
+                """UPDATE settings_trials SET request_hash=?,terminal_status=?,outcome=?,
+                   metrics_json=?,checks_json=? WHERE trial_id=? AND terminal_status='RESERVED'""",
+                (request_hash, "COMPLETE", outcome, json.dumps(metrics or {}, sort_keys=True),
+                 json.dumps(checks or [], sort_keys=True), trial_id),
+            )
 
     def consume(self, count: int = 1) -> None:
         self.consumed = min(self.total_budget, self.consumed + max(0, int(count)))

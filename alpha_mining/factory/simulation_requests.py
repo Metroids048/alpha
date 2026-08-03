@@ -63,6 +63,7 @@ class SimulationRequestStore:
         settings: dict[str, Any],
         *,
         context: dict[str, Any] | None = None,
+        allow_existing_identity: bool = False,
     ) -> ClaimResult:
         identity = expression_identity(expression)
         if not identity.parameter_skeleton or not identity.field_skeleton:
@@ -82,24 +83,35 @@ class SimulationRequestStore:
                        LIMIT 1""",
                     (identity.exact_hash, identity.exact_hash),
                 ).fetchone()
-                if historical:
+                if historical and not allow_existing_identity:
                     con.rollback()
                     return ClaimResult(False, "exact_hash_exists", request_hash)
-                con.execute(
-                    """INSERT INTO factory_candidate_claims
-                    (expression_text,exact_hash,parameter_skeleton,field_skeleton,request_hash,
-                     status,created_at,updated_at)
-                    VALUES (?,?,?,?,?,'CLAIMED',?,?)""",
-                    (
-                        expression,
-                        identity.exact_hash,
-                        identity.parameter_skeleton,
-                        identity.field_skeleton,
-                        request_hash,
-                        now,
-                        now,
-                    ),
-                )
+                if not historical:
+                    con.execute(
+                        """INSERT INTO factory_candidate_claims
+                        (expression_text,exact_hash,parameter_skeleton,field_skeleton,request_hash,
+                         status,created_at,updated_at)
+                        VALUES (?,?,?,?,?,'CLAIMED',?,?)""",
+                        (
+                            expression,
+                            identity.exact_hash,
+                            identity.parameter_skeleton,
+                            identity.field_skeleton,
+                            request_hash,
+                            now,
+                            now,
+                        ),
+                    )
+                elif not bool((context or {}).get("tune_parent_candidate_id")):
+                    con.rollback()
+                    return ClaimResult(False, "tune_lineage_required", request_hash)
+                elif not con.execute(
+                    """SELECT 1 FROM candidate_outcomes
+                       WHERE candidate_id=? AND exact_hash=? LIMIT 1""",
+                    (str((context or {}).get("tune_parent_candidate_id") or ""), identity.exact_hash),
+                ).fetchone():
+                    con.rollback()
+                    return ClaimResult(False, "tune_parent_unverified", request_hash)
                 context_json = json.dumps(context or {}, sort_keys=True)
                 con.execute(
                     """INSERT INTO simulation_requests

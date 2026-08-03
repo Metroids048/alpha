@@ -8,7 +8,7 @@ import re
 import sqlite3
 import time
 import traceback
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Sequence
 
@@ -20,13 +20,14 @@ from alpha_mining.factory.v50_adapter import (
     adapt_v50_candidate,
     generate_candidates,
 )
+from alpha_mining.common import load_workspace_env
 from alpha_mining.generation.feedback import CandidateFeedbackStore
 from alpha_mining.generation.screening import CandidateScreeningPolicy, RejectionReason
 from alpha_mining.offline.metadata import MetadataCache, MetadataCacheError, MetadataCacheMissing, MetadataCacheStale
 from alpha_mining.platform.catalog import PlatformCatalogSynchronizer, ReadOnlyExpressionCatalog
 from alpha_mining.quality.decision import QualityStatus, evaluate_quality
 from alpha_mining.scheduler.arm_metrics import ArmDimensions, ResearchArmTracker
-from alpha_mining.simulate.settings_optimizer import SettingsOptimizer
+from alpha_mining.simulate.settings_optimizer import SettingsOptimizer, TuneStage
 from alpha_mining.storage.ready_alpha_csv import ReadyAlphaCsvStore
 
 
@@ -61,6 +62,8 @@ class GenerationCycleSummary:
 
 
 CandidateSource = Callable[[], tuple[list[Any], Any]]
+
+_MAX_CATALOG_BACKOFF_SECONDS = 60 * 60
 
 
 def recovery_exit_code(exc: BaseException) -> int:
@@ -124,11 +127,22 @@ def _sanitized_traceback() -> str:
     return _sanitize_diagnostic(traceback.format_exc())
 
 
-def _default_candidate_source(config: GenerationCycleConfig) -> tuple[list[Any], Any]:
-    """Use only the preserved v50 candidate boundary."""
+def _catalog_recovery_hint(exc: BaseException) -> str:
+    """Turn a fail-closed catalog error into an operator action."""
 
-    del config
-    return generate_candidates()
+    detail = str(exc).lower()
+    if "wq_username" in detail or "authentication state" in detail or "auth-state" in detail:
+        return "请先在仓库 .env 配置与浏览器会话相同的 WQ_USERNAME，并导入新的会话 Cookie"
+    if "circuitopen" in detail or "429" in detail or "rate-limit" in detail:
+        return "平台访问仍在 429 熔断；认证恢复后先运行 python -m alpha_mining platform probe（只读）"
+    if ".alpha_operators_cache.json" in detail or "operator" in detail:
+        return "缺少完整 operators 目录；认证恢复后运行 python -m alpha_mining platform catalog-sync"
+    return "认证恢复后运行 python -m alpha_mining platform catalog-sync，成功后再继续生成"
+
+
+def _default_candidate_source(config: GenerationCycleConfig) -> tuple[list[Any], Any]:
+    """Use the knowledge-aware v50 adapter boundary."""
+    return generate_candidates(knowledge_database=config.database)
 
 
 def _load_catalog(
@@ -155,7 +169,8 @@ def _load_catalog(
         except Exception as sync_error:
             raise MetadataCacheError(
                 f"catalog sync attempted after {type(first_error).__name__}; "
-                f"{type(sync_error).__name__}: {_sanitize_diagnostic(str(sync_error))[:320]}"
+                f"{type(sync_error).__name__}: {_sanitize_diagnostic(str(sync_error))[:320]}; "
+                f"{_catalog_recovery_hint(sync_error)}"
             ) from sync_error
         return MetadataCache.from_platform_disk_cache(config.cache_dir, max_age_hours=24)
 
@@ -230,6 +245,13 @@ def _record_feedback(
         quality_reasons=quality_reasons,
         self_correlation=statuses.get("SELF_CORRELATION", ""),
         prod_correlation=statuses.get("PROD_CORRELATION", statuses.get("PRODUCTION_CORRELATION", "")),
+        knowledge_refs=proposal.knowledge_refs,
+        knowledge_usage_mode=proposal.knowledge_usage_mode,
+        context_refs=proposal.context_refs,
+        knowledge_context_hash=proposal.knowledge_context_hash,
+        degraded=proposal.degraded,
+        parent_candidate_id=proposal.parent_candidate_id,
+        repair_action=proposal.repair_origin,
         operator_topology=operator_topology(proposal.expression),
         region="USA",
         universe_name="TOP3000",
@@ -274,7 +296,46 @@ def _ready_row(proposal: FactoryCandidateProposal, request_hash: str, result: An
         "quality_reasons_json": list(reasons),
         "request_hash": request_hash,
         "simulated_at": str((getattr(result, "raw", {}) or {}).get("simulatedAt") or ""),
+        "knowledge_usage_mode": proposal.knowledge_usage_mode,
+        "knowledge_refs_json": list(proposal.knowledge_refs),
+        "context_refs_json": list(proposal.context_refs),
+        "knowledge_context_hash": proposal.knowledge_context_hash,
+        "degraded": proposal.degraded,
     }
+
+
+def _apply_arm_budget(
+    proposals: list[FactoryCandidateProposal], tracker: ResearchArmTracker
+) -> list[FactoryCandidateProposal]:
+    """Apply persisted arm weights before any platform request is claimed."""
+    weighted = [(proposal, tracker.stats(_arm_for(proposal)).sampling_weight) for proposal in proposals]
+    positive = [(proposal, weight) for proposal, weight in weighted if weight > 0]
+    if not positive:
+        return []
+    if not any(weight > 0.1 for _, weight in positive):
+        # All viable arms are in exploration-only mode.  One stable slot keeps
+        # the factory from starving new evidence while respecting the budget.
+        return [min((proposal for proposal, _ in positive), key=lambda item: (
+            item.strategy_family, item.candidate_id, item.exact_hash,
+        ))]
+    admitted: list[FactoryCandidateProposal] = []
+    limited_families: set[str] = set()
+    for proposal, weight in positive:
+        if weight <= 0.1:
+            continue
+        if weight < 1.0:
+            if proposal.strategy_family in limited_families:
+                continue
+            limited_families.add(proposal.strategy_family)
+        admitted.append(proposal)
+    return admitted
+
+
+def _tune_result_key(decision: Any, result: Any | None) -> tuple[int, float, float]:
+    status = str(getattr(getattr(decision, "status", None), "value", ""))
+    rank = {"READY_TO_SUBMIT": 3, "NEAR_PASS": 2, "WAITING_CHECKS": 1}.get(status, 0)
+    metrics = getattr(result, "metrics", {}) or {}
+    return (rank, float(metrics.get("sharpe") or float("-inf")), float(metrics.get("fitness") or float("-inf")))
 
 
 def run_generation_cycle(
@@ -316,24 +377,21 @@ def run_generation_cycle(
     counts = {"generated": 0, "screened_out": 0, "simulated": 0, "ready": 0, "near_pass": 0, "far_fail": 0, "failed": 0, "unknown": 0, "repaired": 0}
     seen_hashes: set[str] = set()
     seen_skeletons: set[str] = set()
-    per_family: dict[str, int] = {}
     repair_parents = 0
     partial = False
 
+    proposals: list[FactoryCandidateProposal] = []
     for candidate in sorted(candidates, key=lambda item: float(getattr(item, "score", 0.0) or 0.0), reverse=True):
+        try:
+            proposals.append(adapt_v50_candidate(candidate, v50_catalog))
+        except ValueError:
+            counts["screened_out"] += 1
+    for proposal in _apply_arm_budget(proposals, tracker):
         if counts["generated"] >= max(0, config.max_initial_candidates) or counts["simulated"] >= max(0, config.max_cycle_simulations) or counts["ready"] >= max(0, config.max_ready_per_cycle):
             break
         if _terminal_simulations_last_24h(config.database) >= max(0, config.max_24h_simulations):
             break
-        try:
-            proposal = adapt_v50_candidate(candidate, v50_catalog)
-        except ValueError:
-            counts["screened_out"] += 1
-            continue
         arm_stats = tracker.stats(_arm_for(proposal))
-        if arm_stats.sampling_weight <= 0 or (arm_stats.sampling_weight < 1.0 and per_family.get(proposal.strategy_family, 0) >= 1):
-            counts["screened_out"] += 1
-            continue
         screening = policy.screen_expression(
             proposal.expression,
             round_seen_hashes=seen_hashes,
@@ -345,7 +403,6 @@ def run_generation_cycle(
             continue
         seen_hashes.add(proposal.exact_hash)
         seen_skeletons.add(proposal.field_skeleton)
-        per_family[proposal.strategy_family] = per_family.get(proposal.strategy_family, 0) + 1
         counts["generated"] += 1
         settings = optimizer.stage1_default(proposal.strategy_family)
         execution = executor.execute_candidate(proposal, settings)
@@ -372,21 +429,51 @@ def run_generation_cycle(
             if arm_stats.sampling_weight <= 0.1 or repair_parents >= config.max_repair_parents:
                 continue
             repair_parents += 1
-            trials = optimizer.local_trials(settings, quality_score=0.8, metric_ratio=0.95, candidate_id=proposal.candidate_id, candidate_classification="NEAR_PASS")
-            for trial in trials[: config.max_repairs_per_parent]:
-                if counts["simulated"] >= config.max_cycle_simulations or _terminal_simulations_last_24h(config.database) >= config.max_24h_simulations:
+            plan = optimizer.tune_plan(settings, candidate_id=proposal.candidate_id)
+            stage_baseline = settings
+            stage_best = (decision, execution.result)
+            trial_count = 0
+            for stage in plan.stages:
+                if trial_count >= min(config.max_repairs_per_parent, plan.max_trials):
                     break
-                retry = executor.execute_candidate(proposal, trial.settings)
-                counts["repaired"] += 1
-                if retry.result is None:
-                    counts["failed"] += 1
-                    _record_feedback(feedback, tracker, proposal, retry.request_hash, outcome="FAILED", result=None, error_category=retry.error_category, error_message=retry.error_message)
-                    continue
-                counts["simulated"] += 1
-                retry_decision = evaluate_quality(alpha_id=retry.result.alpha_id, status=retry.result.status, metrics=retry.result.metrics, checks=retry.result.checks, prod_corr_exception_confirmed=bool((retry.result.raw or {}).get("prodCorrExceptionConfirmed")))
-                _record_feedback(feedback, tracker, proposal, retry.request_hash, outcome=retry_decision.status.value, result=retry.result, quality_reasons=retry_decision.reasons)
-                if retry_decision.status is QualityStatus.READY_TO_SUBMIT:
-                    counts["ready"] += int(ready_store.upsert(_ready_row(proposal, retry.request_hash, retry.result, retry_decision.reasons, trial.settings)))
+                trials = SettingsOptimizer.stage_trials(stage, stage_baseline)
+                for trial in trials:
+                    if trial_count >= min(config.max_repairs_per_parent, plan.max_trials):
+                        break
+                    if counts["simulated"] >= config.max_cycle_simulations or _terminal_simulations_last_24h(config.database) >= config.max_24h_simulations:
+                        break
+                    trial_id = SettingsOptimizer.reserve_trial(
+                        config.database, candidate_id=proposal.candidate_id,
+                        parent_candidate_id=proposal.candidate_id, trial=trial,
+                        rolling_limit=config.max_24h_simulations,
+                    )
+                    if trial_id is None:
+                        break
+                    child = replace(
+                        proposal,
+                        candidate_id=f"{proposal.candidate_id}:{trial.stage}:{trial.profile}",
+                        parent_candidate_id=proposal.candidate_id,
+                        repair_origin=trial.stage,
+                    )
+                    retry = executor.execute_candidate(child, trial.settings, allow_existing_identity=True)
+                    counts["repaired"] += 1
+                    trial_count += 1
+                    if retry.result is None:
+                        counts["failed"] += 1
+                        _record_feedback(feedback, tracker, child, retry.request_hash, outcome="FAILED", result=None, error_category=retry.error_category, error_message=retry.error_message)
+                        SettingsOptimizer.complete_reserved_trial(config.database, trial_id=trial_id, request_hash=retry.request_hash, outcome="FAILED")
+                        continue
+                    counts["simulated"] += 1
+                    retry_decision = evaluate_quality(alpha_id=retry.result.alpha_id, status=retry.result.status, metrics=retry.result.metrics, checks=retry.result.checks, prod_corr_exception_confirmed=bool((retry.result.raw or {}).get("prodCorrExceptionConfirmed")))
+                    _record_feedback(feedback, tracker, child, retry.request_hash, outcome=retry_decision.status.value, result=retry.result, quality_reasons=retry_decision.reasons)
+                    SettingsOptimizer.complete_reserved_trial(config.database, trial_id=trial_id, request_hash=retry.request_hash, outcome=retry_decision.status.value, metrics=retry.result.metrics, checks=retry.result.checks)
+                    if _tune_result_key(retry_decision, retry.result) > _tune_result_key(*stage_best):
+                        stage_best = (retry_decision, retry.result)
+                        stage_baseline = trial.settings
+                    if retry_decision.status is QualityStatus.READY_TO_SUBMIT:
+                        counts["ready"] += int(ready_store.upsert(_ready_row(child, retry.request_hash, retry.result, retry_decision.reasons, trial.settings)))
+                        break
+                if stage_best[0].status is QualityStatus.READY_TO_SUBMIT:
                     break
             continue
         counts["far_fail"] += 1
@@ -397,13 +484,36 @@ def run_generation_cycle(
 
 def run_generation_loop(config: GenerationCycleConfig, *, max_rounds: int, interval_seconds: float) -> int:
     rounds = 0
+    catalog_failures = 0
     try:
         while max_rounds <= 0 or rounds < max_rounds:
             summary = run_generation_cycle(config)
             print(json.dumps(summary.__dict__, sort_keys=True, ensure_ascii=False))
             rounds += 1
-            if summary.state in {"BLOCKED", "CATALOG_UNAVAILABLE"}:
-                return 2 if summary.state == "BLOCKED" else 8
+            if summary.state == "BLOCKED":
+                return 2
+            if summary.state == "CATALOG_UNAVAILABLE":
+                catalog_failures += 1
+                if max_rounds > 0 and rounds >= max_rounds:
+                    return 8
+                backoff = min(
+                    _MAX_CATALOG_BACKOFF_SECONDS,
+                    max(1.0, float(interval_seconds)) * (2 ** min(catalog_failures - 1, 6)),
+                )
+                print(
+                    json.dumps(
+                        {
+                            "runtime_event": "CATALOG_BACKOFF",
+                            "seconds": int(backoff),
+                            "message": "catalog unavailable; waiting before the next read-only recovery attempt",
+                        },
+                        sort_keys=True,
+                        ensure_ascii=False,
+                    )
+                )
+                time.sleep(backoff)
+                continue
+            catalog_failures = 0
             if max_rounds > 0 and rounds >= max_rounds:
                 return 0
             time.sleep(max(1.0, float(interval_seconds)))
@@ -413,6 +523,9 @@ def run_generation_loop(config: GenerationCycleConfig, *, max_rounds: int, inter
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    # Keep direct script execution consistent with the package CLI: credentials
+    # from the repository .env must be available before catalog/auth fallback.
+    load_workspace_env()
     parser = argparse.ArgumentParser(prog="python -m alpha_mining.factory.runtime")
     parser.add_argument("--database", default="数据/本地运行产物/数据库/research_memory.sqlite")
     parser.add_argument("--output", default="待提交Alpha列表.csv")

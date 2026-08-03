@@ -1,0 +1,26 @@
+2026-08-03 fresh verification
+
+Command:
+  & $env:AGENT_PYTHON -m pytest -q tests/test_factory_runtime_phase1.py tests/test_quality_decision.py tests/test_quality_generation_workflow.py tests/test_v50_factory_generation_bridge.py tests/test_prod_corr_pipeline.py tests/test_simulation_request_state_machine.py tests/test_llm_consultant_contract.py tests/test_worldquant_knowledge_integration.py tests/test_sequential_tune.py
+Result:
+  69 passed in 3.5s
+
+Command:
+  & $env:AGENT_PYTHON -m pytest -q
+Result:
+  passed in 47.8s
+
+Command:
+  & $env:AGENT_PYTHON 生成Alpha.py --help
+Result:
+  exit 0
+
+Command:
+  & $env:AGENT_PYTHON -m compileall -q alpha_mining 生成Alpha.py 提交Alpha.py
+Result:
+  exit 0
+
+Command:
+  git diff --check
+Result:
+  exit 0

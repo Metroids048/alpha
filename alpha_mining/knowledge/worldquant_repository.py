@@ -1,11 +1,27 @@
-"""Deterministic, read-only retrieval over the checked-in WorldQuant notes."""
+"""Deterministic, read-only retrieval over checked-in WorldQuant knowledge."""
 
 from __future__ import annotations
 
 import hashlib
 import re
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
+
+
+class KnowledgeIntent(str, Enum):
+    IDEA_GENERATION = "IDEA_GENERATION"
+    QUALITY_RULE = "QUALITY_RULE"
+    TUNING_RULE = "TUNING_RULE"
+
+
+class KnowledgeDocType(str, Enum):
+    IDEA_BODY = "IDEA_BODY"
+    RULE = "RULE"
+    INDEX = "INDEX"
+    AUTH = "AUTH"
+    ENGINEERING = "ENGINEERING"
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclass(frozen=True)
@@ -16,6 +32,7 @@ class KnowledgeSnippet:
     content_hash: str
     text: str
     tags: tuple[str, ...]
+    document_type: KnowledgeDocType = KnowledgeDocType.UNKNOWN
 
 
 @dataclass(frozen=True)
@@ -23,10 +40,12 @@ class KnowledgeContext:
     snippets: tuple[KnowledgeSnippet, ...]
     completeness_status: str
     missing_refs: tuple[str, ...] = ()
+    context_hash: str = ""
+    intent: KnowledgeIntent = KnowledgeIntent.IDEA_GENERATION
 
 
 class WorldQuantKnowledgeRepository:
-    """Only scans Markdown that exists below the configured knowledge root."""
+    """Only use local, relevant Markdown as attributable knowledge evidence."""
 
     def __init__(self, root: str | Path = "World quant") -> None:
         self.root = Path(root)
@@ -38,30 +57,60 @@ class WorldQuantKnowledgeRepository:
         fields: tuple[str, ...],
         mechanism: str,
         failure_category: str = "",
+        intent: KnowledgeIntent = KnowledgeIntent.IDEA_GENERATION,
     ) -> KnowledgeContext:
         snippets = self._snippets()
         if not snippets:
-            return KnowledgeContext((), "MISSING", ("WORLDQUANT_MARKDOWN",))
+            return self._context((), "MISSING", ("WORLDQUANT_MARKDOWN",), intent)
+        admissible = [item for item in snippets if _admissible(item.document_type, intent)]
+        if not admissible:
+            return self._context((), "INCOMPLETE", ("NO_ADMISSIBLE_WORLDQUANT_BODY",), intent)
         terms = _terms(dataset, mechanism, failure_category, *fields)
         ranked = sorted(
-            snippets,
-            key=lambda item: (-_score(item, terms), item.ref_id),
+            ((item, _score(item, terms)) for item in admissible),
+            key=lambda item: (-item[1], item[0].ref_id),
         )
+        # A ref is evidence only when it matches the actual request.  Never
+        # silently fill a context budget with unrelated directory material.
+        relevant = [item for item, score in ranked if score > 0]
+        if not relevant:
+            return self._context((), "NO_RELEVANT_MATCH", ("NO_RELEVANT_WORLDQUANT_BODY",), intent)
         selected: list[KnowledgeSnippet] = []
+        per_source: dict[str, int] = {}
         remaining = 6000
-        for item in ranked:
+        for item in relevant:
             if len(selected) >= 5 or remaining <= 0:
                 break
-            text = item.text[:remaining]
+            source_count = per_source.get(item.path, 0)
+            if source_count >= 2:
+                continue
+            text = item.text[: min(1200, remaining)]
             if not text:
                 continue
             selected.append(
                 item if text == item.text else KnowledgeSnippet(
-                    item.ref_id, item.path, item.heading, item.content_hash, text, item.tags
+                    item.ref_id, item.path, item.heading, item.content_hash,
+                    text, item.tags, item.document_type,
                 )
             )
+            per_source[item.path] = source_count + 1
             remaining -= len(text)
-        return KnowledgeContext(tuple(selected), "COMPLETE")
+        return self._context(tuple(selected), "COMPLETE", (), intent)
+
+    def _context(
+        self,
+        snippets: tuple[KnowledgeSnippet, ...],
+        status: str,
+        missing_refs: tuple[str, ...],
+        intent: KnowledgeIntent,
+    ) -> KnowledgeContext:
+        digest = hashlib.sha256()
+        digest.update(intent.value.encode("utf-8"))
+        digest.update(status.encode("utf-8"))
+        for item in snippets:
+            digest.update(item.ref_id.encode("utf-8"))
+            digest.update(item.content_hash.encode("ascii"))
+        return KnowledgeContext(snippets, status, missing_refs, digest.hexdigest(), intent)
 
     def _snippets(self) -> tuple[KnowledgeSnippet, ...]:
         if not self.root.is_dir():
@@ -75,6 +124,7 @@ class WorldQuantKnowledgeRepository:
             except OSError:
                 continue
             relative = path.relative_to(self.root).as_posix()
+            document_type = _classify_document(relative, source)
             for index, (heading, text) in enumerate(_sections(source), start=1):
                 normalized = " ".join(text.split())
                 if not normalized:
@@ -89,9 +139,44 @@ class WorldQuantKnowledgeRepository:
                     heading=heading,
                     content_hash=content_hash,
                     text=normalized,
-                    tags=tuple(sorted(_terms(heading, normalized))),
+                    tags=tuple(sorted(_terms(relative, heading, normalized))),
+                    document_type=document_type,
                 )
         return tuple(sorted(unique.values(), key=lambda item: item.ref_id))
+
+
+def _classify_document(path: str, source: str) -> KnowledgeDocType:
+    frontmatter = source.split("---", 2)
+    declared = ""
+    if len(frontmatter) >= 3 and source.lstrip().startswith("---"):
+        match = re.search(r"(?im)^\s*(?:document_type|type|kind)\s*:\s*([^\r\n#]+)", frontmatter[1])
+        declared = match.group(1).strip().upper() if match else ""
+    aliases = {item.value: item for item in KnowledgeDocType}
+    if declared in aliases:
+        return aliases[declared]
+    value = path.lower().replace("\\", "/")
+    if any(token in value for token in ("index", "directory", "catalog", "目录", "索引", "readme")):
+        return KnowledgeDocType.INDEX
+    if any(token in value for token in ("auth", "login", "cookie", "credential", "认证", "登录")):
+        return KnowledgeDocType.AUTH
+    if any(token in value for token in ("engineering", "runtime", "deploy", "implementation", "代码", "工程")):
+        return KnowledgeDocType.ENGINEERING
+    if any(token in value for token in (
+        "alpha_inspiration/posts/", "inspiration", "idea", "alpha_idea",
+        "guide", "tutorial", "example", "灵感", "指南", "教程",
+    )):
+        return KnowledgeDocType.IDEA_BODY
+    if any(token in value for token in ("operator", "rule", "constraint", "quality", "tuning", "settings", "规则")):
+        return KnowledgeDocType.RULE
+    return KnowledgeDocType.UNKNOWN
+
+
+def _admissible(document_type: KnowledgeDocType, intent: KnowledgeIntent) -> bool:
+    if intent is KnowledgeIntent.IDEA_GENERATION:
+        return document_type in {KnowledgeDocType.IDEA_BODY, KnowledgeDocType.RULE}
+    if intent is KnowledgeIntent.QUALITY_RULE:
+        return document_type is KnowledgeDocType.RULE
+    return document_type is KnowledgeDocType.RULE
 
 
 def _sections(source: str) -> list[tuple[str, str]]:

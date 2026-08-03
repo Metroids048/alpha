@@ -4,10 +4,17 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
+from enum import Enum
 from typing import Iterable
 
 from alpha_mining.domain.expression_normalization import behavior_signature
 from .mutation_policy import MutationPolicy
+
+
+class KnowledgeUsageMode(str, Enum):
+    NONE = "NONE"
+    LIVE_LLM_KNOWLEDGE = "LIVE_LLM_KNOWLEDGE"
+    DETERMINISTIC_NO_KNOWLEDGE = "DETERMINISTIC_NO_KNOWLEDGE"
 
 
 @dataclass(frozen=True)
@@ -24,6 +31,9 @@ class ConsultantCandidate:
     expected_turnover_behavior: str = ""
     repair_origin: str = ""
     degraded: bool = False
+    knowledge_usage_mode: KnowledgeUsageMode = KnowledgeUsageMode.NONE
+    context_refs: tuple[str, ...] = ()
+    knowledge_context_hash: str = ""
 
 
 class ConsultantGenerator:

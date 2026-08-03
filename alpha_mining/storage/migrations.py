@@ -486,6 +486,29 @@ ALTER TABLE research_arm_observation_windows ADD COLUMN prod_corr_passes_json TE
 ALTER TABLE research_arm_observation_windows ADD COLUMN final_submits_json TEXT NOT NULL DEFAULT '[]';
 """,
     ),
+    (
+        20,
+        """
+ALTER TABLE candidate_outcomes ADD COLUMN knowledge_usage_mode TEXT NOT NULL DEFAULT 'NONE';
+ALTER TABLE candidate_outcomes ADD COLUMN context_refs_json TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE candidate_outcomes ADD COLUMN knowledge_context_hash TEXT NOT NULL DEFAULT '';
+ALTER TABLE candidate_outcomes ADD COLUMN degraded INTEGER NOT NULL DEFAULT 0;
+""",
+    ),
+    (
+        21,
+        """
+ALTER TABLE settings_trials ADD COLUMN candidate_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE settings_trials ADD COLUMN parent_candidate_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE settings_trials ADD COLUMN tune_stage TEXT NOT NULL DEFAULT 'OFAT';
+ALTER TABLE settings_trials ADD COLUMN settings_json TEXT NOT NULL DEFAULT '{}';
+ALTER TABLE settings_trials ADD COLUMN request_hash TEXT NOT NULL DEFAULT '';
+ALTER TABLE settings_trials ADD COLUMN terminal_status TEXT NOT NULL DEFAULT 'COMPLETE';
+ALTER TABLE settings_trials ADD COLUMN outcome TEXT NOT NULL DEFAULT '';
+CREATE INDEX IF NOT EXISTS idx_settings_trials_budget ON settings_trials(created_at,terminal_status);
+CREATE INDEX IF NOT EXISTS idx_settings_trials_lineage ON settings_trials(parent_candidate_id,tune_stage);
+""",
+    ),
 )
 
 
@@ -507,6 +530,8 @@ def migrate(path: str | Path) -> None:
                 continue
             if version == 19:
                 _ensure_research_arm_prerequisites(connection)
+            if version == 21:
+                _ensure_settings_trials_prerequisites(connection)
             try:
                 connection.executescript(
                     f"BEGIN IMMEDIATE;\n{sql}\n"
@@ -600,6 +625,17 @@ def _ensure_research_arm_prerequisites(connection: sqlite3.Connection) -> None:
         )
 
 
+def _ensure_settings_trials_prerequisites(connection: sqlite3.Connection) -> None:
+    """Recover sparse legacy databases which recorded migration 1 without its table."""
+
+    connection.execute(
+        """CREATE TABLE IF NOT EXISTS settings_trials (
+           trial_id TEXT PRIMARY KEY, expression_id TEXT NOT NULL, setting_profile TEXT NOT NULL,
+           parameter_delta_json TEXT NOT NULL, metrics_json TEXT NOT NULL, checks_json TEXT NOT NULL,
+           quality_score REAL, robustness_score REAL, simulation_cost REAL NOT NULL DEFAULT 0,
+           created_at TEXT NOT NULL
+        )"""
+    )
 def backup_and_migrate(path: str | Path, backup_path: str | Path | None = None) -> Path | None:
     """Create a verified SQLite backup before applying migrations."""
     target = Path(path)

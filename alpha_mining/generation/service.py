@@ -43,6 +43,10 @@ class CandidateProposal:
     expected_signal: str = ""
     expected_turnover_behavior: str = ""
     repair_origin: str = ""
+    knowledge_usage_mode: str = "NONE"
+    context_refs: tuple[str, ...] = ()
+    knowledge_context_hash: str = ""
+    degraded: bool = False
 
 
 @dataclass(frozen=True)
@@ -240,6 +244,10 @@ class CandidateGenerationService:
                         getattr(candidate, "expected_turnover_behavior", "") or ""
                     ),
                     repair_origin=str(getattr(candidate, "repair_origin", "") or ""),
+                    knowledge_usage_mode=str(getattr(candidate, "knowledge_usage_mode", "NONE")),
+                    context_refs=tuple(getattr(candidate, "context_refs", ()) or ()),
+                    knowledge_context_hash=str(getattr(candidate, "knowledge_context_hash", "") or ""),
+                    degraded=bool(getattr(candidate, "degraded", False)),
                 )
                 accepted.append(proposal)
 

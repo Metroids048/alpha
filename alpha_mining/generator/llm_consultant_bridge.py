@@ -6,7 +6,11 @@ import hashlib
 from pathlib import Path
 from typing import Any
 
-from alpha_mining.generator.consultant_generator import ConsultantCandidate, ConsultantGenerator
+from alpha_mining.generator.consultant_generator import (
+    ConsultantCandidate,
+    ConsultantGenerator,
+    KnowledgeUsageMode,
+)
 from alpha_mining.knowledge.worldquant_repository import KnowledgeContext, WorldQuantKnowledgeRepository
 
 
@@ -109,6 +113,9 @@ class LLMConsultantBridge:
                     knowledge_refs=refs,
                     expected_signal=str(row.get("novelty_reason") or ""),
                     expected_turnover_behavior=turnover,
+                    knowledge_usage_mode=KnowledgeUsageMode.LIVE_LLM_KNOWLEDGE,
+                    context_refs=tuple(sorted(allowed_refs)),
+                    knowledge_context_hash=context.context_hash,
                 )
             )
         return candidates
@@ -142,10 +149,13 @@ class LLMConsultantBridge:
                 mutation_type="deterministic_fallback",
                 expression=item.expression,
                 economic_rationale=f"Deterministic fallback for {mechanism}",
-                knowledge_refs=(context.snippets[0].ref_id,),
+                knowledge_refs=(),
                 expected_signal="fallback",
                 expected_turnover_behavior="unknown",
                 degraded=True,
+                knowledge_usage_mode=KnowledgeUsageMode.DETERMINISTIC_NO_KNOWLEDGE,
+                context_refs=tuple(item.ref_id for item in context.snippets),
+                knowledge_context_hash=context.context_hash,
             )
         ]
 
