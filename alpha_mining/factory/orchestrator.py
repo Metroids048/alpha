@@ -462,7 +462,7 @@ class FactoryOrchestrator:
                 for item in result.checks
                 if isinstance(item, dict)
             }
-            ResearchArmTracker(self.database).record_window(
+            ResearchArmTracker(self.database).record_observation(
                 ArmDimensions(
                     spec.family,
                     spec.dataset,
@@ -473,14 +473,13 @@ class FactoryOrchestrator:
                     str(settings.get("universe") or "TOP3000"),
                     str(settings.get("delay") if settings.get("delay") is not None else "1"),
                 ),
-                sharpes=[float(result.metrics["sharpe"])],
-                base_passes=[outcome is BaselineOutcome.PASS],
-                near_passes=[outcome is BaselineOutcome.NEAR_PASS],
-                self_corr_passes=int(checks.get("SELF_CORRELATION") == "PASS"),
-                prod_corr_passes=int(
-                    checks.get("PROD_CORRELATION", checks.get("PRODUCTION_CORRELATION")) == "PASS"
-                ),
-                final_submits=0,
+                sharpe=float(result.metrics["sharpe"]),
+                fitness=result.metrics.get("fitness"),
+                base_pass=outcome is BaselineOutcome.PASS,
+                near_pass=outcome is BaselineOutcome.NEAR_PASS,
+                self_corr_pass=checks.get("SELF_CORRELATION") == "PASS",
+                prod_corr_pass=checks.get("PROD_CORRELATION", checks.get("PRODUCTION_CORRELATION")) == "PASS",
+                final_submit=False,
             )
 
     @staticmethod

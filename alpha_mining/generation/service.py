@@ -153,6 +153,7 @@ class CandidateGenerationService:
         accepted: list[CandidateProposal] = []
         selected_topic_ids: set[str] = set()
         selected_families: set[str] = set()
+        accepted_per_family: dict[str, int] = {}
         family_index = 0
         attempts = 0
         max_attempts = limit * 20 + len(specs) * 14
@@ -163,6 +164,10 @@ class CandidateGenerationService:
                 break
             sf = families_in_order[family_index % len(families_in_order)]
             family_index += 1
+            if arm_weights.get(sf, 1.0) <= 0:
+                continue
+            if arm_weights.get(sf, 1.0) < 1.0 and accepted_per_family.get(sf, 0) >= 1:
+                continue
             bucket = family_buckets.get(sf, [])
             if not bucket:
                 continue
@@ -205,6 +210,7 @@ class CandidateGenerationService:
                 selected_topic_ids.add(spec["topic_id"])
                 strategy_family = _classify_strategy_family(spec["mechanism"], spec["family"])
                 selected_families.add(strategy_family)
+                accepted_per_family[strategy_family] = accepted_per_family.get(strategy_family, 0) + 1
 
                 proposal = CandidateProposal(
                     candidate_id=candidate.candidate_id,

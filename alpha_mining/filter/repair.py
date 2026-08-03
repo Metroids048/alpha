@@ -95,7 +95,7 @@ class RepairEngine:
         for pattern, category in _FAILURE_PATTERNS:
             if re.search(pattern, text):
                 return category
-        return "LOW_SHARPE"  # conservative default
+        return "UNKNOWN"
 
     def classify_all(self, fail_reason: str) -> list[str]:
         """Return all matching categories (a single run may hit multiple gates)."""
@@ -106,9 +106,11 @@ class RepairEngine:
             if category not in seen and re.search(pattern, text):
                 categories.append(category)
                 seen.add(category)
-        return categories or ["LOW_SHARPE"]
+        return categories or ["UNKNOWN"]
 
     def repair(self, expression: str, failure_category: str) -> RepairResult:
+        if failure_category == "UNKNOWN":
+            return RepairResult("UNKNOWN", "manual_or_new_evidence_required", None, True)
         strategy = _REPAIR_STRATEGIES.get(
             failure_category, "trigger_l5_mutation_change_hypothesis"
         )

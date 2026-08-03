@@ -471,6 +471,19 @@ ALTER TABLE candidate_outcomes ADD COLUMN operator_topology TEXT NOT NULL DEFAUL
 ALTER TABLE candidate_outcomes ADD COLUMN region TEXT NOT NULL DEFAULT '';
 ALTER TABLE candidate_outcomes ADD COLUMN universe_name TEXT NOT NULL DEFAULT '';
 ALTER TABLE candidate_outcomes ADD COLUMN delay TEXT NOT NULL DEFAULT '';
+        """,
+    ),
+    (
+        19,
+        """
+ALTER TABLE research_arm_metrics ADD COLUMN arm_state TEXT NOT NULL DEFAULT 'YELLOW';
+ALTER TABLE research_arm_observation_windows ADD COLUMN sharpes_json TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE research_arm_observation_windows ADD COLUMN fitnesses_json TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE research_arm_observation_windows ADD COLUMN base_passes_json TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE research_arm_observation_windows ADD COLUMN near_passes_json TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE research_arm_observation_windows ADD COLUMN self_corr_passes_json TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE research_arm_observation_windows ADD COLUMN prod_corr_passes_json TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE research_arm_observation_windows ADD COLUMN final_submits_json TEXT NOT NULL DEFAULT '[]';
 """,
     ),
 )
