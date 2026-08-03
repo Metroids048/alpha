@@ -23,6 +23,7 @@ from alpha_mining.factory.v50_adapter import (
 from alpha_mining.common import load_workspace_env
 from alpha_mining.generation.feedback import CandidateFeedbackStore
 from alpha_mining.generation.screening import CandidateScreeningPolicy, RejectionReason
+from alpha_mining.offline.cli import main as offline_main
 from alpha_mining.offline.metadata import MetadataCache, MetadataCacheError, MetadataCacheMissing, MetadataCacheStale
 from alpha_mining.platform.catalog import PlatformCatalogSynchronizer, ReadOnlyExpressionCatalog
 from alpha_mining.quality.decision import QualityStatus, evaluate_quality
@@ -532,6 +533,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--cache-dir", default=".")
     parser.add_argument("--auth-state-file", default=".wq_auth_state.json")
     parser.add_argument("--lock-path", default="worldquant_api.lock")
+    parser.add_argument(
+        "--production",
+        action="store_true",
+        help="执行平台目录、模拟和 READY CSV 生产闭环；默认仅常驻离线候选生成",
+    )
     parser.add_argument("--once", action="store_true")
     parser.add_argument("--max-rounds", type=int, default=0)
     parser.add_argument("--interval", type=float, default=30.0)
@@ -542,6 +548,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--max-repair-parents", type=int, default=2)
     parser.add_argument("--max-repairs-per-parent", type=int, default=4)
     args = parser.parse_args(argv)
+    if not args.production:
+        offline_args = ["--interval", str(args.interval)]
+        if args.once:
+            return offline_main(offline_args)
+        offline_args.append("--loop")
+        if args.max_rounds > 0:
+            offline_args.extend(["--max-rounds", str(args.max_rounds)])
+        return offline_main(offline_args)
     config = GenerationCycleConfig(
         database=Path(args.database), output=Path(args.output), cache_dir=Path(args.cache_dir),
         auth_state_file=Path(args.auth_state_file), lock_path=Path(args.lock_path),

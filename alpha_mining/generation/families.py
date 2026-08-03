@@ -58,7 +58,7 @@ def generate_candidate_pool(metadata: MetadataCache) -> list[GeneratedExpression
         secondary = selected[1] if len(selected) > 1 else fallback[(family_index + 1) % len(fallback)]
         # Vary both the base shape and bounded nesting depth so a long-running
         # local queue can continue exploring structurally distinct candidates.
-        for variant in range(65):
+        for variant in range(130):
             first = unary_time[(family_index + variant) % len(unary_time)]
             second = unary_time[(family_index * 2 + variant + 1) % len(unary_time)]
             third = unary_time[(family_index + variant * 3 + 2) % len(unary_time)]

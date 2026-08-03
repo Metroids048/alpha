@@ -284,7 +284,7 @@ def test_runtime_main_loads_workspace_env_before_running_cycle(monkeypatch, tmp_
     monkeypatch.setattr(runtime, "load_workspace_env", fake_load_workspace_env)
     monkeypatch.setattr(runtime, "run_generation_cycle", fake_run_generation_cycle)
 
-    assert runtime.main(["--once", "--database", str(tmp_path / "runtime.sqlite")]) == 0
+    assert runtime.main(["--production", "--once", "--database", str(tmp_path / "runtime.sqlite")]) == 0
     assert events == ["env", "cycle"]
 
 
