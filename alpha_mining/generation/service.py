@@ -179,6 +179,7 @@ class CandidateGenerationService:
                 mechanism=spec["mechanism"],
                 horizon=spec["horizon"],
                 fields=spec["fields"],
+                dataset=spec["dataset"],
             )
             if not candidates:
                 continue
@@ -187,6 +188,11 @@ class CandidateGenerationService:
             for candidate in candidates:
                 if len(accepted) >= limit:
                     break
+                if not tuple(getattr(candidate, "knowledge_refs", ()) or ()):
+                    rejected_by_reason[RejectionReason.KNOWLEDGE_MISSING.value] = (
+                        rejected_by_reason.get(RejectionReason.KNOWLEDGE_MISSING.value, 0) + 1
+                    )
+                    continue
                 reason = self._policy.screen_expression(
                     candidate.expression,
                     round_seen_hashes=round_seen_hashes,

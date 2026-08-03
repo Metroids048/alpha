@@ -43,6 +43,7 @@ class ConsultantGenerator:
         horizon: str,
         fields: Iterable[str],
         parent_expression: str = "",
+        dataset: str = "",
     ) -> list[ConsultantCandidate]:
         field_list = list(
             dict.fromkeys(str(field).strip() for field in fields if str(field).strip())

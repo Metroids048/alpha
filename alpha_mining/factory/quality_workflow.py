@@ -107,7 +107,20 @@ class QualityAlphaWorkflow:
 
     @staticmethod
     def _settings(proposal: CandidateProposal) -> dict[str, Any]:
-        return {"region": "USA", "universe": "TOP3000", "delay": 1, "decay": 0, "neutralization": "SUBINDUSTRY"}
+        return {
+            "instrumentType": "EQUITY",
+            "region": "USA",
+            "universe": "TOP3000",
+            "delay": 1,
+            "decay": 0,
+            "neutralization": "SUBINDUSTRY",
+            "truncation": 0.08,
+            "pasteurization": "ON",
+            "unitHandling": "VERIFY",
+            "nanHandling": "OFF",
+            "language": "FASTEXPR",
+            "visualization": False,
+        }
 
     def _record_failure(self, proposal: CandidateProposal, execution: CandidateExecutionResult) -> bool:
         try:
