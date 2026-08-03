@@ -7,11 +7,21 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Protocol
 
+from alpha_mining.generation.validation import ExpressionCatalog, LocalExpressionValidator
+from alpha_mining.offline.metadata import MetadataCache
+
 
 class CatalogClient(Protocol):
     def list_datasets(self, params: dict[str, object]) -> dict[str, Any]: ...
     def list_data_fields(self, params: dict[str, object]) -> dict[str, Any]: ...
     def list_operators(self, params: dict[str, object]) -> dict[str, Any]: ...
+
+
+class ReadOnlyExpressionCatalog(LocalExpressionValidator):
+    """Production catalog adapter backed only by a verified local snapshot."""
+
+    def __init__(self, metadata: MetadataCache, *, max_age_hours: float = 168) -> None:
+        super().__init__(metadata, max_age_hours=max_age_hours, allow_stale_catalog=False)
 
 
 def _utc_timestamp() -> float:

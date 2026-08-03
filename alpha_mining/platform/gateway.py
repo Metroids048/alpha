@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
@@ -55,7 +56,7 @@ class PlatformGateway:
             allow_server_retry=False,
         )
         if response.status_code not in {200, 201, 204}:
-            raise PlatformReadError(f"description PATCH failed with HTTP {response.status_code}")
+            raise self._http_error("description PATCH", response)
         return {"status_code": int(response.status_code)}
 
     def submit_alpha(self, alpha_id: str) -> dict[str, Any]:
@@ -66,7 +67,7 @@ class PlatformGateway:
             allow_server_retry=False,
         )
         if response.status_code not in {200, 201, 202}:
-            raise PlatformReadError(f"submit failed with HTTP {response.status_code}")
+            raise self._http_error("submit", response)
         return {"status_code": int(response.status_code)}
 
     def simulate(
@@ -114,7 +115,7 @@ class PlatformGateway:
                     "simulation POST ended without a confirmable platform response"
                 ) from exc
             if response.status_code not in {200, 201, 202}:
-                raise PlatformReadError(f"simulation submit failed with HTTP {response.status_code}")
+                raise self._http_error("simulation submit", response)
             try:
                 parsed = response.json()
             except Exception:
@@ -146,7 +147,7 @@ class PlatformGateway:
                     "GET", progress_url, endpoint_class="simulation_poll"
                 )
                 if progress.status_code != 200:
-                    raise PlatformReadError(f"simulation poll failed with HTTP {progress.status_code}")
+                    raise self._http_error("simulation poll", progress)
                 try:
                     current = progress.json()
                 except Exception:
@@ -182,3 +183,19 @@ class PlatformGateway:
             checks=extract_checks(detail),
             raw=detail,
         )
+
+    @staticmethod
+    def _http_error(operation: str, response: Any) -> PlatformReadError:
+        """Expose a bounded, scrubbed body without leaking headers or credentials."""
+        try:
+            body = str(response.text or "")
+        except Exception:
+            body = ""
+        body = re.sub(
+            r"(?i)\b(cookie|authorization|token|password|secret)\s*[:=]\s*[^\s,;]+",
+            "[REDACTED]",
+            body,
+        )
+        body = " ".join(body.split())[:500]
+        suffix = f": {body}" if body else ""
+        return PlatformReadError(f"{operation} failed with HTTP {int(response.status_code)}{suffix}")

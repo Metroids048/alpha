@@ -64,7 +64,11 @@ def run_offline_generation(
         )
 
     queue = CandidateCsvQueue(queue_path, events_path)
-    validator = LocalExpressionValidator(metadata)
+    validator = LocalExpressionValidator(
+        metadata,
+        max_age_hours=cache_max_age_hours,
+        allow_stale_catalog=allow_stale_cache,
+    )
     failure_path = (
         Path(failure_history_path)
         if failure_history_path is not None

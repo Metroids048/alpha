@@ -19,6 +19,7 @@ from typing import Any
 
 from alpha_mining.domain.expression_normalization import expression_identity
 from alpha_mining.generation.screening import CandidateScreeningPolicy, RejectionReason
+from alpha_mining.generation.validation import ExpressionCatalog
 
 
 @dataclass(frozen=True)
@@ -84,10 +85,19 @@ class CandidateGenerationService:
         idea_generator: Any | None = None,
         feedback: Any | None = None,
         policy: CandidateScreeningPolicy | None = None,
+        catalog: ExpressionCatalog | None = None,
+        region: str | None = None,
+        universe: str | None = None,
+        delay: int | str | None = None,
         rng: random.Random | None = None,
     ) -> None:
         self.database = Path(database)
-        self._policy = policy or CandidateScreeningPolicy()
+        self._policy = policy or CandidateScreeningPolicy(
+            catalog=catalog,
+            region=region,
+            universe=universe,
+            delay=delay,
+        )
         self._rng = rng or random.Random()
 
         # Lazy imports to allow offline usage without full platform deps
@@ -171,6 +181,7 @@ class CandidateGenerationService:
                     candidate.expression,
                     round_seen_hashes=round_seen_hashes,
                     round_seen_skeletons=round_seen_skeletons,
+                    expected_dataset_id=spec["dataset"],
                 )
                 if reason is not None and reason != RejectionReason.NONE:
                     rejected_by_reason[reason.value] = rejected_by_reason.get(reason.value, 0) + 1

@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 
 from alpha_mining.domain.expression_ast import parse_expression, ExpressionSyntaxError
 from alpha_mining.domain.expression_normalization import expression_identity
+from alpha_mining.generation.validation import ExpressionCatalog
 
 
 class RejectionReason(enum.Enum):
@@ -18,6 +19,11 @@ class RejectionReason(enum.Enum):
     INVALID_SYNTAX = "INVALID_SYNTAX"
     UNKNOWN_OPERATOR = "UNKNOWN_OPERATOR"
     UNKNOWN_FIELD = "UNKNOWN_FIELD"
+    INVALID_ARITY = "INVALID_ARITY"
+    FIELD_DATASET_MISMATCH = "FIELD_DATASET_MISMATCH"
+    CATALOG_UNAVAILABLE = "CATALOG_UNAVAILABLE"
+    CATALOG_STALE = "CATALOG_STALE"
+    CATALOG_CONTEXT_MISMATCH = "CATALOG_CONTEXT_MISMATCH"
     GROUP_RANK_DISABLED = "GROUP_RANK_DISABLED"
     EXACT_HASH_EXISTS = "EXACT_HASH_EXISTS"
     FIELD_SKELETON_ROUND_LIMIT = "FIELD_SKELETON_ROUND_LIMIT"
@@ -46,6 +52,11 @@ class CandidateScreeningPolicy:
 
     group_rank_enabled: bool = False
     max_field_skeleton_per_round: int = 1
+    catalog: ExpressionCatalog | None = None
+    expected_dataset_id: str | None = None
+    region: str | None = None
+    universe: str | None = None
+    delay: int | str | None = None
 
     def screen_expression(
         self,
@@ -53,12 +64,50 @@ class CandidateScreeningPolicy:
         *,
         round_seen_hashes: set[str],
         round_seen_skeletons: set[str],
+        expected_dataset_id: str | None = None,
+        region: str | None = None,
+        universe: str | None = None,
+        delay: int | str | None = None,
     ) -> RejectionReason | None:
         """Return a RejectionReason if the expression should be rejected, else RejectionReason.NONE.
 
         Callers should treat both None and RejectionReason.NONE as "passed".
         """
-        # Syntax check
+        # Catalog validation is deliberately first: an untrusted expression must
+        # never reach identity creation, request claiming, or a platform gateway.
+        dataset_id = expected_dataset_id or self.expected_dataset_id
+        context_required = any(
+            value is not None
+            for value in (dataset_id, region or self.region, universe or self.universe, delay if delay is not None else self.delay)
+        )
+        if self.catalog is None:
+            # Standalone identity tools retain their legacy syntax-only use.
+            # The production service always provides dataset/context and thus
+            # takes this fail-closed path when no read-only catalog is present.
+            if context_required:
+                return RejectionReason.CATALOG_UNAVAILABLE
+        else:
+            try:
+                issues = self.catalog.validate(
+                    expression,
+                    expected_dataset_id=dataset_id,
+                    region=region or self.region,
+                    universe=universe or self.universe,
+                    delay=delay if delay is not None else self.delay,
+                )
+            except Exception:
+                return RejectionReason.CATALOG_UNAVAILABLE
+            if issues:
+                code = str(issues[0].code)
+                if code == "FASTPLUS":
+                    code = "INVALID_SYNTAX"
+                try:
+                    return RejectionReason(code)
+                except ValueError:
+                    return RejectionReason.CATALOG_UNAVAILABLE
+
+        # Syntax check remains explicit for catalog implementations that only
+        # validate metadata and do not parse expressions themselves.
         try:
             parse_expression(expression)
         except ExpressionSyntaxError:
