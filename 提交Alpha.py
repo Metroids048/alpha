@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """
-提交Alpha脚本（持续循环模式，真实 simulate + CLI 子命令提交保护）
+提交Alpha脚本（仅消费 READY Alpha 的受保护提交入口）
 
 功能：
 1. 登录检查/自动续期（照抄 启动Alpha主线.py 的逻辑）
 2. 持续循环读取"待提交Alpha列表.csv"
-3. 批量 simulate alpha（真实调用 PlatformGateway，settings 包含全部必需字段）
-4. 调用已有 CLI 子命令：sync-ledger / description backfill / submit dry-run / submit execute
+3. 调用已有 CLI 子命令：sync-ledger / description backfill / submit dry-run / submit execute
 5. 历史记录如实记录真实状态（不允许假成功）
 6. Ctrl+C 停止
 
@@ -103,7 +102,7 @@ def _ensure_fresh_auth(args) -> int:
 
 
 def read_pending_candidates(input_path: Path, processed_hashes: set) -> list[dict]:
-    """读取待提交的候选（跳过已处理的）"""
+    """只读取已有 alpha_id 且质量状态 READY 的记录。"""
     if not input_path.exists():
         return []
 
@@ -112,8 +111,10 @@ def read_pending_candidates(input_path: Path, processed_hashes: set) -> list[dic
         with input_path.open("r", encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)
             for row in reader:
-                exact_hash = row.get("精确哈希", "")
-                if exact_hash and exact_hash not in processed_hashes:
+                exact_hash = row.get("exact_hash", row.get("精确哈希", ""))
+                alpha_id = row.get("alpha_id", "")
+                quality_status = row.get("quality_status", "")
+                if alpha_id and quality_status == "READY_TO_SUBMIT" and exact_hash and exact_hash not in processed_hashes:
                     candidates.append(row)
     except Exception as exc:
         print(f"[提交Alpha] 读取CSV失败: {exc}")
@@ -160,24 +161,6 @@ def append_to_history(history_path: Path, candidate: dict, result: dict):
         ])
 
 
-def _default_settings() -> dict:
-    """完整的平台 settings 默认值（避免像旧版只传 3 个字段）"""
-    return {
-        "instrumentType": "EQUITY",
-        "region": "USA",
-        "universe": "TOP3000",
-        "delay": 1,
-        "decay": 0,
-        "neutralization": "SUBINDUSTRY",
-        "truncation": 0.08,
-        "pasteurization": "ON",
-        "unitHandling": "VERIFY",
-        "nanHandling": "OFF",
-        "language": "FASTEXPR",
-        "visualization": False,
-    }
-
-
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="持续循环批量提交Alpha到WorldQuant平台")
     parser.add_argument("--input", default="待提交Alpha列表.csv", help="输入CSV文件")
@@ -186,11 +169,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--config", default="alpha_mining/config.yaml", help="配置文件路径")
     parser.add_argument("--auth-state", default=".wq_auth_state.json", help="认证状态文件")
     parser.add_argument("--profile-dir", default=".wq_browser_profile", help="浏览器配置目录")
-    parser.add_argument("--batch-size", type=int, default=20, help="每批 simulate 数量")
+    parser.add_argument("--batch-size", type=int, default=20, help="每批 READY Alpha 数量")
     parser.add_argument("--max-submit", type=int, default=20, help="每轮最大提交数")
     parser.add_argument("--interval", type=int, default=30, help="轮次间隔（秒）")
     parser.add_argument("--max-rounds", type=int, default=0, help="最大轮数（0=无限循环）")
-    parser.add_argument("--simulate-only", action="store_true", help="仅 simulate，跳过台账/description/submit")
     parser.add_argument("--允许提交", action="store_true", help="允许真实提交（默认 False，加上才会跑 submit execute --execute-submit）")
     parser.add_argument("--确认短语", default="I_UNDERSTAND_REAL_SUBMISSION", help="提交确认短语")
     args = parser.parse_args(argv)
@@ -205,13 +187,11 @@ def main(argv: list[str] | None = None) -> int:
     print(f"[提交Alpha] 数据库: {args.database}")
     print(f"[提交Alpha] 批次: {args.batch_size}")
     print(f"[提交Alpha] 间隔: {args.interval} 秒")
-    if args.simulate_only:
-        print(f"[提交Alpha] 模式: 仅 simulate")
-    elif args.允许提交:
-        print(f"[提交Alpha] 模式: simulate + 台账同步 + description + 真实提交")
+    if args.允许提交:
+        print(f"[提交Alpha] 模式: 台账同步 + description + 真实提交")
         print(f"[提交Alpha] ⚠️  真实提交已启用！")
     else:
-        print(f"[提交Alpha] 模式: simulate + 台账同步 + description + dry-run（不真实提交）")
+        print(f"[提交Alpha] 模式: 台账同步 + description + dry-run（不真实提交）")
     print()
 
     # 登录检查/自动续期
@@ -233,22 +213,6 @@ def main(argv: list[str] | None = None) -> int:
             print(f"[提交Alpha] 已加载历史: {len(processed_hashes)} 个已处理")
         except Exception as exc:
             print(f"[提交Alpha] 历史文件读取失败: {exc}")
-
-    # 初始化平台网关
-    gateway = None
-    try:
-        from alpha_mining.platform.gateway import PlatformGateway
-
-        gateway = PlatformGateway(
-            state_path=str(_auth_state_path(args)),
-            database=args.database,
-            lock_path="worldquant_api.lock",
-            min_interval=2.0,
-        )
-        print(f"[提交Alpha] ✓ 平台网关已初始化\n")
-    except Exception as exc:
-        print(f"[提交Alpha] ✗ 平台网关初始化失败: {exc}")
-        return 1
 
     round_num = 0
     total_processed = 0
@@ -277,76 +241,28 @@ def main(argv: list[str] | None = None) -> int:
             batch = candidates[: args.batch_size]
 
             for idx, candidate in enumerate(batch, 1):
-                expression = candidate.get("表达式", "")
-                candidate_id = candidate.get("候选ID", "")
-                exact_hash = candidate.get("精确哈希", "")
-                settings_json = candidate.get("模拟设置JSON", "")
+                candidate_id = candidate.get("candidate_id", candidate.get("候选ID", ""))
+                exact_hash = candidate.get("exact_hash", candidate.get("精确哈希", ""))
 
                 print(f"[提交Alpha] [{idx}/{len(batch)}] {candidate_id[:32]}...")
 
                 result = {
                     "processed_at": datetime.now(timezone.utc).isoformat(),
-                    "alpha_id": "",
-                    "status": "",
+                    "alpha_id": candidate.get("alpha_id", ""),
+                    "status": "READY_TO_SUBMIT",
                     "sharpe": "",
                     "fitness": "",
                     "turnover": "",
                     "error": "",
                 }
 
-                # 解析 settings（如果为空，使用完整默认值）
-                try:
-                    if settings_json:
-                        settings = json.loads(settings_json)
-                    else:
-                        settings = _default_settings()
-                        print(f"[提交Alpha]   警告: 模拟设置JSON为空，使用默认完整 settings")
-
-                    # 确保 settings 包含全部必需字段（补齐缺失字段）
-                    defaults = _default_settings()
-                    for key, value in defaults.items():
-                        settings.setdefault(key, value)
-
-                except Exception as exc:
-                    print(f"[提交Alpha]   ✗ settings 解析失败: {exc}")
-                    result["error"] = f"settings_parse_error: {exc}"
-                    result["status"] = "SETTINGS_INVALID"
-                    append_to_history(history_path, candidate, result)
-                    processed_hashes.add(exact_hash)
-                    total_processed += 1
-                    continue
-
-                # Simulate（真实调用平台接口）
-                try:
-                    sim_result = gateway.simulate(
-                        expression=expression,
-                        settings=settings,
-                        alpha_type="REGULAR",
-                    )
-                    result["alpha_id"] = sim_result.alpha_id or ""
-                    result["status"] = sim_result.status or ""
-                    result["sharpe"] = sim_result.metrics.get("sharpe", "")
-                    result["fitness"] = sim_result.metrics.get("fitness", "")
-                    result["turnover"] = sim_result.metrics.get("turnover", "")
-
-                    print(f"[提交Alpha]   ✓ simulate: alpha_id={result['alpha_id']}, sharpe={result['sharpe']}, status={result['status']}")
-
-                except Exception as exc:
-                    print(f"[提交Alpha]   ✗ simulate 失败: {exc}")
-                    result["error"] = str(exc)
-                    result["status"] = "SIMULATE_FAILED"
-                    append_to_history(history_path, candidate, result)
-                    processed_hashes.add(exact_hash)
-                    total_processed += 1
-                    continue
-
-                # 记录到历史（simulate 成功）
+                print(f"[提交Alpha]   使用已有 alpha_id={result['alpha_id']}，不重新 simulate")
                 append_to_history(history_path, candidate, result)
                 processed_hashes.add(exact_hash)
                 total_processed += 1
 
-            # 如果不是 simulate-only，继续执行台账同步 / description / submit
-            if not args.simulate_only:
+            # 对已有 Alpha 继续执行台账同步 / description / submit
+            if candidates:
                 print(f"\n[提交Alpha] === 台账同步 / Description / Submit ===")
 
                 # 1. 台账同步

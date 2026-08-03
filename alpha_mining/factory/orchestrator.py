@@ -102,6 +102,58 @@ class FactoryOrchestrator:
             self.database, lease_timeout_seconds=lease_timeout_seconds
         )
 
+    def execute_candidate(self, proposal: Any, settings: dict[str, Any]):
+        """Execute one already-screened proposal through the sole request lifecycle.
+
+        The caller owns quality classification; this boundary owns claiming,
+        checkpoint-capable simulation, and transactional terminal state only.
+        """
+        from alpha_mining.factory.quality_workflow import CandidateExecutionResult
+
+        context = {
+            "candidate_id": str(getattr(proposal, "candidate_id", "")),
+            "topic_id": str(getattr(proposal, "topic_id", "")),
+            "hypothesis_id": str(getattr(proposal, "hypothesis_id", "")),
+            "research_family": str(getattr(proposal, "research_family", "")),
+            "strategy_family": str(getattr(proposal, "strategy_family", "")),
+            "mechanism": str(getattr(proposal, "mechanism", "")),
+            "dataset": str(getattr(proposal, "dataset", "")),
+            "exact_hash": str(getattr(proposal, "exact_hash", "")),
+            "parameter_skeleton": str(getattr(proposal, "parameter_skeleton", "")),
+            "field_skeleton": str(getattr(proposal, "field_skeleton", "")),
+        }
+        claim = self.requests.claim(proposal.expression, settings, context=context)
+        if not claim.claimed:
+            return CandidateExecutionResult(claim.request_hash, error_category="CLAIM_REJECTED", error_message=claim.reason)
+        leases = self.requests.acquire(1, request_hash=claim.request_hash)
+        if not leases:
+            return CandidateExecutionResult(claim.request_hash, error_category="LEASE_UNAVAILABLE", error_message="claimed request was not acquired")
+        lease = leases[0]
+        spec = ResearchSpec(
+            hypothesis_id=context["hypothesis_id"], family=context["research_family"], mechanism=context["mechanism"],
+            horizon="medium", fields=(context["dataset"],), dataset=context["dataset"],
+        )
+        try:
+            result = self._call_simulation(lease)
+        except Exception as exc:
+            detail = self._sanitize_error(f"{type(exc).__name__}: {exc}")
+            self.requests.finalize_failure(lease.request_hash, lease_started_at=lease.lease_started_at, error=detail)
+            return CandidateExecutionResult(lease.request_hash, error_category="SIMULATION_FAILED", error_message=detail)
+        validation = validate_simulation_result(result)
+        if not validation.valid:
+            detail = self._sanitize_error(validation.reason)
+            self.requests.finalize_failure(lease.request_hash, lease_started_at=lease.lease_started_at, error=detail)
+            return CandidateExecutionResult(lease.request_hash, error_category="INVALID_RESULT", error_message=detail)
+        finalized = self.requests.finalize_success(
+            lease.request_hash, alpha_id=result.alpha_id, lease_started_at=lease.lease_started_at,
+            write_success=lambda con: self._write_success(
+                con, spec=spec, expression=lease.expression, settings=lease.settings, result=result, outcome=None
+            ),
+        )
+        if not finalized:
+            return CandidateExecutionResult(lease.request_hash, error_category="LEASE_LOST", error_message="terminal transition lost")
+        return CandidateExecutionResult(lease.request_hash, result=result)
+
     def _catalog_unavailable_reason(self, mappings: list[tuple[Any, ...]]) -> str | None:
         max_age_seconds = 24 * 60 * 60
         self._refresh_operator_cache_from_ledger(max_age_seconds=max_age_seconds)
