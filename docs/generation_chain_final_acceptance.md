@@ -117,4 +117,13 @@ request/structure/behavior 三种签名均唯一。脱敏摘要：
 尚未证明平台 Sharpe、Fitness、真实 self-correlation 或 submit 通过率；这些必须由下一阶段
 `提交Alpha.py` 的真实 simulate 验证。重建 catalog 的来源和 arity 局限见第 5 节，不得把它解释为平台最新同步。
 
+## 10. 收口回归补充
+
+提交 `0444708` 收紧了本地 operator arity 硬门槛，并修正了本地 `ValueError` 的异常分类；
+定向 generation 测试 13 项通过，完整 `pytest -q` 通过（全量耗时约 238 秒），compileall 与
+`git diff --check` 通过。收口后再次启动真实 `--once` 时，v50 种子阶段正常完成，但两次
+DeepSeek 请求均返回脱敏的 `LLM_UNAVAILABLE/DeepSeekLLMError`；进程没有写入 degraded 候选，
+队列仍保持 4 条原有 `PENDING_SIMULATION`。此前同一生产链路已取得真实 DeepSeek HTTP 200、
+单轮入队 1 条和两轮累计 3 条的证据；本次失败属于模型传输暂时不可用，不是平台 I/O 或队列回退。
+
 残余设计风险：为复用 v50 的已验证表达式工厂，`v50_kernel.py` 当前仍 import v50 单体模块；它没有实例化平台 pipeline，也没有发现平台请求，但 v50 顶层仍带 pandas bootstrap 代码。真实 catalog 恢复后，应在隔离环境复核该 import 在缺依赖环境下不会触发安装行为，再决定是否做更细粒度的纯能力提取。
