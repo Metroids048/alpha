@@ -27,11 +27,11 @@
 
 - `生成Alpha.py`：薄入口，只指向 `production.main`。
 - `alpha_mining/generation/snapshots.py`：固定目录顺序读取完整本地 catalog，汇总 SQLite、队列和 v50 CSV 反馈；缺失即 `CATALOG_UNAVAILABLE`。
-- `alpha_mining/generation/v50_kernel.py`：只适配 v50 `PipelineConfig`、`FieldCatalog`、`PreflightValidator`、`ExpressionFactory`、`HistorySimilarityPools`、`NoveltyIndex`、`NearPassAmplifier`；不实例化 `WorldQuantAlphaPipeline`。
+- `alpha_mining/generation/v50_kernel.py`：以单一兼容边界适配 v50 `PipelineConfig`、`FieldCatalog`、`PreflightValidator`、`ExpressionFactory`、`HistorySimilarityPools`、`NoveltyIndex`、`NearPassAmplifier`；不实例化 `WorldQuantAlphaPipeline`。v50 文件仍整体被 import，见“未证明项”。
 - `alpha_mining/generation/high_quality.py`：v50 seed 去重、World Quant 检索、两阶段 LLM、字段/算子/引用/数据集/相似度/窗口硬门槛和本地质量排序。
 - `alpha_mining/generation/production.py`：CLI、单轮、常驻循环、脱敏日志和退出码。
 - `alpha_mining/knowledge/worldquant_repository.py`：中文词、二元词片和中英别名；排除索引/认证/工程正文。
-- `alpha_mining/storage/csv_queue.py`：请求级 schema、原子写入、事件 `GENERATED`/`LOCAL_REJECTED`/`DEDUPLICATED`/`LLM_UNAVAILABLE`/`ENQUEUED`、消费端状态保护。
+- `alpha_mining/storage/csv_queue.py`：请求级 schema、原子写入、事件 `GENERATED`/`LOCAL_REJECTED`/`DEDUPLICATED`/`LLM_UNAVAILABLE`/`ENQUEUED`、消费端状态保护；`GENERATED` 写入后再追加 `ENQUEUED`，事件有当前状态。
 - `README.md`：明确当前 CSV 是待 simulate 队列，而不是 READY 提交队列。
 
 旧 `factory.runtime`、`FactoryOrchestrator`、平台 gateway 和 v50 monolith 保留为回归基准，不再由新入口调用。
@@ -39,6 +39,8 @@
 ## 4. LLM、知识、反馈证据
 
 定向 fake-transport 测试证明阶段 A prompt 含本轮真实 knowledge ref、字段/算子白名单、v50 seed 与反馈摘要；阶段 B provenance 写入 CSV，`knowledge_usage_mode=LIVE_LLM_KNOWLEDGE` 且 `degraded=false`。LLM 异常测试确认不会写 degraded 候选。
+
+LLM 与本地生成异常已分开归类：模型调用异常为 `LLM_UNAVAILABLE`，内核/知识/本地校验异常为 `GENERATION_FAILED`，不会混淆运维诊断。
 
 真实仓库 Markdown 测试命中：
 
@@ -92,4 +94,6 @@ README、认证文档和 `Alpha灵感启示录.md` 不会作为 IDEA 正文引�
 
 ## 9. 未证明项与最小下一步
 
-阻塞点只有完整本地 datasets、data-fields、operators catalog 缺失。下一步应由运维动作导入真实本地快照，再重新运行真实 DeepSeek 单轮、两轮命令和常驻冒烟；不得把 `数据/导出结果/` 测试产物当作生产 catalog。
+阻塞点是完整本地 datasets、data-fields、operators catalog 缺失。下一步应由运维动作导入真实本地快照，再重新运行真实 DeepSeek 单轮、两轮命令和常驻冒烟；不得把 `数据/导出结果/` 测试产物当作生产 catalog。
+
+残余设计风险：为复用 v50 的已验证表达式工厂，`v50_kernel.py` 当前仍 import v50 单体模块；它没有实例化平台 pipeline，也没有发现平台请求，但 v50 顶层仍带 pandas bootstrap 代码。真实 catalog 恢复后，应在隔离环境复核该 import 在缺依赖环境下不会触发安装行为，再决定是否做更细粒度的纯能力提取。
