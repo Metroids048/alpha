@@ -49,3 +49,24 @@ def test_v50_kernel_uses_pure_primitives_without_worldquant_pipeline(tmp_path: P
     assert "WorldQuantAlphaPipeline(" not in source
     assert "fetch_datafields" not in source
     assert "submit_simulation" not in source
+
+
+def test_historical_operator_observations_do_not_claim_synthetic_arity_is_authoritative(tmp_path: Path) -> None:
+    from alpha_mining.generation.snapshots import load_local_snapshots
+    from alpha_mining.generation.validation import LocalExpressionValidator
+
+    _write_dot_catalog(tmp_path)
+    path = tmp_path / ".alpha_operators_cache.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["source"] = "historical_platform_observations"
+    payload["records"].append({"name": "log", "signature": "log(x, x)", "arity": 2})
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    snapshots = load_local_snapshots(root=tmp_path, database=tmp_path / "history.sqlite")
+    issues = LocalExpressionValidator(snapshots.catalog, allow_stale_catalog=True).validate(
+        "log(field)", expected_dataset_id="ds",
+    )
+
+    assert snapshots.catalog.info["source"] == "historical_platform_observations"
+    assert snapshots.catalog.info["operator_arity_trusted"] is False
+    assert issues == []

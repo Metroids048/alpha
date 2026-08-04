@@ -371,7 +371,13 @@ class MetadataCache:
             "region": context.get("region") or payloads["fields"].get("region") or "",
             "universe": context.get("universe") or payloads["fields"].get("universe") or "",
             "delay": context.get("delay") if context.get("delay") is not None else payloads["fields"].get("delay"),
-            "source": "platform_catalog",
+            "source": str(context.get("source") or "platform_catalog"),
+            "operator_arity_trusted": bool(
+                context.get(
+                    "operator_arity_trusted",
+                    str(context.get("source") or "platform_catalog") != "historical_platform_observations",
+                )
+            ),
         }
         return cls(root, operators, fields, datasets, info)
 

@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import logging
+import signal
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -111,8 +112,9 @@ def run_cycle(
         )
         result = generator.generate(snapshots, cycle_id=cycle_id, candidates_per_cycle=config.candidates_per_cycle)
     except (DeepSeekLLMError, LLMUnavailable, ValueError) as exc:
-        _event(queue, cycle_id, "LLM_UNAVAILABLE", type(exc).__name__)
-        return _summary_from_snapshot(cycle_id, "LLM_UNAVAILABLE", snapshots, existing_rows, detail=type(exc).__name__)
+        detail = str(exc) or type(exc).__name__
+        _event(queue, cycle_id, "LLM_UNAVAILABLE", detail)
+        return _summary_from_snapshot(cycle_id, "LLM_UNAVAILABLE", snapshots, existing_rows, detail=detail)
     except Exception as exc:
         _event(queue, cycle_id, "LOCAL_FAILURE", type(exc).__name__)
         return _summary_from_snapshot(cycle_id, "GENERATION_FAILED", snapshots, existing_rows, detail=type(exc).__name__)
@@ -149,6 +151,7 @@ def run_cycle(
 
 def main(argv: Sequence[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    _install_console_interrupt_handler()
     parser = argparse.ArgumentParser(description="纯本地 Alpha 生产器：只生成待平台 simulate 的候选")
     parser.add_argument("--once", action="store_true", help="执行一轮；LLM 或 catalog 不可用时返回非零")
     parser.add_argument("--max-rounds", type=int, default=0, help="执行指定轮数后退出；0 为无限")
@@ -231,6 +234,18 @@ def _event(queue: CandidateCsvQueue, candidate_id: str, event_type: str, detail:
 
 def _cycle_id() -> str:
     return "cycle_" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+
+
+def _install_console_interrupt_handler() -> None:
+    """Translate Windows CTRL_BREAK_EVENT into the normal graceful exit path."""
+
+    sigbreak = getattr(signal, "SIGBREAK", None)
+    if sigbreak is not None:
+        signal.signal(sigbreak, _raise_keyboard_interrupt)
+
+
+def _raise_keyboard_interrupt(_signum: int, _frame: Any) -> None:
+    raise KeyboardInterrupt
 
 
 def _log_cycle(cycle_id: str, state: str, **values: Any) -> None:
