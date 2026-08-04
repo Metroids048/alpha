@@ -23,7 +23,10 @@ def test_generation_entrypoint_is_the_only_new_public_flow() -> None:
     entry = Path("生成Alpha.py")
     assert entry.is_file()
     text = entry.read_text(encoding="utf-8")
-    assert "factory.runtime" in text
+    assert "alpha_mining.generation.production" in text
+    assert "factory.runtime" not in text
+    assert "offline.cli" not in text
+    assert "--production" not in text
     assert "QualityAlphaWorkflow" not in text
     assert "CandidateGenerationService" not in text
     assert "MetadataCache.load" not in text
@@ -31,7 +34,7 @@ def test_generation_entrypoint_is_the_only_new_public_flow() -> None:
 
 
 def test_generation_entry_defaults_to_production_runtime() -> None:
-    from alpha_mining.factory.runtime import main as production_main
+    from alpha_mining.generation.production import main as production_main
 
     spec = importlib.util.spec_from_file_location("generation_entry", Path("生成Alpha.py"))
     assert spec and spec.loader
