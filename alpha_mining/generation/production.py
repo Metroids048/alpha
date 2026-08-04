@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from alpha_mining.common import load_workspace_env
-from alpha_mining.generation.high_quality import HighQualityGenerator
+from alpha_mining.generation.high_quality import HighQualityGenerator, LLMUnavailable
 from alpha_mining.generation.snapshots import CatalogUnavailable, load_local_snapshots
 from alpha_mining.generation.v50_kernel import V50Kernel
 from alpha_mining.knowledge.worldquant_repository import WorldQuantKnowledgeRepository
@@ -110,9 +110,12 @@ def run_cycle(
             knowledge_repository=WorldQuantKnowledgeRepository(config.worldquant_root),
         )
         result = generator.generate(snapshots, cycle_id=cycle_id, candidates_per_cycle=config.candidates_per_cycle)
-    except Exception as exc:
+    except (DeepSeekLLMError, LLMUnavailable, ValueError) as exc:
         _event(queue, cycle_id, "LLM_UNAVAILABLE", type(exc).__name__)
         return _summary_from_snapshot(cycle_id, "LLM_UNAVAILABLE", snapshots, existing_rows, detail=type(exc).__name__)
+    except Exception as exc:
+        _event(queue, cycle_id, "LOCAL_FAILURE", type(exc).__name__)
+        return _summary_from_snapshot(cycle_id, "GENERATION_FAILED", snapshots, existing_rows, detail=type(exc).__name__)
     finally:
         if owned_llm:
             llm.close()
@@ -123,9 +126,9 @@ def run_cycle(
                 queue.record_event(cycle_id, "LOCAL_REJECTED", f"{reason}:{count}")
         for candidate in result.accepted:
             row = _queue_row(candidate, model_id=str(getattr(llm, "model_id", "")))
-            queue.record_event(row["candidate_id"], "GENERATED", "LLM researched and locally validated")
-            if queue.upsert(row):
+            if queue.upsert(row, event_type="GENERATED", event_details="LLM researched and locally validated"):
                 enqueued += 1
+                queue.record_event(row["candidate_id"], "ENQUEUED", "pending platform simulation")
     rows = tuple(queue.read())
     pending = sum(row.get("queue_status") == "PENDING_SIMULATION" for row in rows)
     summary = CycleSummary(
@@ -179,6 +182,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 8
     if final_state == "LLM_UNAVAILABLE":
         return 7
+    if final_state == "GENERATION_FAILED":
+        return 9
     return 0
 
 

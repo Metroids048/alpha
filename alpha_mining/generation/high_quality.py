@@ -29,6 +29,10 @@ class StructuredLLM(Protocol):
     def generate_json(self, *, system_prompt: str, user_prompt: str, json_schema: dict[str, Any]) -> dict[str, Any]: ...
 
 
+class LLMUnavailable(RuntimeError):
+    """A model transport or structured-response failure, without secret detail."""
+
+
 @dataclass(frozen=True)
 class AcceptedCandidate:
     expression: str
@@ -99,7 +103,7 @@ class HighQualityGenerator:
         if not knowledge.snippets:
             seed_rejections["KNOWLEDGE_UNAVAILABLE"] = seed_rejections.get("KNOWLEDGE_UNAVAILABLE", 0) + 1
             return HighQualityResult(tuple(seeds), knowledge, (), seed_rejections, 0)
-        plan = self.llm.generate_json(
+        plan = self._call_llm(
             system_prompt="You are a constrained WorldQuant alpha researcher. Return JSON only and never invent catalog items or references.",
             user_prompt=self._research_prompt(snapshots, seeds, knowledge, cycle_id),
             json_schema=_plan_schema(),
@@ -109,7 +113,7 @@ class HighQualityGenerator:
         if not plan_refs or not plan_refs <= allowed_refs:
             seed_rejections["HALLUCINATED_KNOWLEDGE_REF"] = seed_rejections.get("HALLUCINATED_KNOWLEDGE_REF", 0) + 1
             return HighQualityResult(tuple(seeds), knowledge, (), seed_rejections, 0)
-        proposed = self.llm.generate_json(
+        proposed = self._call_llm(
             system_prompt="Generate a few valid FASTEXPR candidates from the plan. Return JSON only.",
             user_prompt=self._candidate_prompt(snapshots, seeds, knowledge, plan),
             json_schema=_candidate_schema(),
@@ -117,7 +121,7 @@ class HighQualityGenerator:
         candidate_rows = proposed.get("candidates") if isinstance(proposed, dict) else []
         if not isinstance(candidate_rows, list):
             candidate_rows = []
-        critique = self.llm.generate_json(
+        critique = self._call_llm(
             system_prompt="Critically audit these proposed alpha expressions. Reject hallucinations, clones, unjustified mechanisms, and correlation risk. Return JSON only.",
             user_prompt=json.dumps({"plan": plan, "candidates": candidate_rows}, ensure_ascii=False),
             json_schema=_critique_schema(),
@@ -148,6 +152,15 @@ class HighQualityGenerator:
             used_behaviors.add(behavior_signature(outcome.expression))
             used_pairs.add((operator_topology(outcome.expression), tuple(sorted(extract_fields(outcome.expression)))))
         return HighQualityResult(tuple(seeds), knowledge, tuple(accepted), seed_rejections, len(candidate_rows))
+
+    def _call_llm(self, **kwargs: Any) -> dict[str, Any]:
+        try:
+            response = self.llm.generate_json(**kwargs)
+        except Exception as exc:
+            raise LLMUnavailable(type(exc).__name__) from None
+        if not isinstance(response, dict):
+            raise LLMUnavailable("invalid structured response")
+        return response
 
     def _select_seeds(self, candidates: list[Any], feedback: FeedbackSummary) -> tuple[list[Any], dict[str, int]]:
         rejections: dict[str, int] = {}

@@ -69,7 +69,13 @@ class CandidateCsvQueue:
     def read_events(self) -> list[dict[str, str]]:
         return self._read_csv(self.events_path)
 
-    def upsert(self, candidate: dict[str, str]) -> bool:
+    def upsert(
+        self,
+        candidate: dict[str, str],
+        *,
+        event_type: str = "ENQUEUED",
+        event_details: str = "candidate enqueued",
+    ) -> bool:
         self._require_lock()
         row = self.empty_candidate()
         row.update({key: str(value) for key, value in candidate.items() if key in row})
@@ -101,8 +107,8 @@ class CandidateCsvQueue:
         self._atomic_write(rows)
         self._append_event(
             row["candidate_id"], previous["queue_status"] if previous else "",
-            row["queue_status"], "DEDUPLICATED" if previous else "ENQUEUED",
-            "candidate deduplicated; consumer state preserved" if previous else "candidate enqueued",
+            row["queue_status"], "DEDUPLICATED" if previous else event_type,
+            "candidate deduplicated; consumer state preserved" if previous else event_details,
         )
         return previous is None
 

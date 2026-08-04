@@ -152,6 +152,23 @@ def test_llm_unavailable_never_writes_degraded_candidate(tmp_path) -> None:
     assert summary.queue_rows == ()
 
 
+def test_non_llm_generation_failure_is_not_reported_as_llm_unavailable(tmp_path) -> None:
+    from alpha_mining.generation.production import ProductionConfig, run_cycle
+
+    class BrokenKernel:
+        def generate(self, *_args, **_kwargs):
+            raise RuntimeError("local kernel failure")
+
+    _write_catalog(tmp_path)
+    summary = run_cycle(
+        ProductionConfig(root=tmp_path, database=tmp_path / "history.sqlite"),
+        llm=_LLM(), kernel=BrokenKernel(),
+    )
+
+    assert summary.state == "GENERATION_FAILED"
+    assert summary.enqueued == 0
+
+
 def test_two_cycles_are_idempotent_and_preserve_consumer_state(tmp_path) -> None:
     from alpha_mining.generation.production import ProductionConfig, run_cycle
     from alpha_mining.storage.csv_queue import CandidateCsvQueue
