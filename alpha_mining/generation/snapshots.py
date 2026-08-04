@@ -36,6 +36,35 @@ class FeedbackRecord:
     failure_types: tuple[str, ...]
     self_corr_risk: bool
     field_skeleton: str = ""
+    grounded: bool = True
+
+
+@dataclass(frozen=True)
+class InventoryRecord:
+    ref_id: str
+    candidate_id: str
+    request_hash: str
+    expression: str
+    queue_status: str
+    family: str
+    dataset: str
+    data_fields: tuple[str, ...] = ()
+    research_direction: str = ""
+    last_error_category: str = ""
+    field_skeleton: str = ""
+    exact_hash: str = ""
+    structure_signature: str = ""
+    behavior_signature: str = ""
+
+
+@dataclass(frozen=True)
+class CandidateInventory:
+    records: tuple[InventoryRecord, ...]
+    rejection_counts: tuple[tuple[str, int], ...] = ()
+
+    @property
+    def expressions(self) -> tuple[str, ...]:
+        return tuple(item.expression for item in self.records if item.expression)
 
 
 @dataclass(frozen=True)
@@ -49,7 +78,7 @@ class FeedbackSummary:
 
     @property
     def expressions(self) -> tuple[str, ...]:
-        return tuple(item.expression for item in self.records if item.expression)
+        return tuple(item.expression for item in self.records if item.grounded and item.expression)
 
 
 @dataclass(frozen=True)
@@ -59,6 +88,7 @@ class LocalSnapshots:
     catalog_source: str
     catalog_age_hours: float
     feedback: FeedbackSummary
+    inventory: CandidateInventory
 
 
 def load_catalog_snapshot(
@@ -108,70 +138,152 @@ def load_local_snapshots(
     catalog, source_dir, source, age = load_catalog_snapshot(root=root_path, catalog_dir=catalog_dir)
     db_path = Path(database) if database is not None else root_path / "数据" / "本地运行产物" / "数据库" / "research_memory.sqlite"
     queue = Path(queue_path) if queue_path is not None else root_path / "待提交Alpha列表.csv"
-    feedback = load_feedback_summary(db_path, queue_path=queue, root=root_path)
-    return LocalSnapshots(catalog, source_dir, source, age, feedback)
+    queue_rows = _read_queue(queue)
+    events_path = root_path / "数据" / "本地运行产物" / "状态" / "generation_queue_events.csv"
+    inventory = load_candidate_inventory(queue_rows, event_rows=_read_queue(events_path))
+    feedback = load_feedback_summary(db_path, queue_rows=queue_rows, root=root_path)
+    return LocalSnapshots(catalog, source_dir, source, age, feedback, inventory)
 
 
 def load_feedback_summary(
     database: Path | str,
     *,
     queue_path: Path | str | None = None,
+    queue_rows: list[dict[str, str]] | None = None,
     root: Path | str = ".",
 ) -> FeedbackSummary:
-    """Combine SQLite outcomes, the producer queue, and known v50 CSV history."""
+    """Load platform observations only; queue rows are grounding inventory, not feedback."""
 
     db = Path(database)
     records: list[FeedbackRecord] = []
+    inventory_rows = list(queue_rows) if queue_rows is not None else _read_queue(queue_path)
+    by_request = {
+        str(row.get("request_hash") or ""): row
+        for row in inventory_rows
+        if str(row.get("request_hash") or "")
+    }
+    by_candidate = {
+        str(row.get("candidate_id") or ""): row
+        for row in inventory_rows
+        if str(row.get("candidate_id") or "")
+    }
     if db.exists():
         try:
             CandidateFeedbackStore(db)
             with sqlite3.connect(db) as con:
                 columns = {row[1] for row in con.execute("PRAGMA table_info(candidate_outcomes)")}
                 wanted = [
-                    "request_hash", "outcome", "strategy_family", "dataset", "field_skeleton",
-                    "checks_json", "error_category", "self_correlation", "prod_correlation",
+                    "request_hash", "candidate_id", "outcome", "strategy_family", "dataset", "field_skeleton",
+                    "checks_json", "quality_reasons_json", "error_category", "self_correlation", "prod_correlation",
                 ]
                 if "candidate_outcomes" in _tables(con):
                     query = "SELECT " + ",".join(name if name in columns else "''" for name in wanted) + " FROM candidate_outcomes"
                     for row in con.execute(query):
-                        request_hash, outcome, family, dataset, field_skeleton, checks_json, error_category, self_corr, prod_corr = row
-                        failures = _failure_types(checks_json, error_category, self_corr, prod_corr, outcome)
+                        (
+                            request_hash, candidate_id, outcome, family, dataset, field_skeleton,
+                            checks_json, quality_reasons_json, error_category, self_corr, prod_corr,
+                        ) = row
+                        request_hash = str(request_hash or "")
+                        candidate_id = str(candidate_id or "")
+                        source = by_request.get(request_hash) or by_candidate.get(candidate_id) or {}
+                        expression = str(source.get("expression") or "").strip()
+                        failures = _failure_types(
+                            checks_json, quality_reasons_json, error_category, self_corr, prod_corr, outcome,
+                        )
                         records.append(
                             FeedbackRecord(
-                                _stable_ref("sqlite", str(request_hash)), str(request_hash), "", str(outcome or ""),
-                                str(family or ""), str(dataset or ""), tuple(failures),
+                                _stable_ref("sqlite", request_hash or candidate_id),
+                                request_hash,
+                                expression,
+                                str(outcome or ""),
+                                str(family or source.get("operator_family") or ""),
+                                _dataset_value(dataset, source.get("datasets")),
+                                tuple(failures),
                                 "SELF_CORRELATION" in failures or str(self_corr or "").upper() in {"FAIL", "FAILED"},
-                                str(field_skeleton or ""),
+                                str(field_skeleton or source.get("field_skeleton") or ""),
+                                bool(expression),
                             )
                         )
         except sqlite3.Error:
             pass
-    for row in _read_queue(queue_path):
-        failures = _failure_types(row.get("quality_evidence_json"), row.get("last_error_category"), row.get("self_corr_risk_score"), "", row.get("queue_status"))
-        request_hash = str(row.get("request_hash") or row.get("candidate_id") or "")
-        records.append(
-            FeedbackRecord(
-                _stable_ref("queue", request_hash), request_hash, str(row.get("expression") or ""),
-                str(row.get("queue_status") or ""), str(row.get("operator_family") or ""),
-                str(row.get("datasets") or ""), tuple(failures),
-                "SELF_CORRELATION" in failures or float(_number(row.get("self_corr_risk_score"))) >= 0.65,
-                str(row.get("field_skeleton") or ""),
-            )
-        )
     for path in _history_csv_paths(Path(root)):
         records.extend(_read_history_csv(path))
     unique = {item.ref_id: item for item in records}
     records = sorted(unique.values(), key=lambda item: item.ref_id)
-    positive = tuple(item for item in records if item.outcome.upper() in {"PASS", "READY_TO_SUBMIT", "SIMULATED"} and not item.failure_types)
-    near_pass = tuple(item for item in records if item.outcome.upper() == "NEAR_PASS" or "NEAR_PASS" in item.failure_types)
-    failures = tuple(item for item in records if item not in positive and item not in near_pass)
-    risk = tuple(item for item in records if item.self_corr_risk)
+    positive = tuple(
+        item for item in records
+        if item.grounded
+        and item.outcome.upper() in {"PASS", "READY_TO_SUBMIT"}
+        and not item.failure_types
+    )
+    near_pass = tuple(
+        item for item in records
+        if item.grounded
+        and (item.outcome.upper() == "NEAR_PASS" or "NEAR_PASS" in item.failure_types)
+    )
+    failures = tuple(
+        item for item in records
+        if item.failure_types or item.outcome.upper() in {"FAILED", "FAR_FAIL"}
+    )
+    risk = tuple(item for item in records if item.grounded and item.self_corr_risk)
     counts: dict[str, int] = {}
     for item in records:
         for failure in item.failure_types:
             counts[failure] = counts.get(failure, 0) + 1
     return FeedbackSummary(tuple(records), positive, near_pass, failures, risk, counts)
 
+
+def load_candidate_inventory(
+    rows: Iterable[dict[str, str]],
+    *,
+    event_rows: Iterable[dict[str, str]] = (),
+) -> CandidateInventory:
+    records: list[InventoryRecord] = []
+    rejection_counts: dict[str, int] = {}
+    for row in rows:
+        request_hash = str(row.get("request_hash") or "")
+        candidate_id = str(row.get("candidate_id") or "")
+        expression = str(row.get("expression") or "").strip()
+        records.append(
+            InventoryRecord(
+                ref_id=_stable_ref("inventory", request_hash or candidate_id),
+                candidate_id=candidate_id,
+                request_hash=request_hash,
+                expression=expression,
+                queue_status=str(row.get("queue_status") or ""),
+                family=str(row.get("operator_family") or ""),
+                dataset=str(row.get("datasets") or ""),
+                data_fields=_json_string_tuple(row.get("data_fields")),
+                research_direction=str(row.get("research_direction") or ""),
+                last_error_category=str(row.get("last_error_category") or ""),
+                field_skeleton=str(row.get("field_skeleton") or ""),
+                exact_hash=str(row.get("exact_hash") or ""),
+                structure_signature=str(row.get("structure_signature") or ""),
+                behavior_signature=str(row.get("behavior_signature") or ""),
+            )
+        )
+    for item in records:
+        if item.last_error_category:
+            rejection_counts[item.last_error_category] = rejection_counts.get(item.last_error_category, 0) + 1
+    recent_events = list(event_rows)[-100:]
+    for row in recent_events:
+        if str(row.get("event_type") or "") != "LOCAL_REJECTED":
+            continue
+        detail = str(row.get("details") or "").strip()
+        reason, separator, count_text = detail.rpartition(":")
+        if not separator or not reason:
+            continue
+        try:
+            count = int(count_text)
+        except ValueError:
+            continue
+        if count > 0:
+            rejection_counts[reason] = rejection_counts.get(reason, 0) + count
+    unique = {item.ref_id: item for item in records}
+    return CandidateInventory(
+        tuple(sorted(unique.values(), key=lambda item: item.ref_id)),
+        tuple(sorted(rejection_counts.items())),
+    )
 
 def _tables(con: sqlite3.Connection) -> set[str]:
     return {str(row[0]) for row in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
@@ -215,10 +327,54 @@ def _read_history_csv(path: Path) -> list[FeedbackRecord]:
     return result
 
 
+def _json_string_tuple(value: object) -> tuple[str, ...]:
+    if isinstance(value, (list, tuple)):
+        return tuple(str(item) for item in value if str(item))
+    raw = str(value or "").strip()
+    if not raw:
+        return ()
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        return tuple(item.strip() for item in raw.split(",") if item.strip())
+    if isinstance(parsed, list):
+        return tuple(str(item) for item in parsed if str(item))
+    return (str(parsed),) if isinstance(parsed, str) and parsed else ()
+
+
+def _dataset_value(primary: object, fallback: object) -> str:
+    value = str(primary or "").strip()
+    if value:
+        return value
+    raw = str(fallback or "").strip()
+    if not raw:
+        return ""
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        return raw
+    if isinstance(parsed, list) and parsed:
+        return str(parsed[0])
+    return str(parsed) if isinstance(parsed, str) else raw
+
+
 def _failure_types(*values: object) -> list[str]:
     text = " ".join(str(value or "") for value in values).upper()
-    known = ("SELF_CORRELATION", "PROD_CORRELATION", "LOW_SHARPE", "LOW_FITNESS", "HIGH_TURNOVER", "CONCENTRATED_WEIGHT", "NEAR_PASS")
-    return [item for item in known if item in text]
+    aliases = {
+        "SHARPE_LOW": "LOW_SHARPE",
+        "FITNESS_LOW": "LOW_FITNESS",
+        "TURNOVER_HIGH": "HIGH_TURNOVER",
+        "TURNOVER_LOW": "LOW_TURNOVER",
+        "PRODUCTION_CORRELATION": "PROD_CORRELATION",
+    }
+    canonical_text = text + " " + " ".join(
+        canonical for source, canonical in aliases.items() if source in text
+    )
+    known = (
+        "SELF_CORRELATION", "PROD_CORRELATION", "LOW_SHARPE", "LOW_FITNESS",
+        "HIGH_TURNOVER", "LOW_TURNOVER", "CONCENTRATED_WEIGHT", "NEAR_PASS",
+    )
+    return [item for item in known if item in canonical_text]
 
 
 def _stable_ref(namespace: str, value: str) -> str:

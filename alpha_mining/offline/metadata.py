@@ -37,6 +37,10 @@ class FieldMetadata:
     field_type: str
     category: str
     description: str
+    coverage: float | None = None
+    date_coverage: float | None = None
+    user_count: int | None = None
+    alpha_count: int | None = None
 
 
 @dataclass(frozen=True)
@@ -151,6 +155,10 @@ class MetadataCache:
                 field_type=field_type,
                 category=str(row.get("category") or "unknown").lower(),
                 description=str(row.get("description") or ""),
+                coverage=_optional_float(row.get("coverage")),
+                date_coverage=_optional_float(row.get("dateCoverage") if row.get("dateCoverage") is not None else row.get("date_coverage")),
+                user_count=_optional_int(row.get("userCount") if row.get("userCount") is not None else row.get("user_count")),
+                alpha_count=_optional_int(row.get("alphaCount") if row.get("alphaCount") is not None else row.get("alpha_count")),
             )
         if not operators or not fields or not datasets:
             raise MetadataCacheError("平台元数据缓存不得为空")
@@ -252,6 +260,10 @@ class MetadataCache:
                 str(row.get("type") or row.get("dataType") or "UNKNOWN").upper(),
                 _offline_field_category(field_id, dataset_id, row.get("category"), description),
                 description,
+                _optional_float(row.get("coverage")),
+                _optional_float(row.get("dateCoverage") if row.get("dateCoverage") is not None else row.get("date_coverage")),
+                _optional_int(row.get("userCount") if row.get("userCount") is not None else row.get("user_count")),
+                _optional_int(row.get("alphaCount") if row.get("alphaCount") is not None else row.get("alpha_count")),
             )
         if not fields:
             raise MetadataCacheError("local offline data-field cache has no usable rows")
@@ -338,6 +350,10 @@ class MetadataCache:
                 field_type=str(row.get("type") or row.get("dataType") or "UNKNOWN").upper(),
                 category=str(row.get("category") or "unknown").lower(),
                 description=str(row.get("description") or ""),
+                coverage=_optional_float(row.get("coverage")),
+                date_coverage=_optional_float(row.get("dateCoverage") if row.get("dateCoverage") is not None else row.get("date_coverage")),
+                user_count=_optional_int(row.get("userCount") if row.get("userCount") is not None else row.get("user_count")),
+                alpha_count=_optional_int(row.get("alphaCount") if row.get("alphaCount") is not None else row.get("alpha_count")),
             )
         if not fields:
             raise MetadataCacheError("platform data-field cache has no usable rows")
@@ -386,6 +402,24 @@ def _mapping(value: Any, label: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise MetadataCacheError(f"{label} 必须为 JSON 对象")
     return value
+
+
+def _optional_float(value: Any) -> float | None:
+    if value in (None, ""):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _optional_int(value: Any) -> int | None:
+    if value in (None, ""):
+        return None
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return None
 
 
 def _category_text(value: Any) -> str:

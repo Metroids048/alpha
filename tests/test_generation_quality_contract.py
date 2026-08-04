@@ -1,0 +1,159 @@
+from __future__ import annotations
+
+import json
+import re
+import time
+from pathlib import Path
+
+
+def _write_catalog(root: Path) -> None:
+    context = {"cached_at": time.time(), "region": "USA", "universe": "TOP3000", "delay": 1, "source": "test"}
+    (root / ".alpha_datasets_cache.json").write_text(
+        json.dumps({**context, "dataset_ids": ["fund"], "records": [{"id": "fund"}]}), encoding="utf-8"
+    )
+    (root / ".alpha_datafields_cache.json").write_text(
+        json.dumps({
+            **context,
+            "rows": [
+                {"id": "fund_a", "_ds": "fund", "type": "MATRIX", "description": "quality", "coverage": 0.91, "dateCoverage": 0.88, "userCount": 24},
+                {"id": "fund_b", "_ds": "fund", "type": "MATRIX", "description": "value", "coverage": 0.72, "dateCoverage": 0.70, "userCount": 118},
+            ],
+        }), encoding="utf-8"
+    )
+    (root / ".alpha_operators_cache.json").write_text(
+        json.dumps({
+            **context,
+            "records": [
+                {"name": "rank", "signature": "rank(x)", "arity": 1},
+                {"name": "ts_rank", "signature": "ts_rank(x,d)", "arity": 2},
+                {"name": "group_neutralize", "signature": "group_neutralize(x,g)", "arity": 2},
+            ],
+        }), encoding="utf-8"
+    )
+
+
+class _Kernel:
+    def generate(self, *_args, **_kwargs):
+        from auto_alpha_pipeline_rebuilt_v50 import ExpressionCandidate
+
+        return [
+            ExpressionCandidate("group_neutralize(ts_rank(fund_a,63),market)", "fundamental", "v50", 2.0),
+            ExpressionCandidate("group_neutralize(ts_rank(fund_b,63),market)", "fundamental", "v50", 1.9),
+        ]
+
+
+class _TwoCandidateLLM:
+    model_id = "fake-deepseek"
+
+    def __init__(self, *, mismatch: bool = False, extra_operator: bool = False) -> None:
+        self.calls = 0
+        self.knowledge_ref = ""
+        self.mismatch = mismatch
+        self.extra_operator = extra_operator
+
+    def generate_json(self, *, system_prompt, user_prompt, json_schema):
+        del system_prompt, json_schema
+        self.calls += 1
+        if self.calls == 1:
+            refs = re.findall(r'"ref_id":\s*"([^"]+)"', user_prompt)
+            self.knowledge_ref = refs[0]
+            return {
+                "research_direction": "fundamental quality",
+                "hypothesis": "slow information diffusion",
+                "economic_mechanism": "fundamental information is incorporated gradually",
+                "expected_horizon": "medium",
+                "fields_to_use": ["fund_a", "fund_b"],
+                "operators_to_use": ["rank", "ts_rank", "group_neutralize"],
+                "anti_correlation_plan": "use distinct fields and slow transforms",
+                "expected_turnover_behavior": "medium-low",
+                "historical_failures_to_avoid": ["SELF_CORRELATION"],
+                "knowledge_refs": [self.knowledge_ref],
+            }
+        if self.calls == 2:
+            rows = []
+            for field in ("fund_a", "fund_b"):
+                expression = f"group_neutralize(ts_rank({field},63),market)"
+                claimed = "fund_b" if self.mismatch and field == "fund_a" else field
+                rows.append({
+                    "expression": expression,
+                    "settings": {},
+                    "economic_rationale": f"{claimed} captures slowly diffusing fundamental quality information",
+                    "novelty_reason": "distinct field mechanism",
+                    "anti_corr_design": f"{field} and ts_rank diversify the signal",
+                    "parent_seed": "group_neutralize(ts_rank(fund_a,63),market)",
+                    "knowledge_refs": [self.knowledge_ref],
+                    "feedback_patterns_used": [],
+                    "likely_failure_modes": ["LOW_SHARPE"],
+                    "field_roles": [{"field_id": claimed, "role": "fundamental quality input"}],
+                    "operator_roles": [
+                        {"operator": "ts_rank", "role": "slow persistence"},
+                        {"operator": "group_neutralize", "role": "market diversification"},
+                    ] + ([{"operator": "rank", "role": "claimed but unused"}] if self.extra_operator else []),
+                    "turnover_controls": ["ts_rank"],
+                    "correlation_diversifiers": [field, "group_neutralize"],
+                })
+            return {"candidates": rows}
+        return {"approved": [{"approved": True}, {"approved": True}]}
+
+
+def test_same_cycle_proxy_similarity_gate_keeps_only_one_highly_similar_candidate(tmp_path: Path) -> None:
+    from alpha_mining.generation.production import ProductionConfig, run_cycle
+
+    _write_catalog(tmp_path)
+    summary = run_cycle(
+        ProductionConfig(root=tmp_path, database=tmp_path / "history.sqlite", candidates_per_cycle=2),
+        llm=_TwoCandidateLLM(), kernel=_Kernel(),
+    )
+
+    assert summary.enqueued == 1
+    assert (summary.rejections or {}).get("CYCLE_SIMILARITY", 0) == 1
+    assert float(summary.queue_rows[0]["local_quality_score"]) <= 85.0
+
+
+def test_existing_pending_inventory_is_included_in_similarity_gate(tmp_path: Path) -> None:
+    from alpha_mining.generation.production import ProductionConfig, _queue_row, run_cycle
+    from alpha_mining.generation.high_quality import AcceptedCandidate
+    from alpha_mining.storage.csv_queue import CandidateCsvQueue
+
+    _write_catalog(tmp_path)
+    config = ProductionConfig(root=tmp_path, database=tmp_path / "history.sqlite", candidates_per_cycle=1)
+    queue = CandidateCsvQueue(config.queue_path, config.events_path)
+    existing = AcceptedCandidate(
+        expression="rank(group_neutralize(ts_rank(fund_a,126),market))", settings={"alpha_type": "REGULAR", "region": "USA", "universe": "TOP3000", "delay": 1, "decay": 4, "neutralization": "MARKET", "truncation": 0.08, "language": "FASTEXPR"},
+        datasets=("fund",), parent_seed="seed", research_direction="old", hypothesis="old", economic_rationale="old",
+        knowledge_refs=(), feedback_refs=(), anti_corr_design="old", expected_turnover_behavior="low",
+        local_quality_score=80, novelty_score=1, self_corr_risk_score=0, quality_evidence={}, generator_source="fixture",
+    )
+    with queue.writer():
+        queue.upsert(_queue_row(existing, model_id="fixture"))
+
+    summary = run_cycle(config, llm=_TwoCandidateLLM(), kernel=_Kernel())
+
+    assert summary.enqueued == 0
+    assert (summary.rejections or {}).get("INVENTORY_SIMILARITY", 0) >= 1
+
+
+def test_claimed_field_not_present_in_expression_is_rejected(tmp_path: Path) -> None:
+    from alpha_mining.generation.production import ProductionConfig, run_cycle
+
+    _write_catalog(tmp_path)
+    summary = run_cycle(
+        ProductionConfig(root=tmp_path, database=tmp_path / "history.sqlite", candidates_per_cycle=1),
+        llm=_TwoCandidateLLM(mismatch=True), kernel=_Kernel(),
+    )
+
+    assert summary.enqueued == 0
+    assert (summary.rejections or {}).get("MECHANISM_FIELD_MISMATCH", 0) >= 1
+
+
+def test_claimed_operator_not_present_in_expression_is_rejected(tmp_path: Path) -> None:
+    from alpha_mining.generation.production import ProductionConfig, run_cycle
+
+    _write_catalog(tmp_path)
+    summary = run_cycle(
+        ProductionConfig(root=tmp_path, database=tmp_path / "history.sqlite", candidates_per_cycle=1),
+        llm=_TwoCandidateLLM(extra_operator=True), kernel=_Kernel(),
+    )
+
+    assert summary.enqueued == 0
+    assert (summary.rejections or {}).get("MECHANISM_OPERATOR_MISMATCH", 0) >= 1

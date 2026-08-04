@@ -96,7 +96,7 @@ class HighQualityGenerator:
 
     def generate(self, snapshots: LocalSnapshots, *, cycle_id: str, candidates_per_cycle: int) -> HighQualityResult:
         raw_seeds = list(self.kernel.generate(snapshots))
-        seeds, seed_rejections = self._select_seeds(raw_seeds, snapshots.feedback)
+        seeds, seed_rejections = self._select_seeds(raw_seeds, snapshots)
         if not seeds:
             return HighQualityResult((), _empty_context(), (), seed_rejections, 0)
         fields = tuple(sorted({field for seed in seeds for field in extract_fields(str(getattr(seed, "expression", ""))) if field in snapshots.catalog.fields}))
@@ -281,6 +281,7 @@ class HighQualityGenerator:
         candidates_per_cycle: int,
     ) -> tuple[list[AcceptedCandidate], set[str], set[tuple[str, tuple[str, ...]]]]:
         accepted: list[AcceptedCandidate] = []
+        accepted_expressions: list[str] = []
         used_behaviors: set[str] = set()
         used_pairs: set[tuple[str, tuple[str, ...]]] = set()
         for index, row in enumerate(candidate_rows):
@@ -293,19 +294,32 @@ class HighQualityGenerator:
             if not approval.get("approved"):
                 _reject(rejections, "LLM_CRITIQUE_REJECTED")
                 continue
-            outcome = self._validate_candidate(row, plan, snapshots, seeds, knowledge, used_behaviors, used_pairs)
+            outcome = self._validate_candidate(
+                row,
+                plan,
+                snapshots,
+                seeds,
+                knowledge,
+                used_behaviors,
+                used_pairs,
+                accepted_expressions,
+            )
             if isinstance(outcome, str):
                 _reject(rejections, outcome)
                 continue
             accepted.append(outcome)
+            accepted_expressions.append(outcome.expression)
             used_behaviors.add(behavior_signature(outcome.expression))
             used_pairs.add((operator_topology(outcome.expression), tuple(sorted(extract_fields(outcome.expression)))))
         return accepted, used_behaviors, used_pairs
 
-    def _select_seeds(self, candidates: list[Any], feedback: FeedbackSummary) -> tuple[list[Any], dict[str, int]]:
+    def _select_seeds(self, candidates: list[Any], snapshots: LocalSnapshots) -> tuple[list[Any], dict[str, int]]:
         rejections: dict[str, int] = {}
-        known_exact = {exact_hash(item.expression) for item in feedback.records if item.expression}
-        known_structures = {structure_signature(item.expression) for item in feedback.records if item.expression}
+        known_expressions = [
+            item.expression for item in snapshots.feedback.records if item.grounded and item.expression
+        ] + list(snapshots.inventory.expressions)
+        known_exact = {exact_hash(item) for item in known_expressions}
+        known_structures = {structure_signature(item) for item in known_expressions}
         selected: list[Any] = []
         behavior_seen: set[str] = set()
         pair_seen: set[tuple[str, tuple[str, ...]]] = set()
@@ -405,6 +419,7 @@ class HighQualityGenerator:
         knowledge: KnowledgeContext,
         used_behaviors: set[str],
         used_pairs: set[tuple[str, tuple[str, ...]]],
+        accepted_expressions: list[str],
     ) -> AcceptedCandidate | str:
         expression = str(row.get("expression") or "").strip()
         if not expression:
@@ -431,7 +446,9 @@ class HighQualityGenerator:
         feedback_refs = _string_set(row.get("feedback_patterns_used"))
         if feedback_refs <= {"none", "n/a", "na", "no_feedback", "no_feedback_available"}:
             feedback_refs = set()
-        known_feedback_refs = {item.ref_id for item in snapshots.feedback.records}
+        known_feedback_refs = {
+            item.ref_id for item in snapshots.feedback.records if item.grounded and item.expression
+        }
         if not feedback_refs <= known_feedback_refs:
             return "HALLUCINATED_FEEDBACK_REF"
         parents = {str(getattr(seed, "expression", "")) for seed in seeds}
@@ -442,14 +459,18 @@ class HighQualityGenerator:
         issues = [issue for issue in validator.validate(expression, expected_dataset_id=next(iter(datasets))) if not (issue.code == "UNKNOWN_FIELD" and issue.message in GROUPS)]
         if issues:
             return "LOCAL_VALIDATION_" + issues[0].code
-        history = [item.expression for item in snapshots.feedback.records if item.expression]
-        if exact_hash(expression) in {exact_hash(item) for item in history}:
+        history = [
+            item.expression for item in snapshots.feedback.records if item.grounded and item.expression
+        ]
+        inventory = list(snapshots.inventory.expressions)
+        existing = history + inventory
+        if exact_hash(expression) in {exact_hash(item) for item in existing}:
             return "EXACT_DUPLICATE"
         normalized_hash = _hash(normalized_expression(expression))
-        if normalized_hash in {_hash(normalized_expression(item)) for item in history}:
+        if normalized_hash in {_hash(normalized_expression(item)) for item in existing}:
             return "NORMALIZED_DUPLICATE"
         struct = structure_signature(expression)
-        if struct in {structure_signature(item) for item in history}:
+        if struct in {structure_signature(item) for item in existing}:
             return "STRUCTURE_DUPLICATE"
         self_risk = max((_similarity(expression, item.expression) for item in snapshots.feedback.self_corr_risk if item.expression), default=0.0)
         if self_risk >= self.correlation_ceiling:
@@ -457,12 +478,21 @@ class HighQualityGenerator:
         history_risk = max((_similarity(expression, item) for item in history), default=0.0)
         if history_risk >= self.history_ceiling:
             return "HISTORY_SIMILARITY"
+        inventory_risk = max((_similarity(expression, item) for item in inventory), default=0.0)
+        if inventory_risk >= self.history_ceiling:
+            return "INVENTORY_SIMILARITY"
+        cycle_risk = max((_similarity(expression, item) for item in accepted_expressions), default=0.0)
+        if cycle_risk >= self.correlation_ceiling:
+            return "CYCLE_SIMILARITY"
         behavior = behavior_signature(expression)
         pair = (operator_topology(expression), fields)
         if behavior in used_behaviors:
             return "BEHAVIOR_DUPLICATE"
         if pair in used_pairs:
             return "OPERATOR_FIELD_DUPLICATE"
+        mechanism_issue = _mechanism_issue(row, expression, fields, functions, snapshots)
+        if mechanism_issue:
+            return mechanism_issue
         if _has_short_window(expression):
             return "SHORT_WINDOW"
         if _bare_price_expression(fields):
@@ -472,7 +502,13 @@ class HighQualityGenerator:
         if len(rationale) < 20 or len(anti) < 12:
             return "WEAK_ECONOMIC_MECHANISM"
         score, evidence = self._quality_score(
-            expression, fields, refs, feedback_refs, rationale, anti, snapshots.feedback, self_risk,
+            expression,
+            fields,
+            refs,
+            feedback_refs,
+            snapshots,
+            max(self_risk, history_risk, inventory_risk, cycle_risk),
+            mechanism_complete=True,
         )
         if score < self.quality_threshold:
             return "LOW_LOCAL_QUALITY"
@@ -484,23 +520,55 @@ class HighQualityGenerator:
             max(0.0, 1.0 - history_risk), self_risk, evidence, "LLM_REFINED_V50",
         )
 
-    def _quality_score(self, expression: str, fields: tuple[str, ...], refs: set[str], feedback_refs: set[str], rationale: str, anti: str, feedback: FeedbackSummary, self_risk: float) -> tuple[float, dict[str, Any]]:
-        value = 30.0
-        value += 16.0 if refs else 0.0
-        value += 15.0 if len(rationale) >= 40 else 8.0
-        value += 12.0 if len(anti) >= 20 else 6.0
-        value += min(12.0, 4.0 + len(fields) * 4.0)
-        value += 7.0 if not feedback_refs or feedback_refs <= {item.ref_id for item in feedback.records} else 0.0
-        value += max(0.0, 8.0 - self_risk * 12.0)
+    def _quality_score(
+        self,
+        expression: str,
+        fields: tuple[str, ...],
+        refs: set[str],
+        feedback_refs: set[str],
+        snapshots: LocalSnapshots,
+        max_similarity: float,
+        *,
+        mechanism_complete: bool,
+    ) -> tuple[float, dict[str, Any]]:
+        field_component = _field_quality_component(fields, snapshots)
+        referenced = [
+            item for item in snapshots.feedback.records
+            if item.ref_id in feedback_refs and item.grounded
+        ]
+        positive_support = sum(item in snapshots.feedback.positive for item in referenced)
+        near_support = sum(item in snapshots.feedback.near_pass for item in referenced)
+        feedback_component = min(20.0, positive_support * 10.0 + near_support * 6.0)
+        novelty_component = max(0.0, 20.0 * (1.0 - min(1.0, max_similarity)))
+        mechanism_component = 20.0 if mechanism_complete else 0.0
+        knowledge_component = 10.0 if refs else 0.0
+        risk_component = _risk_component(expression, max_similarity)
+        value = (
+            field_component + feedback_component + novelty_component
+            + mechanism_component + knowledge_component + risk_component
+        )
+        evidence_cap = 100.0 if positive_support or near_support else 85.0
+        value = min(value, evidence_cap)
         evidence = {
             "local_quality_score_definition": "local candidate ranking only; not platform Sharpe or Fitness",
+            "generator_contract_version": "generation-hq-v2",
             "catalog_legal": True,
             "knowledge_grounded": bool(refs),
-            "economic_mechanism_length": len(rationale),
-            "anti_corr_design_length": len(anti),
             "field_count": len(fields),
             "feedback_refs": sorted(feedback_refs),
-            "self_corr_risk_score": round(self_risk, 4),
+            "grounded_feedback_refs": sorted(item.ref_id for item in referenced),
+            "positive_feedback_support": positive_support,
+            "near_pass_support": near_support,
+            "max_proxy_similarity": round(max_similarity, 4),
+            "score_components": {
+                "field_quality": round(field_component, 2),
+                "grounded_feedback": round(feedback_component, 2),
+                "novelty_low_similarity": round(novelty_component, 2),
+                "mechanism_expression_consistency": round(mechanism_component, 2),
+                "knowledge_relevance": round(knowledge_component, 2),
+                "turnover_complexity_concentration_risk": round(risk_component, 2),
+            },
+            "evidence_cap": evidence_cap,
         }
         return round(min(100.0, value), 2), evidence
 
@@ -526,6 +594,7 @@ class HighQualityGenerator:
                 "failure_counts": snapshots.feedback.failure_counts,
                 "self_corr_refs": [item.ref_id for item in snapshots.feedback.self_corr_risk[:12]],
             },
+            "candidate_inventory": _inventory_prompt_summary(snapshots),
             "knowledge": [{"ref_id": item.ref_id, "text": item.text} for item in knowledge.snippets],
             "v50_seeds": [str(getattr(item, "expression", "")) for item in seeds],
             "plan_requirements": [
@@ -545,8 +614,11 @@ class HighQualityGenerator:
             "allowed_fields": sorted(snapshots.catalog.fields),
             "allowed_operators": sorted(snapshots.catalog.operators),
             "allowed_knowledge_refs": [item.ref_id for item in knowledge.snippets],
-            "allowed_feedback_refs": [item.ref_id for item in snapshots.feedback.records],
+            "allowed_feedback_refs": [
+                item.ref_id for item in snapshots.feedback.records if item.grounded and item.expression
+            ],
             "allowed_parent_seeds": [str(getattr(item, "expression", "")) for item in seeds],
+            "candidate_inventory": _inventory_prompt_summary(snapshots),
             "forbidden_identifiers": sorted(BASE_VARS - set(snapshots.catalog.fields)),
             "candidate_requirements": [
                 "Produce at most one candidate per parent seed.",
@@ -554,11 +626,68 @@ class HighQualityGenerator:
                 "Do not use rank(ts_mean(volume,...)/adv...) as a generic cosmetic liquidity leg.",
                 "Use only exact allowed IDs and include a specific economic rationale tied to the selected fields.",
                 "Every selected field and operator must appear verbatim in the plan's fields_to_use and operators_to_use arrays.",
+                "Provide field_roles for every field used and operator_roles for every function used in the expression.",
+                "turnover_controls and correlation_diversifiers must name only fields/operators actually present in the expression.",
                 "Do not use any forbidden_identifiers, even when a parent seed contains one.",
+                "Avoid repeating candidate_inventory used research directions, field sets, and operator topologies unless grounded feedback supports a material repair.",
+                "Use recent_rejection_counts to change the mechanism rather than making a cosmetic clone.",
                 "When allowed_feedback_refs is empty, set feedback_patterns_used to an empty JSON array, never a placeholder string.",
             ],
         }
         return json.dumps(payload, ensure_ascii=False, sort_keys=True)
+
+
+def _inventory_prompt_summary(snapshots: LocalSnapshots) -> dict[str, Any]:
+    directions = sorted({
+        item.research_direction for item in snapshots.inventory.records if item.research_direction
+    })[:24]
+    field_sets = sorted({
+        tuple(sorted(item.data_fields)) for item in snapshots.inventory.records if item.data_fields
+    })[:24]
+    topologies = sorted({
+        operator_topology(item.expression)
+        for item in snapshots.inventory.records
+        if item.expression
+    })[:24]
+    rejection_counts = dict(snapshots.inventory.rejection_counts)
+    return {
+        "used_research_directions": directions,
+        "used_field_sets": [list(items) for items in field_sets],
+        "used_operator_topologies": topologies,
+        "recent_rejection_counts": dict(sorted(rejection_counts.items())),
+    }
+
+
+def revalidate_pending_rows(
+    rows: list[dict[str, str]],
+    snapshots: LocalSnapshots,
+) -> tuple[list[dict[str, str]], list[tuple[str, str]]]:
+    """Quarantine legacy pending rows that cannot prove the v2 quality contract.
+
+    Old rows are retained verbatim apart from status/error fields.  Consumer
+    owned terminal states are never touched, and no row is deleted.
+    """
+
+    del snapshots  # The v2 evidence marker is the deterministic revalidation boundary.
+    updated: list[dict[str, str]] = []
+    changes: list[tuple[str, str]] = []
+    for source in rows:
+        row = dict(source)
+        if row.get("queue_status") != "PENDING_SIMULATION":
+            updated.append(row)
+            continue
+        try:
+            evidence = json.loads(row.get("quality_evidence_json") or "{}")
+        except json.JSONDecodeError:
+            evidence = {}
+        version = evidence.get("generator_contract_version") if isinstance(evidence, dict) else None
+        if version != "generation-hq-v2":
+            row["queue_status"] = "REJECTED_LOCAL_REVALIDATION"
+            row["last_error_category"] = "LEGACY_CONTRACT_MISSING_EVIDENCE"
+            row["last_error"] = "candidate lacks generation-hq-v2 deterministic quality evidence"
+            changes.append((str(row.get("candidate_id") or ""), row["last_error_category"]))
+        updated.append(row)
+    return updated, changes
 
 
 def _empty_context() -> KnowledgeContext:
@@ -612,6 +741,72 @@ def _bare_price_expression(fields: tuple[str, ...]) -> bool:
     return bool(fields) and all(field.lower() in {"close", "open", "high", "low", "vwap", "price"} for field in fields)
 
 
+def _mechanism_issue(
+    row: dict[str, Any],
+    expression: str,
+    fields: tuple[str, ...],
+    functions: set[str],
+    snapshots: LocalSnapshots,
+) -> str:
+    field_roles = row.get("field_roles")
+    operator_roles = row.get("operator_roles")
+    turnover_controls = _string_set(row.get("turnover_controls"))
+    diversifiers = _string_set(row.get("correlation_diversifiers"))
+    if not isinstance(field_roles, list) or not isinstance(operator_roles, list):
+        return "MECHANISM_EVIDENCE_MISSING"
+    claimed_fields = {
+        str(item.get("field_id") or "").strip()
+        for item in field_roles if isinstance(item, dict) and str(item.get("role") or "").strip()
+    }
+    claimed_operators = {
+        str(item.get("operator") or "").strip().lower()
+        for item in operator_roles if isinstance(item, dict) and str(item.get("role") or "").strip()
+    }
+    if claimed_fields != set(fields):
+        return "MECHANISM_FIELD_MISMATCH"
+    if claimed_operators != functions:
+        return "MECHANISM_OPERATOR_MISMATCH"
+    expression_items = set(fields) | functions
+    if not turnover_controls or not turnover_controls <= expression_items:
+        return "TURNOVER_CONTROL_MISMATCH"
+    if not diversifiers or not diversifiers <= expression_items:
+        return "ANTI_CORR_DESIGN_MISMATCH"
+    rationale = str(row.get("economic_rationale") or "")
+    mentioned_catalog_fields = {
+        field for field in snapshots.catalog.fields
+        if re.search(rf"(?<![a-z0-9_]){re.escape(field)}(?![a-z0-9_])", rationale, flags=re.IGNORECASE)
+    }
+    if not mentioned_catalog_fields <= set(fields):
+        return "MECHANISM_FIELD_MISMATCH"
+    return ""
+
+
+def _field_quality_component(fields: tuple[str, ...], snapshots: LocalSnapshots) -> float:
+    if not fields:
+        return 0.0
+    scores: list[float] = []
+    for field_id in fields:
+        field = snapshots.catalog.fields[field_id]
+        coverage = getattr(field, "coverage", None)
+        date_coverage = getattr(field, "date_coverage", None)
+        user_count = getattr(field, "user_count", None)
+        coverage_score = 0.75 if coverage is None else max(0.0, min(1.0, float(coverage)))
+        date_score = 0.75 if date_coverage is None else max(0.0, min(1.0, float(date_coverage)))
+        if user_count is None:
+            crowding_score = 0.75
+        else:
+            crowding_score = 1.0 / (1.0 + max(0.0, float(user_count)) / 100.0)
+        scores.append((coverage_score * 0.45 + date_score * 0.35 + crowding_score * 0.20) * 20.0)
+    return sum(scores) / len(scores)
+
+
+def _risk_component(expression: str, max_similarity: float) -> float:
+    functions = extract_functions(expression)
+    complexity_penalty = max(0, len(functions) - 5) * 1.25
+    similarity_penalty = min(6.0, max_similarity * 6.0)
+    return max(0.0, 10.0 - complexity_penalty - similarity_penalty)
+
+
 def _hash(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
@@ -642,7 +837,11 @@ def _candidate_schema() -> dict[str, Any]:
         "properties": {
             "candidates": {"type": "array", "maxItems": 5, "items": {
                 "type": "object",
-                "required": ["expression", "settings", "economic_rationale", "novelty_reason", "anti_corr_design", "parent_seed", "knowledge_refs", "feedback_patterns_used", "likely_failure_modes"],
+                "required": [
+                    "expression", "settings", "economic_rationale", "novelty_reason", "anti_corr_design",
+                    "parent_seed", "knowledge_refs", "feedback_patterns_used", "likely_failure_modes",
+                    "field_roles", "operator_roles", "turnover_controls", "correlation_diversifiers",
+                ],
                 "properties": {
                     "expression": {"type": "string"}, "settings": {"type": "object"},
                     "economic_rationale": {"type": "string"}, "novelty_reason": {"type": "string"},
@@ -650,6 +849,10 @@ def _candidate_schema() -> dict[str, Any]:
                     "knowledge_refs": {"type": "array", "items": {"type": "string"}},
                     "feedback_patterns_used": {"type": "array", "items": {"type": "string"}},
                     "likely_failure_modes": {"type": "array", "items": {"type": "string"}},
+                    "field_roles": {"type": "array", "items": {"type": "object"}},
+                    "operator_roles": {"type": "array", "items": {"type": "object"}},
+                    "turnover_controls": {"type": "array", "items": {"type": "string"}},
+                    "correlation_diversifiers": {"type": "array", "items": {"type": "string"}},
                 },
             }},
         },

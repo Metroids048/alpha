@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from alpha_mining.common import load_workspace_env
-from alpha_mining.generation.high_quality import HighQualityGenerator, LLMUnavailable
+from alpha_mining.generation.high_quality import HighQualityGenerator, LLMUnavailable, revalidate_pending_rows
 from alpha_mining.generation.snapshots import CatalogUnavailable, load_local_snapshots
 from alpha_mining.generation.v50_kernel import V50Kernel
 from alpha_mining.knowledge.worldquant_repository import WorldQuantKnowledgeRepository
@@ -34,6 +34,7 @@ class ProductionConfig:
     interval_seconds: float = 300.0
     allow_degraded: bool = False
     knowledge_root: Path | None = None
+    pending_limit: int = 20
 
     @property
     def queue_path(self) -> Path:
@@ -72,6 +73,14 @@ class CycleSummary:
     rejections: dict[str, int] | None = None
     detail: str = ""
     queue_rows: tuple[dict[str, str], ...] = ()
+    next_wait_seconds: float = 0.0
+
+
+@dataclass
+class GenerationLoopState:
+    last_input_fingerprint: str = ""
+    last_enqueued: int | None = None
+    zero_output_streak: int = 0
 
 
 def run_cycle(
@@ -79,6 +88,7 @@ def run_cycle(
     *,
     llm: Any | None = None,
     kernel: Any | None = None,
+    runtime_state: GenerationLoopState | None = None,
 ) -> CycleSummary:
     """Run one read-local, LLM-required generation cycle without platform I/O."""
 
@@ -95,6 +105,47 @@ def run_cycle(
     except CatalogUnavailable as exc:
         _log_cycle(cycle_id, "CATALOG_UNAVAILABLE", detail=str(exc))
         return CycleSummary(cycle_id, "CATALOG_UNAVAILABLE", detail=str(exc), queue_rows=existing_rows)
+    revalidated_rows, quarantined = revalidate_pending_rows(list(existing_rows), snapshots)
+    if quarantined:
+        with queue.writer():
+            queue.replace_all(revalidated_rows)
+            for candidate_id, reason in quarantined:
+                queue.record_event(candidate_id, "LOCAL_REVALIDATION_REJECTED", reason)
+        existing_rows = tuple(queue.read())
+
+    pending_before = sum(row.get("queue_status") == "PENDING_SIMULATION" for row in existing_rows)
+    fingerprint = _input_fingerprint(snapshots, existing_rows, config.worldquant_root)
+    if pending_before >= max(1, int(config.pending_limit)):
+        summary = _summary_from_snapshot(
+            cycle_id,
+            "WAITING_FOR_CONSUMER",
+            snapshots,
+            existing_rows,
+            detail=f"pending queue reached limit {config.pending_limit}",
+            pending_total=pending_before,
+            next_wait_seconds=config.interval_seconds,
+        )
+        _log_cycle(cycle_id, summary.state, pending=summary.pending_total, detail=summary.detail)
+        return summary
+    if (
+        runtime_state is not None
+        and runtime_state.last_enqueued == 0
+        and runtime_state.last_input_fingerprint == fingerprint
+    ):
+        runtime_state.zero_output_streak += 1
+        wait_seconds = _backoff_seconds(config.interval_seconds, runtime_state.zero_output_streak)
+        summary = _summary_from_snapshot(
+            cycle_id,
+            "NO_NEW_EVIDENCE",
+            snapshots,
+            existing_rows,
+            detail="catalog, grounded feedback and candidate inventory are unchanged",
+            pending_total=pending_before,
+            next_wait_seconds=wait_seconds,
+        )
+        _log_cycle(cycle_id, summary.state, pending=summary.pending_total, next_round_wait=wait_seconds)
+        return summary
+
     owned_llm = False
     if llm is None:
         load_workspace_env(config.root / ".env")
@@ -133,11 +184,22 @@ def run_cycle(
                 queue.record_event(row["candidate_id"], "ENQUEUED", "pending platform simulation")
     rows = tuple(queue.read())
     pending = sum(row.get("queue_status") == "PENDING_SIMULATION" for row in rows)
+    wait_seconds = config.interval_seconds
+    if runtime_state is not None:
+        if runtime_state.last_input_fingerprint != fingerprint:
+            runtime_state.zero_output_streak = 0
+        runtime_state.last_input_fingerprint = fingerprint
+        runtime_state.last_enqueued = enqueued
+        if enqueued == 0:
+            runtime_state.zero_output_streak = max(1, runtime_state.zero_output_streak)
+        else:
+            runtime_state.zero_output_streak = 0
     summary = CycleSummary(
         cycle_id, "COMPLETE", len(snapshots.catalog.fields), len(snapshots.catalog.operators), len(snapshots.catalog.datasets),
         len(snapshots.feedback.records), len(snapshots.feedback.positive), len(snapshots.feedback.near_pass),
         len(snapshots.feedback.self_corr_risk), len(result.knowledge.snippets), str(getattr(llm, "model_id", "")),
         len(result.seeds), result.llm_candidates, enqueued, pending, result.rejections, queue_rows=rows,
+        next_wait_seconds=wait_seconds,
     )
     _log_cycle(
         cycle_id, summary.state, catalog_fields=summary.catalog_fields, catalog_operators=summary.catalog_operators,
@@ -159,25 +221,29 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--candidates-per-cycle", type=int, default=3, help="每轮最多入队 1-5 条")
     parser.add_argument("--catalog-dir", type=Path, default=None, help="完整本地 catalog 目录")
     parser.add_argument("--allow-degraded", action="store_true", help="显式允许未来受控降级；默认绝不降级")
+    parser.add_argument("--pending-limit", type=int, default=20, help="待 simulate 队列上限；达到后暂停调用 LLM")
     args = parser.parse_args(argv)
     if args.candidates_per_cycle < 1 or args.candidates_per_cycle > 5:
         parser.error("--candidates-per-cycle 必须在 1 到 5 之间")
     config = ProductionConfig(
         root=Path("."), catalog_dir=args.catalog_dir, candidates_per_cycle=args.candidates_per_cycle,
         interval_seconds=max(0.0, args.interval), allow_degraded=bool(args.allow_degraded),
+        pending_limit=max(1, int(args.pending_limit)),
     )
     max_rounds = 1 if args.once else max(0, int(args.max_rounds))
     rounds = 0
     final_state = "COMPLETE"
+    runtime_state = GenerationLoopState()
     try:
         while max_rounds == 0 or rounds < max_rounds:
-            summary = run_cycle(config)
+            summary = run_cycle(config, runtime_state=runtime_state)
             rounds += 1
             final_state = summary.state
             if max_rounds and rounds >= max_rounds:
                 break
-            LOG.info("cycle_id=%s next_round_wait=%.1fs", summary.cycle_id, config.interval_seconds)
-            time.sleep(config.interval_seconds)
+            wait_seconds = summary.next_wait_seconds or config.interval_seconds
+            LOG.info("cycle_id=%s next_round_wait=%.1fs", summary.cycle_id, wait_seconds)
+            time.sleep(wait_seconds)
     except KeyboardInterrupt:
         LOG.info("generation loop interrupted by operator after %s cycle(s)", rounds)
         return 0
@@ -190,11 +256,27 @@ def main(argv: Sequence[str] | None = None) -> int:
     return 0
 
 
-def _summary_from_snapshot(cycle_id: str, state: str, snapshots: Any, queue_rows: tuple[dict[str, str], ...], *, detail: str = "") -> CycleSummary:
+def _summary_from_snapshot(
+    cycle_id: str,
+    state: str,
+    snapshots: Any,
+    queue_rows: tuple[dict[str, str], ...],
+    *,
+    detail: str = "",
+    pending_total: int | None = None,
+    next_wait_seconds: float = 0.0,
+) -> CycleSummary:
     return CycleSummary(
         cycle_id, state, len(snapshots.catalog.fields), len(snapshots.catalog.operators), len(snapshots.catalog.datasets),
         len(snapshots.feedback.records), len(snapshots.feedback.positive), len(snapshots.feedback.near_pass),
-        len(snapshots.feedback.self_corr_risk), detail=detail, queue_rows=queue_rows,
+        len(snapshots.feedback.self_corr_risk),
+        pending_total=(
+            sum(row.get("queue_status") == "PENDING_SIMULATION" for row in queue_rows)
+            if pending_total is None else pending_total
+        ),
+        detail=detail,
+        queue_rows=queue_rows,
+        next_wait_seconds=next_wait_seconds,
     )
 
 
@@ -230,6 +312,84 @@ def _queue_row(candidate: Any, *, model_id: str) -> dict[str, str]:
 def _event(queue: CandidateCsvQueue, candidate_id: str, event_type: str, detail: str) -> None:
     with queue.writer():
         queue.record_event(candidate_id, event_type, detail)
+
+
+def _input_fingerprint(
+    snapshots: Any,
+    rows: tuple[dict[str, str], ...],
+    knowledge_root: Path,
+) -> str:
+    catalog_fields = [
+        {
+            "id": field.field_id,
+            "dataset": field.dataset_id,
+            "coverage": field.coverage,
+            "date_coverage": field.date_coverage,
+            "user_count": field.user_count,
+            "alpha_count": field.alpha_count,
+        }
+        for field in sorted(snapshots.catalog.fields.values(), key=lambda item: item.field_id)
+    ]
+    feedback = [
+        {
+            "ref_id": item.ref_id,
+            "request_hash": item.request_hash,
+            "outcome": item.outcome,
+            "failure_types": item.failure_types,
+            "expression": item.expression if item.grounded else "",
+        }
+        for item in snapshots.feedback.records
+    ]
+    inventory = [
+        {
+            "request_hash": row.get("request_hash", ""),
+            "queue_status": row.get("queue_status", ""),
+            "research_direction": row.get("research_direction", ""),
+            "data_fields": row.get("data_fields", ""),
+            "operator_family": row.get("operator_family", ""),
+            "structure_signature": row.get("structure_signature", ""),
+            "last_error_category": row.get("last_error_category", ""),
+        }
+        for row in rows
+    ]
+    payload = {
+        "fields": catalog_fields,
+        "operators": sorted(snapshots.catalog.operators),
+        "datasets": sorted(snapshots.catalog.datasets),
+        "feedback": feedback,
+        "inventory": inventory,
+        "inventory_rejection_counts": snapshots.inventory.rejection_counts,
+        "knowledge": _knowledge_fingerprint(knowledge_root),
+    }
+    encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def _knowledge_fingerprint(root: Path) -> str:
+    digest = hashlib.sha256()
+    if not root.is_dir():
+        return "MISSING"
+    files = sorted(
+        (path for path in root.rglob("*") if path.is_file() and path.suffix.lower() in {".md", ".txt"}),
+        key=lambda path: path.relative_to(root).as_posix(),
+    )
+    for path in files:
+        relative = path.relative_to(root).as_posix()
+        digest.update(relative.encode("utf-8"))
+        digest.update(b"\0")
+        try:
+            digest.update(path.read_bytes())
+        except OSError:
+            digest.update(b"UNREADABLE")
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def _backoff_seconds(base: float, zero_output_streak: int) -> float:
+    safe_base = max(0.0, float(base))
+    multipliers = (1, 3, 6, 12)
+    index = min(max(0, int(zero_output_streak) - 1), len(multipliers) - 1)
+    return min(3600.0, safe_base * multipliers[index])
 
 
 def _cycle_id() -> str:

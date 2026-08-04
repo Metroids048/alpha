@@ -7,6 +7,23 @@ import time
 from pathlib import Path
 
 
+def _mechanism_contract(expression: str) -> dict[str, object]:
+    from alpha_mining.domain.expression_normalization import extract_fields, extract_functions
+
+    fields = extract_fields(expression)
+    functions = extract_functions(expression)
+    turnover = next((item for item in functions if item.startswith("ts_") or item == "rank"), functions[0])
+    diversifiers = [fields[0]]
+    if "group_neutralize" in functions:
+        diversifiers.append("group_neutralize")
+    return {
+        "field_roles": [{"field_id": field, "role": "economic input"} for field in fields],
+        "operator_roles": [{"operator": operator, "role": "signal transformation"} for operator in functions],
+        "turnover_controls": [turnover],
+        "correlation_diversifiers": diversifiers,
+    }
+
+
 def _write_catalog(root: Path) -> None:
     now = time.time()
     context = {
@@ -98,6 +115,7 @@ class _LLM:
                 "knowledge_refs": [self.knowledge_ref],
                 "feedback_patterns_used": [],
                 "likely_failure_modes": ["LOW_SHARPE"],
+                **_mechanism_contract(expression),
             }]}
         return {"approved": [{"approved": True, "expression": "approved", "critique": "mechanism and catalog checked"}]}
 
@@ -184,14 +202,16 @@ def test_invalid_research_plan_is_repaired_before_candidate_generation(tmp_path)
                     "historical_failures_to_avoid": ["SELF_CORRELATION"], "knowledge_refs": [self.knowledge_ref],
                 }
             if len(self.calls) == 3:
+                expression = "group_neutralize(ts_rank(fund_b,63),market)"
                 return {"candidates": [{
-                    "expression": "group_neutralize(ts_rank(fund_b,63),market)", "settings": {},
+                    "expression": expression, "settings": {},
                     "economic_rationale": "Slow-moving fundamental quality information persists over a medium horizon.",
                     "novelty_reason": "The repaired plan uses only the grounded field scope.",
                     "anti_corr_design": "Uses a separate field and a medium horizon to reduce crowding.",
                     "parent_seed": "group_neutralize(rank(fund_b),market)",
                     "knowledge_refs": [self.knowledge_ref], "feedback_patterns_used": [],
                     "likely_failure_modes": ["LOW_SHARPE"],
+                    **_mechanism_contract(expression),
                 }]}
             if len(self.calls) == 4:
                 return {"approved": [{"approved": True, "critique": "grounded plan and candidate"}]}
@@ -276,9 +296,10 @@ def test_two_cycles_are_idempotent_and_preserve_consumer_state(tmp_path) -> None
 
     rows = CandidateCsvQueue(config.queue_path, config.events_path).read()
     assert first.cycle_id != second.cycle_id
-    assert len(rows) == 2
+    assert len(rows) == 1
     assert rows[0]["queue_status"] == "SIMULATED"
-    assert {row["queue_status"] for row in rows} == {"SIMULATED", "PENDING_SIMULATION"}
+    assert second.enqueued == 0
+    assert (second.rejections or {}).get("LOW_LOCAL_QUALITY", 0) == 1
     assert not list(tmp_path.glob("*.tmp"))
     assert not config.queue_path.with_suffix(config.queue_path.suffix + ".lock").exists()
 
@@ -318,6 +339,7 @@ def test_hallucinated_llm_fields_operators_and_refs_are_hard_rejected(tmp_path) 
                     "novelty_reason": "test", "anti_corr_design": "slow window and independent field selection",
                     "parent_seed": "group_neutralize(ts_rank(fund_a,63),market)", "knowledge_refs": refs,
                     "feedback_patterns_used": [], "likely_failure_modes": [],
+                    **_mechanism_contract(expression),
                 }]}
             return {"approved": [{"approved": True, "critique": "passes model critique"}]}
 
@@ -374,6 +396,7 @@ def test_scope_repair_reasks_llm_but_keeps_all_hard_gates(tmp_path) -> None:
                 "anti_corr_design": "Uses a separate field and avoids the rejected invalid identifier.",
                 "parent_seed": "group_neutralize(ts_rank(fund_a,63),market)", "knowledge_refs": [self.knowledge_ref],
                 "feedback_patterns_used": [], "likely_failure_modes": ["LOW_SHARPE"],
+                    **_mechanism_contract(expression),
             }]}
 
     _write_catalog(tmp_path)
@@ -409,3 +432,238 @@ def test_history_self_correlation_and_low_sharpe_change_next_seed_selection(tmp_
     assert result.v50_seeds == 1, result.detail  # the f_a topology was excluded before LLM selection
     assert result.enqueued == 0
     assert "UNKNOWN_PARENT_SEED" in (result.rejections or {})
+
+
+def test_unchanged_zero_output_cycle_skips_llm_and_increases_backoff(tmp_path) -> None:
+    from alpha_mining.generation.production import GenerationLoopState, ProductionConfig, run_cycle
+
+    class EmptyLLM(_LLM):
+        def generate_json(self, *, system_prompt, user_prompt, json_schema):
+            del system_prompt, json_schema
+            self.calls.append(user_prompt)
+            phase = len(self.calls) % 3
+            if phase == 1:
+                refs = re.findall(r'"ref_id":\s*"([^"]+)"', user_prompt)
+                self.knowledge_ref = refs[0]
+                return {
+                    "research_direction": "fundamental quality", "hypothesis": "quality persists",
+                    "economic_mechanism": "slow information diffusion", "expected_horizon": "medium",
+                    "fields_to_use": ["fund_a"], "operators_to_use": ["rank", "ts_rank", "group_neutralize"],
+                    "anti_correlation_plan": "distinct field", "expected_turnover_behavior": "low",
+                    "historical_failures_to_avoid": [], "knowledge_refs": [self.knowledge_ref],
+                }
+            if phase == 2:
+                return {"candidates": []}
+            return {"approved": []}
+
+    _write_catalog(tmp_path)
+    llm = EmptyLLM()
+    state = GenerationLoopState()
+    config = ProductionConfig(root=tmp_path, database=tmp_path / "history.sqlite", interval_seconds=300)
+
+    first = run_cycle(config, llm=llm, kernel=_Kernel(), runtime_state=state)
+    calls_after_first = len(llm.calls)
+    second = run_cycle(config, llm=llm, kernel=_Kernel(), runtime_state=state)
+
+    assert first.enqueued == 0
+    assert calls_after_first == 3
+    assert second.state == "NO_NEW_EVIDENCE"
+    assert len(llm.calls) == calls_after_first
+    assert second.next_wait_seconds == 900
+
+
+def test_pending_limit_waits_for_consumer_without_calling_llm(tmp_path) -> None:
+    from alpha_mining.generation.production import GenerationLoopState, ProductionConfig, run_cycle
+    from alpha_mining.storage.csv_queue import CandidateCsvQueue
+
+    class ForbiddenLLM:
+        model_id = "must-not-run"
+
+        def generate_json(self, **_kwargs):
+            raise AssertionError("LLM must not run when pending queue is full")
+
+    _write_catalog(tmp_path)
+    config = ProductionConfig(root=tmp_path, database=tmp_path / "history.sqlite", pending_limit=20)
+    queue = CandidateCsvQueue(config.queue_path, config.events_path)
+    with queue.writer():
+        for index in range(20):
+            row = queue.empty_candidate()
+            row.update(
+                candidate_id=f"candidate-{index}", request_hash=f"request-{index}",
+                expression=f"rank(fund_a)+{index}", queue_status="PENDING_SIMULATION",
+                quality_evidence_json=json.dumps({"generator_contract_version": "generation-hq-v2"}),
+            )
+            queue.upsert(row)
+
+    summary = run_cycle(config, llm=ForbiddenLLM(), kernel=_Kernel(), runtime_state=GenerationLoopState())
+
+    assert summary.state == "WAITING_FOR_CONSUMER"
+    assert summary.pending_total == 20
+
+
+def test_legacy_pending_candidate_without_v2_evidence_is_quarantined_not_deleted(tmp_path) -> None:
+    from alpha_mining.generation.production import ProductionConfig, run_cycle
+    from alpha_mining.storage.csv_queue import CandidateCsvQueue
+
+    class EmptyKernel:
+        def generate(self, *_args, **_kwargs):
+            return []
+
+    class UnusedLLM:
+        model_id = "unused"
+
+        def generate_json(self, **_kwargs):
+            raise AssertionError("empty kernel should not call the LLM")
+
+    _write_catalog(tmp_path)
+    config = ProductionConfig(root=tmp_path, database=tmp_path / "history.sqlite")
+    queue = CandidateCsvQueue(config.queue_path, config.events_path)
+    row = queue.empty_candidate()
+    row.update(
+        candidate_id="legacy-1", request_hash="legacy-request", expression="group_neutralize(ts_rank(fund_a,63),market)",
+        queue_status="PENDING_SIMULATION", quality_evidence_json="{}",
+    )
+    with queue.writer():
+        queue.upsert(row)
+
+    summary = run_cycle(config, llm=UnusedLLM(), kernel=EmptyKernel())
+    rows = CandidateCsvQueue(config.queue_path, config.events_path).read()
+
+    assert summary.state == "COMPLETE"
+    assert len(rows) == 1
+    assert rows[0]["queue_status"] == "REJECTED_LOCAL_REVALIDATION"
+    assert rows[0]["last_error_category"] == "LEGACY_CONTRACT_MISSING_EVIDENCE"
+
+
+def test_worldquant_knowledge_change_resets_no_new_evidence_skip(tmp_path) -> None:
+    from alpha_mining.generation.production import GenerationLoopState, ProductionConfig, run_cycle
+
+    class EmptyLLM(_LLM):
+        def generate_json(self, *, system_prompt, user_prompt, json_schema):
+            del system_prompt, json_schema
+            self.calls.append(user_prompt)
+            phase = len(self.calls) % 3
+            if phase == 1:
+                refs = re.findall(r'"ref_id":\s*"([^"]+)"', user_prompt)
+                self.knowledge_ref = refs[0]
+                return {
+                    "research_direction": "fundamental quality",
+                    "hypothesis": "quality persists",
+                    "economic_mechanism": "slow information diffusion",
+                    "expected_horizon": "medium",
+                    "fields_to_use": ["fund_a"],
+                    "operators_to_use": ["rank", "ts_rank", "group_neutralize"],
+                    "anti_correlation_plan": "distinct field",
+                    "expected_turnover_behavior": "low",
+                    "historical_failures_to_avoid": [],
+                    "knowledge_refs": [self.knowledge_ref],
+                }
+            if phase == 2:
+                return {"candidates": []}
+            return {"approved": []}
+
+    _write_catalog(tmp_path)
+    knowledge_root = tmp_path / "World quant"
+    knowledge_root.mkdir()
+    knowledge_file = knowledge_root / "优质Alpha挖掘.md"
+    knowledge_file.write_text("基本面 Alpha 应坚持假说优先、算子多样性并降低自相关。", encoding="utf-8")
+    config = ProductionConfig(
+        root=tmp_path,
+        database=tmp_path / "history.sqlite",
+        knowledge_root=knowledge_root,
+        interval_seconds=300,
+    )
+    llm = EmptyLLM()
+    state = GenerationLoopState()
+
+    first = run_cycle(config, llm=llm, kernel=_Kernel(), runtime_state=state)
+    second = run_cycle(config, llm=llm, kernel=_Kernel(), runtime_state=state)
+    calls_before_change = len(llm.calls)
+    knowledge_file.write_text("基本面 Alpha 应坚持假说优先、算子多样性、降低自相关并避免拥挤字段。", encoding="utf-8")
+    third = run_cycle(config, llm=llm, kernel=_Kernel(), runtime_state=state)
+
+    assert first.enqueued == 0
+    assert second.state == "NO_NEW_EVIDENCE"
+    assert third.state == "COMPLETE"
+    assert len(llm.calls) > calls_before_change
+
+
+def test_research_prompt_contains_used_queue_directions_fields_topologies_and_rejections(tmp_path) -> None:
+    from alpha_mining.generation.production import ProductionConfig, run_cycle
+    from alpha_mining.storage.csv_queue import CandidateCsvQueue
+
+    _write_catalog(tmp_path)
+    config = ProductionConfig(root=tmp_path, database=tmp_path / "history.sqlite", candidates_per_cycle=1)
+    queue = CandidateCsvQueue(config.queue_path, config.events_path)
+    row = queue.empty_candidate()
+    row.update(
+        candidate_id="old-candidate",
+        request_hash="old-request",
+        expression="rank(fund_a + fund_b)",
+        data_fields='["fund_a","fund_b"]',
+        datasets='["fund"]',
+        research_direction="already-used-value-quality",
+        operator_family="rank",
+        queue_status="REJECTED_LOCAL_REVALIDATION",
+        last_error_category="CYCLE_SIMILARITY",
+    )
+    with queue.writer():
+        queue.upsert(row)
+        queue.record_event("old-cycle", "LOCAL_REJECTED", "CYCLE_SIMILARITY:3")
+
+    llm = _LLM()
+    run_cycle(config, llm=llm, kernel=_Kernel())
+
+    research_payload = json.loads(llm.calls[0])
+    inventory = research_payload["candidate_inventory"]
+    assert "already-used-value-quality" in inventory["used_research_directions"]
+    assert ["fund_a", "fund_b"] in inventory["used_field_sets"]
+    assert inventory["used_operator_topologies"]
+    assert inventory["recent_rejection_counts"]["CYCLE_SIMILARITY"] == 4
+
+
+def test_new_local_rejection_evidence_resets_no_new_evidence_skip(tmp_path) -> None:
+    from alpha_mining.generation.production import GenerationLoopState, ProductionConfig, run_cycle
+    from alpha_mining.storage.csv_queue import CandidateCsvQueue
+
+    class EmptyLLM(_LLM):
+        def generate_json(self, *, system_prompt, user_prompt, json_schema):
+            del system_prompt, json_schema
+            self.calls.append(user_prompt)
+            phase = len(self.calls) % 3
+            if phase == 1:
+                refs = re.findall(r'"ref_id":\s*"([^"]+)"', user_prompt)
+                self.knowledge_ref = refs[0]
+                return {
+                    "research_direction": "fundamental quality",
+                    "hypothesis": "quality persists",
+                    "economic_mechanism": "slow information diffusion",
+                    "expected_horizon": "medium",
+                    "fields_to_use": ["fund_a"],
+                    "operators_to_use": ["rank", "ts_rank", "group_neutralize"],
+                    "anti_correlation_plan": "distinct field",
+                    "expected_turnover_behavior": "low",
+                    "historical_failures_to_avoid": [],
+                    "knowledge_refs": [self.knowledge_ref],
+                }
+            if phase == 2:
+                return {"candidates": []}
+            return {"approved": []}
+
+    _write_catalog(tmp_path)
+    config = ProductionConfig(root=tmp_path, database=tmp_path / "history.sqlite", interval_seconds=300)
+    llm = EmptyLLM()
+    state = GenerationLoopState()
+
+    first = run_cycle(config, llm=llm, kernel=_Kernel(), runtime_state=state)
+    second = run_cycle(config, llm=llm, kernel=_Kernel(), runtime_state=state)
+    calls_before_event = len(llm.calls)
+    queue = CandidateCsvQueue(config.queue_path, config.events_path)
+    with queue.writer():
+        queue.record_event("external-review", "LOCAL_REJECTED", "MECHANISM_FIELD_MISMATCH:2")
+    third = run_cycle(config, llm=llm, kernel=_Kernel(), runtime_state=state)
+
+    assert first.enqueued == 0
+    assert second.state == "NO_NEW_EVIDENCE"
+    assert third.state == "COMPLETE"
+    assert len(llm.calls) > calls_before_event
