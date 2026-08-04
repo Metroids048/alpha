@@ -220,3 +220,24 @@ def test_hallucinated_llm_fields_operators_and_refs_are_hard_rejected(tmp_path) 
         result = run_cycle(ProductionConfig(root=root, database=root / "history.sqlite"), llm=BadLLM(kind), kernel=_Kernel())
         assert result.enqueued == 0
         assert expected in (result.rejections or {})
+
+
+def test_history_self_correlation_and_low_sharpe_change_next_seed_selection(tmp_path) -> None:
+    from alpha_mining.generation.production import ProductionConfig, run_cycle
+
+    _write_catalog(tmp_path)
+    (tmp_path / "alpha_submission_feedback.csv").write_text(
+        "expression,status,self_correlation_status,Failure Reasons\n"
+        '"group_neutralize(ts_rank(fund_a,126),market)",ok,FAIL,"SELF_CORRELATION;LOW_SHARPE"\n',
+        encoding="utf-8-sig",
+    )
+
+    result = run_cycle(
+        ProductionConfig(root=tmp_path, database=tmp_path / "history.sqlite"),
+        llm=_LLM(), kernel=_Kernel(),
+    )
+
+    assert result.self_corr_risk == 1
+    assert result.v50_seeds == 1  # the f_a topology was excluded before LLM selection
+    assert result.enqueued == 0
+    assert "UNKNOWN_PARENT_SEED" in (result.rejections or {})

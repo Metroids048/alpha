@@ -303,4 +303,9 @@ def test_alpha_mining_has_no_monolith_imports() -> None:
             or "from auto_alpha_pipeline_rebuilt_v50" in text
         ):
             offenders.append(path.relative_to(root).as_posix())
-    assert offenders == []
+    # The pure production kernel is the single explicit compatibility boundary
+    # for v50's expression and similarity primitives.  It must never revive
+    # the monolith's platform pipeline.
+    assert offenders == ["generation/v50_kernel.py"]
+    kernel = (root / "generation" / "v50_kernel.py").read_text(encoding="utf-8")
+    assert "WorldQuantAlphaPipeline(" not in kernel

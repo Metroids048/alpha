@@ -176,6 +176,8 @@ class CandidateCsvQueue:
                 {"event_id": event_id, "candidate_id": candidate_id, "event_at": event_at,
                  "event_type": event_type, "old_status": old, "new_status": new, "details": details}
             )
+            handle.flush()
+            os.fsync(handle.fileno())
 
     @staticmethod
     def _read_csv(path: Path) -> list[dict[str, str]]:

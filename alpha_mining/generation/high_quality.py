@@ -33,6 +33,7 @@ class StructuredLLM(Protocol):
 class AcceptedCandidate:
     expression: str
     settings: dict[str, Any]
+    datasets: tuple[str, ...]
     parent_seed: str
     research_direction: str
     hypothesis: str
@@ -255,7 +256,7 @@ class HighQualityGenerator:
             return "LOW_LOCAL_QUALITY"
         settings = _settings(row.get("settings"), snapshots.catalog.info)
         return AcceptedCandidate(
-            expression, settings, parent, str(plan.get("research_direction") or ""), str(plan.get("hypothesis") or ""),
+            expression, settings, tuple(sorted(datasets)), parent, str(plan.get("research_direction") or ""), str(plan.get("hypothesis") or ""),
             rationale, tuple(sorted(refs)), tuple(sorted(feedback_refs)), anti,
             str(plan.get("expected_turnover_behavior") or ""), score,
             max(0.0, 1.0 - history_risk), self_risk, evidence, "LLM_REFINED_V50",

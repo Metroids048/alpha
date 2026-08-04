@@ -145,6 +145,7 @@ def run_cycle(
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     parser = argparse.ArgumentParser(description="纯本地 Alpha 生产器：只生成待平台 simulate 的候选")
     parser.add_argument("--once", action="store_true", help="执行一轮；LLM 或 catalog 不可用时返回非零")
     parser.add_argument("--max-rounds", type=int, default=0, help="执行指定轮数后退出；0 为无限")
@@ -201,7 +202,7 @@ def _queue_row(candidate: Any, *, model_id: str) -> dict[str, str]:
         "delay": str(settings["delay"]), "decay": str(settings["decay"]), "neutralization": settings["neutralization"],
         "truncation": str(settings["truncation"]), "language": settings["language"],
         "data_fields": json.dumps(extract_fields(candidate.expression), ensure_ascii=False),
-        "datasets": json.dumps([], ensure_ascii=False), "operator_family": operator_topology(candidate.expression),
+        "datasets": json.dumps(candidate.datasets, ensure_ascii=False), "operator_family": operator_topology(candidate.expression),
         "exact_hash": exact_hash(candidate.expression),
         "normalized_hash": hashlib.sha256(normalized_expression(candidate.expression).encode("utf-8")).hexdigest(),
         "structure_signature": structure_signature(candidate.expression), "behavior_signature": behavior_signature(candidate.expression),
@@ -234,4 +235,3 @@ def _log_cycle(cycle_id: str, state: str, **values: Any) -> None:
 
 # Imports are intentionally local to the pure-domain package, never platform adapters.
 from alpha_mining.domain.expression_normalization import behavior_signature, exact_hash, extract_fields, normalized_expression, operator_topology, structure_signature
-
