@@ -51,7 +51,7 @@ def test_v50_kernel_uses_pure_primitives_without_worldquant_pipeline(tmp_path: P
     assert "submit_simulation" not in source
 
 
-def test_historical_operator_observations_do_not_claim_synthetic_arity_is_authoritative(tmp_path: Path) -> None:
+def test_historical_operator_observations_keep_arity_as_a_local_hard_gate(tmp_path: Path) -> None:
     from alpha_mining.generation.snapshots import load_local_snapshots
     from alpha_mining.generation.validation import LocalExpressionValidator
 
@@ -69,4 +69,6 @@ def test_historical_operator_observations_do_not_claim_synthetic_arity_is_author
 
     assert snapshots.catalog.info["source"] == "historical_platform_observations"
     assert snapshots.catalog.info["operator_arity_trusted"] is False
-    assert issues == []
+    assert [(issue.code, issue.message) for issue in issues] == [
+        ("INVALID_ARITY", "log expects 2, got 1"),
+    ]

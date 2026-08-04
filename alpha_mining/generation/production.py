@@ -111,7 +111,7 @@ def run_cycle(
             knowledge_repository=WorldQuantKnowledgeRepository(config.worldquant_root),
         )
         result = generator.generate(snapshots, cycle_id=cycle_id, candidates_per_cycle=config.candidates_per_cycle)
-    except (DeepSeekLLMError, LLMUnavailable, ValueError) as exc:
+    except (DeepSeekLLMError, LLMUnavailable) as exc:
         detail = str(exc) or type(exc).__name__
         _event(queue, cycle_id, "LLM_UNAVAILABLE", detail)
         return _summary_from_snapshot(cycle_id, "LLM_UNAVAILABLE", snapshots, existing_rows, detail=detail)

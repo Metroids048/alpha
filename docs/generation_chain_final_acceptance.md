@@ -40,7 +40,7 @@
 
 定向 fake-transport 测试证明阶段 A prompt 含本轮真实 knowledge ref、字段/算子白名单、v50 seed 与反馈摘要；阶段 B provenance 写入 CSV，`knowledge_usage_mode=LIVE_LLM_KNOWLEDGE` 且 `degraded=false`。LLM 异常测试确认不会写 degraded 候选。
 
-LLM 与本地生成异常已分开归类：模型调用异常为 `LLM_UNAVAILABLE`，内核/知识/本地校验异常为 `GENERATION_FAILED`，不会混淆运维诊断。
+LLM 与本地生成异常已分开归类：模型调用异常为 `LLM_UNAVAILABLE`，内核/知识/本地校验异常（包括 `ValueError`）为 `GENERATION_FAILED`，不会混淆运维诊断。
 
 真实仓库 Markdown 测试命中：
 
@@ -64,7 +64,7 @@ README、认证文档和 `Alpha灵感启示录.md` 不会作为 IDEA 正文引�
 本次生产 catalog 是本地历史平台观测重建快照，不是测试 fixture，也未联网补齐：
 `research_memory.sqlite:alpha_expression_features` 提供 1001 个历史字段，4 个本地数据集映射，
 `数据/本地运行产物/状态/.alpha_operators_cache.json` 提供 122 个 operator 名称。重建快照的 operator
-arity 标记为不受信，生成链只严格校验 operator 名称、FASTEXPR 语法、字段存在和 dataset 边界；真实四文件
+arity 标记为不受信，但只要快照提供明确形参数，生成链仍执行严格本地 arity 门槛；真实四文件
 平台 catalog 恢复后仍应复核 arity 与字段描述。没有伪造 Sharpe/Fitness 或平台相关性比较。
 
 ## 6. 真实运行记录

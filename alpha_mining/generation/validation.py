@@ -65,14 +65,12 @@ class LocalExpressionValidator:
         except ExpressionSyntaxError as exc:
             return [ValidationIssue("INVALID_SYNTAX", str(exc))]
         issues: list[ValidationIssue] = []
-        arity_trusted = bool(self.metadata.info.get("operator_arity_trusted", True))
-
         def walk(node: AstNode, *, callee: bool = False) -> None:
             if node.kind == "call":
                 operator = self.metadata.operators.get(node.value.lower())
                 if operator is None:
                     issues.append(ValidationIssue("UNKNOWN_OPERATOR", node.value))
-                elif arity_trusted and len(node.children) != operator.arity:
+                elif len(node.children) != operator.arity:
                     issues.append(
                         ValidationIssue(
                             "INVALID_ARITY",
