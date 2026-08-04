@@ -1,8 +1,8 @@
-"""唯一 Alpha 生成入口：生成、质量闭环与 READY CSV 投影，不提交。"""
+"""纯 Alpha 生产入口：只生成待平台 simulate 的候选，不模拟或提交。"""
 
 from __future__ import annotations
 
-from alpha_mining.factory.runtime import main
+from alpha_mining.generation.production import main
 
 
 if __name__ == "__main__":

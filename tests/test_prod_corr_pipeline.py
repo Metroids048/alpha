@@ -455,10 +455,11 @@ def test_local_model_cannot_override_platform_fail():
 # 12 – Runtime uses current main engine
 # ---------------------------------------------------------------------------
 
-def test_runtime_uses_vnext_factory_engine():
-    """The active entry point must use the fail-closed quality workflow / factory path."""
+def test_runtime_uses_pure_generation_engine():
+    """The active entry point must not import the browser/simulation factory path."""
     entry_path = Path(__file__).parent.parent / "生成Alpha.py"
     assert entry_path.exists(), "生成Alpha.py missing"
     content = entry_path.read_text(encoding="utf-8")
-    assert "QualityAlphaWorkflow" in content or "alpha_mining.factory" in content
+    assert "alpha_mining.generation.production" in content
+    assert "alpha_mining.factory" not in content
     assert "import auto_alpha_pipeline_rebuilt_v50" not in content

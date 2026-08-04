@@ -52,3 +52,23 @@ def test_queue_uses_atomic_replace_and_appends_events(tmp_path: Path, monkeypatc
     assert all(source.name.endswith(".tmp") for source, _ in replacements)
     events = queue.read_events()
     assert [event["new_status"] for event in events] == ["GENERATED", "QUEUED"]
+
+
+def test_request_hash_idempotency_never_rewinds_consumer_state(tmp_path: Path) -> None:
+    from alpha_mining.storage.csv_queue import CandidateCsvQueue
+
+    queue = CandidateCsvQueue(tmp_path / "待提交Alpha列表.csv", tmp_path / "events.csv")
+    first = queue.empty_candidate()
+    first.update(candidate_id="first", request_hash="same-request", expression="rank(field)", queue_status="PENDING_SIMULATION")
+    with queue.writer():
+        assert queue.upsert(first) is True
+        queue.transition("first", "SIMULATED", "consumer update")
+        duplicate = queue.empty_candidate()
+        duplicate.update(candidate_id="different-id", request_hash="same-request", expression="rank(field)", queue_status="PENDING_SIMULATION", alpha_id="")
+        assert queue.upsert(duplicate) is False
+
+    rows = queue.read()
+    assert len(rows) == 1
+    assert rows[0]["candidate_id"] == "first"
+    assert rows[0]["queue_status"] == "SIMULATED"
+    assert any(event["event_type"] == "DEDUPLICATED" for event in queue.read_events())

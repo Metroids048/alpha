@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import socket
 import time
 from pathlib import Path
@@ -52,7 +53,7 @@ class _Kernel:
 
         return [
             ExpressionCandidate("group_neutralize(ts_rank(fund_a,63),market)", "fundamental", "v50", 2.0),
-            ExpressionCandidate("group_neutralize(ts_rank(fund_b,126),market)", "fundamental", "v50", 1.9),
+            ExpressionCandidate("group_neutralize(rank(fund_b),market)", "fundamental", "v50", 1.9),
         ]
 
 
@@ -62,35 +63,39 @@ class _LLM:
     def __init__(self) -> None:
         self.calls: list[str] = []
         self.cycle = 0
+        self.knowledge_ref = ""
 
     def generate_json(self, *, system_prompt, user_prompt, json_schema):
         del system_prompt, json_schema
         self.calls.append(user_prompt)
         phase = len(self.calls) % 3
         if phase == 1:
+            refs = re.findall(r'"ref_id":\s*"([^"]+)"', user_prompt)
+            self.knowledge_ref = refs[0]
             return {
                 "research_direction": "fundamental quality",
                 "hypothesis": "quality persists",
                 "economic_mechanism": "slow fundamental information diffusion",
                 "expected_horizon": "medium",
                 "fields_to_use": ["fund_a", "fund_b"],
-                "operators_to_use": ["ts_rank", "group_neutralize"],
+                "operators_to_use": ["rank", "ts_rank", "group_neutralize"],
                 "anti_correlation_plan": "use a distinct field and slow window",
                 "expected_turnover_behavior": "medium-low",
                 "historical_failures_to_avoid": ["SELF_CORRELATION"],
-                "knowledge_refs": ["worldquant:优质Alpha挖掘：AI工作流优化方法.md#1"],
+                "knowledge_refs": [self.knowledge_ref],
             }
         if phase == 2:
             self.cycle += 1
             field = "fund_a" if self.cycle == 1 else "fund_b"
+            expression = f"group_neutralize(ts_rank({field},63),market)" if field == "fund_a" else "group_neutralize(rank(fund_b),market)"
             return {"candidates": [{
-                "expression": f"group_neutralize(ts_rank({field},63),market)",
+                "expression": expression,
                 "settings": {"region": "USA", "universe": "TOP3000", "delay": 1, "decay": 4, "neutralization": "MARKET", "truncation": 0.08},
                 "economic_rationale": "fundamental quality persists over a medium horizon",
                 "novelty_reason": "field-specific slow signal",
                 "anti_corr_design": "slow window and field diversification",
-                "parent_seed": "group_neutralize(ts_rank(fund_a,63),market)",
-                "knowledge_refs": ["worldquant:优质Alpha挖掘：AI工作流优化方法.md#1"],
+                "parent_seed": expression,
+                "knowledge_refs": [self.knowledge_ref],
                 "feedback_patterns_used": [],
                 "likely_failure_modes": ["LOW_SHARPE"],
             }]}
@@ -116,7 +121,8 @@ def test_production_cycle_uses_llm_knowledge_and_never_platform_io(tmp_path, mon
     assert summary.state == "COMPLETE"
     assert summary.enqueued == 1
     assert len(llm.calls) == 3
-    assert "worldquant:优质Alpha挖掘：AI工作流优化方法.md#1" in llm.calls[0]
+    assert llm.knowledge_ref.startswith("worldquant:")
+    assert llm.knowledge_ref in llm.calls[0]
     rows = summary.queue_rows
     assert len(rows) == 1
     assert rows[0]["queue_status"] == "PENDING_SIMULATION"
@@ -143,7 +149,7 @@ def test_llm_unavailable_never_writes_degraded_candidate(tmp_path) -> None:
 
     assert summary.state == "LLM_UNAVAILABLE"
     assert summary.enqueued == 0
-    assert summary.queue_rows == []
+    assert summary.queue_rows == ()
 
 
 def test_two_cycles_are_idempotent_and_preserve_consumer_state(tmp_path) -> None:
@@ -166,3 +172,51 @@ def test_two_cycles_are_idempotent_and_preserve_consumer_state(tmp_path) -> None
     assert {row["queue_status"] for row in rows} == {"SIMULATED", "PENDING_SIMULATION"}
     assert not list(tmp_path.glob("*.tmp"))
     assert not config.queue_path.with_suffix(config.queue_path.suffix + ".lock").exists()
+
+
+def test_hallucinated_llm_fields_operators_and_refs_are_hard_rejected(tmp_path) -> None:
+    from alpha_mining.generation.production import ProductionConfig, run_cycle
+
+    class BadLLM(_LLM):
+        def __init__(self, kind: str) -> None:
+            super().__init__()
+            self.kind = kind
+
+        def generate_json(self, *, system_prompt, user_prompt, json_schema):
+            del system_prompt, json_schema
+            self.calls.append(user_prompt)
+            phase = len(self.calls) % 3
+            if phase == 1:
+                refs = re.findall(r'"ref_id":\s*"([^"]+)"', user_prompt)
+                self.knowledge_ref = refs[0]
+                return {
+                    "research_direction": "fundamental", "hypothesis": "quality", "economic_mechanism": "slow information diffusion",
+                    "expected_horizon": "medium", "fields_to_use": ["fund_a", "fund_b"],
+                    "operators_to_use": ["rank", "ts_rank", "group_neutralize"], "anti_correlation_plan": "slow field diversification",
+                    "expected_turnover_behavior": "low", "historical_failures_to_avoid": ["SELF_CORRELATION"], "knowledge_refs": [self.knowledge_ref],
+                }
+            if phase == 2:
+                expression = "group_neutralize(rank(fund_a),market)"
+                refs = [self.knowledge_ref]
+                if self.kind == "field":
+                    expression = "group_neutralize(rank(fake_field),market)"
+                elif self.kind == "operator":
+                    expression = "group_neutralize(fake_operator(fund_a),market)"
+                elif self.kind == "ref":
+                    refs = ["worldquant:invented#1"]
+                return {"candidates": [{
+                    "expression": expression, "settings": {}, "economic_rationale": "a sufficiently explicit economic mechanism for testing",
+                    "novelty_reason": "test", "anti_corr_design": "slow window and independent field selection",
+                    "parent_seed": "group_neutralize(ts_rank(fund_a,63),market)", "knowledge_refs": refs,
+                    "feedback_patterns_used": [], "likely_failure_modes": [],
+                }]}
+            return {"approved": [{"approved": True, "critique": "passes model critique"}]}
+
+    _write_catalog(tmp_path)
+    for kind, expected in (("field", "UNKNOWN_FIELD"), ("operator", "UNKNOWN_OPERATOR"), ("ref", "HALLUCINATED_KNOWLEDGE_REF")):
+        root = tmp_path / kind
+        root.mkdir()
+        _write_catalog(root)
+        result = run_cycle(ProductionConfig(root=root, database=root / "history.sqlite"), llm=BadLLM(kind), kernel=_Kernel())
+        assert result.enqueued == 0
+        assert expected in (result.rejections or {})

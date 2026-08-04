@@ -159,8 +159,14 @@ def _classify_document(path: str, source: str) -> KnowledgeDocType:
         return KnowledgeDocType.INDEX
     if any(token in value for token in ("auth", "login", "cookie", "credential", "认证", "登录")):
         return KnowledgeDocType.AUTH
+    if "alpha灵感启示录" in value:
+        return KnowledgeDocType.INDEX
     if any(token in value for token in ("engineering", "runtime", "deploy", "implementation", "代码", "工程")):
         return KnowledgeDocType.ENGINEERING
+    if any(token in value for token in ("优质alpha挖掘", "高质量alpha", "高质量工作流")):
+        return KnowledgeDocType.IDEA_BODY
+    if any(token in value for token in ("完整agent工作流", "failed ra", "自相关", "算子多样性", "假说优先")):
+        return KnowledgeDocType.RULE
     if any(token in value for token in (
         "alpha_inspiration/posts/", "inspiration", "idea", "alpha_idea",
         "guide", "tutorial", "example", "灵感", "指南", "教程",
@@ -198,12 +204,44 @@ def _sections(source: str) -> list[tuple[str, str]]:
 
 
 def _terms(*values: object) -> set[str]:
-    return {
-        token
-        for value in values
-        for token in re.findall(r"[a-z0-9_]+", str(value or "").lower().replace("_", " "))
-        if len(token) > 1
-    }
+    """Return English identifiers plus Chinese words and stable bigrams.
+
+    Markdown in this repository is bilingual.  A regex that only sees ASCII
+    silently makes all Chinese operational rules unreachable, so aliases are
+    expanded into a shared canonical vocabulary before ranking.
+    """
+
+    text = " ".join(str(value or "").lower() for value in values)
+    terms: set[str] = set()
+    for token in re.findall(r"[a-z0-9_]+", text):
+        if len(token) > 1:
+            terms.add(token)
+            terms.update(part for part in token.split("_") if len(part) > 1)
+    for chunk in re.findall(r"[\u4e00-\u9fff]+", text):
+        if len(chunk) >= 2:
+            terms.add(chunk)
+            terms.update(chunk[index:index + 2] for index in range(len(chunk) - 1))
+    for canonical, aliases in _TERM_ALIASES.items():
+        if any(alias in text for alias in aliases):
+            terms.add(canonical)
+            for alias in aliases:
+                if len(alias) > 1:
+                    terms.add(alias)
+    return terms
+
+
+_TERM_ALIASES: dict[str, tuple[str, ...]] = {
+    "self_correlation": ("self correlation", "self_correlation", "自相关"),
+    "turnover": ("turnover", "换手率", "换手"),
+    "momentum": ("momentum", "动量"),
+    "reversal": ("reversal", "反转"),
+    "fundamental": ("fundamental", "基本面"),
+    "neutralization": ("neutralization", "neutralize", "中性化"),
+    "low_sharpe": ("low sharpe", "low_sharpe", "低夏普"),
+    "prod_correlation": ("prod correlation", "prod_correlation", "相关性", "生产相关"),
+    "operator_diversity": ("operator diversity", "算子多样性"),
+    "hypothesis_first": ("hypothesis first", "假说优先"),
+}
 
 
 def _score(item: KnowledgeSnippet, terms: set[str]) -> int:

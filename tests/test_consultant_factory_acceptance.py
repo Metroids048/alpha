@@ -351,14 +351,14 @@ def test_factory_release_requires_ledger_freeze_and_confirmation(tmp_path: Path)
     assert control.can_generate() is True
 
 
-def test_cycle_entry_uses_vnext_factory_runtime() -> None:
+def test_cycle_entry_uses_pure_generation_runtime() -> None:
     root = Path(__file__).parents[1]
     source = (root / "生成Alpha.py").read_text(encoding="utf-8")
-    runtime = (root / "alpha_mining" / "factory" / "runtime.py").read_text(encoding="utf-8")
-    assert "factory.runtime" in source
-    assert "generate_candidates" in runtime
-    assert "QualityAlphaWorkflow" not in source + runtime
-    assert "CandidateGenerationService" not in source + runtime
+    assert "alpha_mining.generation.production" in source
+    assert "factory.runtime" not in source
+    assert "offline.cli" not in source
+    assert "QualityAlphaWorkflow" not in source
+    assert "CandidateGenerationService" not in source
     assert "import auto_alpha_pipeline_rebuilt_v50" not in source
     legacy = (root / "auto_alpha_pipeline_rebuilt_v50.py").read_text(encoding="utf-8")
     assert "FactoryControl" in legacy

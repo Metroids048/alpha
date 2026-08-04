@@ -73,12 +73,11 @@ class TestActiveRuntimeAuthority:
         assert "candidate_service" not in sig.parameters
         assert hasattr(FactoryOrchestrator, "execute_candidate")
 
-    def test_active_entry_uses_v50_bridge_only(self):
+    def test_active_entry_uses_pure_generation_production_boundary(self):
         from pathlib import Path
 
         entry = Path("生成Alpha.py").read_text(encoding="utf-8")
-        runtime = Path("alpha_mining/factory/runtime.py").read_text(encoding="utf-8")
-        source = entry + runtime
+        source = entry
         for forbidden in (
             "CandidateGenerationService",
             "QualityAlphaWorkflow",
@@ -89,7 +88,8 @@ class TestActiveRuntimeAuthority:
             "subprocess",
         ):
             assert forbidden not in source
-        assert "adapt_v50_candidate" in runtime
+        assert "alpha_mining.generation.production" in source
+        assert "factory.runtime" not in source
 
 
 # ---------------------------------------------------------------------------

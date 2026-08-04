@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 
 def test_repository_scans_real_markdown_and_returns_bounded_deterministic_context(tmp_path) -> None:
     from alpha_mining.knowledge.worldquant_repository import WorldQuantKnowledgeRepository
@@ -75,3 +77,25 @@ def test_context_is_bounded_per_source_and_per_snippet(tmp_path) -> None:
     assert sum(len(item.text) for item in context.snippets) <= 6000
     assert all(len(item.text) <= 1200 for item in context.snippets)
     assert sum(item.path == "alpha_inspiration/posts/one.md" for item in context.snippets) <= 2
+
+
+def test_real_chinese_worldquant_rules_are_retrievable_without_index_or_auth() -> None:
+    from alpha_mining.knowledge.worldquant_repository import KnowledgeIntent, WorldQuantKnowledgeRepository
+
+    root = Path("World quant")
+    repository = WorldQuantKnowledgeRepository(root)
+    self_corr = repository.retrieve(
+        dataset="fundamental", fields=("基本面",), mechanism="自相关 相关性", intent=KnowledgeIntent.QUALITY_RULE,
+    )
+    workflow = repository.retrieve(
+        dataset="fundamental", fields=("基本面",), mechanism="高质量 Alpha 工作流", intent=KnowledgeIntent.IDEA_GENERATION,
+    )
+    diversity = repository.retrieve(
+        dataset="fundamental", fields=("基本面",), mechanism="算子多样性 假说优先", intent=KnowledgeIntent.QUALITY_RULE,
+    )
+
+    assert self_corr.snippets
+    assert workflow.snippets
+    assert diversity.snippets
+    for context in (self_corr, workflow, diversity):
+        assert all(item.path not in {"README.md", "核心：API认证问题及解决方案.md", "Alpha灵感启示录.md"} for item in context.snippets)

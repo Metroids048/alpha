@@ -4,11 +4,13 @@
 
 `生成Alpha.py` → `待提交Alpha列表.csv` → `提交Alpha.py`
 
-`生成Alpha.py` 默认执行受 catalog、知识引用和质量门槛约束的生成/模拟闭环；它最多生成 3 个初始候选、每周期最多模拟 12 个、并发固定为 1，允许零输出。只有已有 `alpha_id` 且质量状态为 `READY_TO_SUBMIT` 的记录会原子写入 `待提交Alpha列表.csv`。
+`生成Alpha.py` 是纯 Alpha 生产入口：每轮只读取本地 catalog、历史反馈和 `World quant/` Markdown，调用配置的 DeepSeek 做研究/生成/批判，再将少量通过本地硬门槛的候选原子写入 `待提交Alpha列表.csv`。它不打开浏览器、不登录、不访问 World Quant 平台、不 simulate、不生成 `alpha_id`，允许零输出。
 
-纯离线候选生成是独立辅助工具，必须显式运行 `python -m alpha_mining.offline.cli`；它不联网、不模拟，也不会写入 `待提交Alpha列表.csv`。离线候选不是可提交 Alpha。
+`待提交Alpha列表.csv` 在该阶段表示**待平台 simulate 队列**。新行固定为 `queue_status=PENDING_SIMULATION`、`alpha_id` 为空、`degraded=false`、`knowledge_usage_mode=LIVE_LLM_KNOWLEDGE`。`local_quality_score` 只是本地排序分，不是 Sharpe、Fitness 或平台通过保证。
 
-`提交Alpha.py` 不重新 simulate。它仅消费 READY CSV，并保留台账同步、Description、SubmissionGuard、dry-run、确认短语与幂等提交保护。
+旧 `alpha_mining.factory.runtime`、`alpha_mining.offline.cli` 仍保留为回归/辅助工具，但不再是 `生成Alpha.py` 的活动链路，也不会作为 LLM 失败后的静默降级。
+
+`提交Alpha.py` 的浏览器登录、批量 simulate、平台结果解析和反馈回写行为保持不变；本阶段不改造提交链路。平台通过率必须由下一阶段真实 simulate 验证。
 
 主要目录：
 
@@ -21,14 +23,14 @@
 
 本地 SQLite、认证状态、浏览器配置、Cookie 和运行数据均保持 Git 忽略，不进入代码历史。运行产物统一放在 `数据/本地运行产物/`（报告 / 状态 / 数据库 / 备份）。
 
-故障恢复：如果入口输出 state=CATALOG_UNAVAILABLE，这不是“生成了 0 个合格 Alpha”，而是平台目录尚未具备生成条件。先完成网页登录并导入新的本地会话，再依次运行：
+故障恢复：如果入口输出 state=CATALOG_UNAVAILABLE，这不是“生成了 0 个合格 Alpha”，而是本地完整目录尚未具备生成条件。目录同步是独立的运维动作；生成入口本身不会联网。完成同步后再运行：
 
     python -m alpha_mining platform probe
     python -m alpha_mining platform catalog-sync
     python 生成Alpha.py
 
-生产闭环（需要有效平台会话和完整 catalog）：
+生产生成（需要完整本地 catalog 与 DeepSeek 配置）：
 
     python 生成Alpha.py
 
-只有 datasets、data-fields、operators 三类目录都成功同步，生成入口才会继续；--once 在目录不可用时返回退出码 8，常驻模式会输出 CATALOG_BACKOFF 后等待重试。
+只有 datasets、data-fields、operators 三类目录都可从本地快照读取，生成入口才会继续；`--once` 在目录不可用时返回退出码 8，常驻模式记录 `CATALOG_UNAVAILABLE` 后等待重试。
