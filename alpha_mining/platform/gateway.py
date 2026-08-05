@@ -47,6 +47,25 @@ class PlatformGateway:
     def fetch_alpha(self, alpha_id: str) -> dict[str, Any]:
         return self.client.fetch_alpha(alpha_id)
 
+    def refresh_alpha_checks(self, alpha_id: str) -> dict[str, Any]:
+        """Read current checks and PnL-bearing metadata without another POST."""
+        detail = self.fetch_alpha(alpha_id)
+        return {
+            "alpha_id": alpha_id,
+            "metrics": extract_metrics(detail),
+            "checks": extract_checks(detail),
+            "raw": detail,
+        }
+
+    def fetch_pnl_records(self, alpha_id: str) -> list[dict[str, Any]]:
+        """Return platform PnL records when present; this is display-only data."""
+        detail = self.fetch_alpha(alpha_id)
+        for key in ("pnl", "pnlRecords", "dailyPnl", "returns"):
+            value = detail.get(key)
+            if isinstance(value, list):
+                return [item for item in value if isinstance(item, dict)]
+        return []
+
     def patch_alpha(self, alpha_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         response = self.client.request(
             "PATCH",

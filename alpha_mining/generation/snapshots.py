@@ -25,6 +25,9 @@ class CatalogUnavailable(RuntimeError):
     """The complete local datasets/fields/operators snapshot is unavailable."""
 
 
+DEFAULT_OFFLINE_CATALOG_MAX_AGE_HOURS = 336.0
+
+
 @dataclass(frozen=True)
 class FeedbackRecord:
     ref_id: str
@@ -97,6 +100,7 @@ def load_catalog_snapshot(
     catalog_dir: Path | str | None = None,
     allow_stale: bool = True,
     allow_partial_offline: bool = False,
+    offline_max_age_hours: float = DEFAULT_OFFLINE_CATALOG_MAX_AGE_HOURS,
 ) -> tuple[MetadataCache, Path, str, float]:
     """Load a complete catalog from an explicit, finite list of locations."""
 
@@ -133,7 +137,7 @@ def load_catalog_snapshot(
             try:
                 metadata = MetadataCache.load_for_offline_generation(
                     path,
-                    max_age_hours=168,
+                    max_age_hours=float(offline_max_age_hours),
                     allow_stale=False,
                 )
                 return metadata, path, f"{source}-partial-offline", _age_hours(metadata.info)
@@ -149,12 +153,14 @@ def load_local_snapshots(
     database: Path | str | None = None,
     queue_path: Path | str | None = None,
     allow_partial_offline: bool = False,
+    offline_max_age_hours: float = DEFAULT_OFFLINE_CATALOG_MAX_AGE_HOURS,
 ) -> LocalSnapshots:
     root_path = Path(root)
     catalog, source_dir, source, age = load_catalog_snapshot(
         root=root_path,
         catalog_dir=catalog_dir,
         allow_partial_offline=allow_partial_offline,
+        offline_max_age_hours=offline_max_age_hours,
     )
     db_path = Path(database) if database is not None else root_path / "数据" / "本地运行产物" / "数据库" / "research_memory.sqlite"
     queue = Path(queue_path) if queue_path is not None else root_path / "待提交Alpha列表.csv"

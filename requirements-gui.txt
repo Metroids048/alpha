@@ -1,0 +1,6 @@
+# Optional desktop workbench dependencies.  The headless generator and CLI do
+# not depend on this file.
+PyQt5>=5.15,<6
+matplotlib>=3.7,<4
+numpy>=1.24,<3
+pytest-qt>=4.4,<5

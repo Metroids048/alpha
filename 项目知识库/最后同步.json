@@ -1,12 +1,33 @@
 {
   "project": "alpha",
-  "time": "2026-07-30T23:36:34",
+  "time": "2026-08-05T12:28:19",
   "dry_run": false,
   "stats": {
     "copied": 1,
-    "unchanged": 10,
+    "unchanged": 11,
     "conflict": 1,
     "skip": 0,
+    "memory_changed": 0,
     "project": "alpha"
-  }
+  },
+  "memory": [
+    {
+      "name": "project-memory.md",
+      "source": "C:\\Users\\Windows11\\Desktop\\alpha\\.github\\agent\\memory\\project-memory.md",
+      "sha256": "9484019f018119cb2614e6bff35ee0114a88f62baef8d82d912ba6ffc842408f",
+      "mtime": "2026-08-05T12:12:28"
+    },
+    {
+      "name": "decisions-log.md",
+      "source": "C:\\Users\\Windows11\\Desktop\\alpha\\.github\\agent\\memory\\decisions-log.md",
+      "sha256": "c962612238ddd78729f5005212579414ea7c36cbf8844c9a34dd63621fa1bd9a",
+      "mtime": "2026-08-05T12:12:28"
+    },
+    {
+      "name": "task-history.md",
+      "source": "C:\\Users\\Windows11\\Desktop\\alpha\\.github\\agent\\memory\\task-history.md",
+      "sha256": "b5213454fdf07e83b1e0d87b2b3626e4cf26540c46575b4f7a54beab51800b17",
+      "mtime": "2026-08-05T12:12:28"
+    }
+  ]
 }

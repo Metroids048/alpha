@@ -96,6 +96,40 @@ class _TwoCandidateLLM:
         return {"approved": [{"approved": True}, {"approved": True}]}
 
 
+class _CritiqueOnlyRejectingLLM(_TwoCandidateLLM):
+    """Models a narrative-only critic failure on both draft and repair passes."""
+
+    def generate_json(self, *, system_prompt, user_prompt, json_schema):
+        if self.calls < 2:
+            return super().generate_json(
+                system_prompt=system_prompt, user_prompt=user_prompt, json_schema=json_schema
+            )
+        self.calls += 1
+        if self.calls in {3, 5}:
+            return {"approved": [{"approved": False, "critique": "narrative mismatch"}]}
+        expression = "group_neutralize(ts_rank(fund_a,63),market)"
+        return {
+            "candidates": [{
+                "expression": expression,
+                "settings": {},
+                "economic_rationale": "fundamental information diffuses slowly into prices",
+                "novelty_reason": "slow persistence",
+                "anti_corr_design": "long window and group neutralization",
+                "parent_seed": "group_neutralize(ts_rank(fund_a,63),market)",
+                "knowledge_refs": [self.knowledge_ref],
+                "feedback_patterns_used": [],
+                "likely_failure_modes": ["LOW_SHARPE"],
+                "field_roles": [{"field_id": "fund_a", "role": "economic input"}],
+                "operator_roles": [
+                    {"operator": "ts_rank", "role": "slow persistence"},
+                    {"operator": "group_neutralize", "role": "group diversification"},
+                ],
+                "turnover_controls": ["ts_rank"],
+                "correlation_diversifiers": ["fund_a", "group_neutralize"],
+            }],
+        }
+
+
 def test_same_cycle_proxy_similarity_gate_keeps_only_one_highly_similar_candidate(tmp_path: Path) -> None:
     from alpha_mining.generation.production import ProductionConfig, run_cycle
 
@@ -108,6 +142,20 @@ def test_same_cycle_proxy_similarity_gate_keeps_only_one_highly_similar_candidat
     assert summary.enqueued == 1
     assert (summary.rejections or {}).get("CYCLE_SIMILARITY", 0) == 1
     assert float(summary.queue_rows[0]["local_quality_score"]) <= 85.0
+
+
+def test_narrative_only_critic_rejection_recovers_through_deterministic_gates(tmp_path: Path) -> None:
+    from alpha_mining.generation.production import ProductionConfig, run_cycle
+
+    _write_catalog(tmp_path)
+    summary = run_cycle(
+        ProductionConfig(root=tmp_path, database=tmp_path / "history.sqlite"),
+        llm=_CritiqueOnlyRejectingLLM(), kernel=_Kernel(),
+    )
+
+    assert summary.enqueued == 1
+    assert (summary.rejections or {}).get("LLM_CRITIQUE_RECOVERED_BY_DETERMINISTIC_GATES") == 1
+    assert summary.queue_rows[0]["quality_evidence_json"]
 
 
 def test_existing_pending_inventory_is_included_in_similarity_gate(tmp_path: Path) -> None:

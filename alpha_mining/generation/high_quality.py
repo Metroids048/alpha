@@ -6,7 +6,7 @@ import hashlib
 import json
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Protocol
 
 from alpha_mining.domain.expression_normalization import (
@@ -19,7 +19,8 @@ from alpha_mining.domain.expression_normalization import (
     structure_signature,
 )
 from alpha_mining.domain.operator_registry import BASE_VARS, GROUPS
-from alpha_mining.generation.snapshots import FeedbackSummary, LocalSnapshots
+from alpha_mining.generation.snapshots import LocalSnapshots
+from alpha_mining.generation.portfolio import PortfolioLimits, select_candidates
 from alpha_mining.generation.validation import LocalExpressionValidator
 from alpha_mining.knowledge.worldquant_repository import KnowledgeIntent, KnowledgeContext, WorldQuantKnowledgeRepository
 
@@ -97,6 +98,10 @@ class HighQualityGenerator:
         correlation_ceiling: float = 0.65,
         history_ceiling: float = 0.72,
         quality_threshold: float = 75.0,
+        offline_quality_threshold: float = 68.0,
+        portfolio_mode: str = "enforce",
+        portfolio_limits: PortfolioLimits | None = None,
+        portfolio_pending_limit: int = 20,
     ) -> None:
         self.llm = llm
         self.kernel = kernel
@@ -104,6 +109,12 @@ class HighQualityGenerator:
         self.correlation_ceiling = float(correlation_ceiling)
         self.history_ceiling = float(history_ceiling)
         self.quality_threshold = float(quality_threshold)
+        self.offline_quality_threshold = min(float(offline_quality_threshold), self.quality_threshold)
+        self.portfolio_mode = str(portfolio_mode or "enforce").strip().lower()
+        if self.portfolio_mode not in {"shadow", "enforce"}:
+            raise ValueError("portfolio mode must be 'shadow' or 'enforce'")
+        self.portfolio_limits = portfolio_limits or PortfolioLimits()
+        self.portfolio_pending_limit = max(1, int(portfolio_pending_limit))
 
     def generate(self, snapshots: LocalSnapshots, *, cycle_id: str, candidates_per_cycle: int) -> HighQualityResult:
         raw_seeds = list(self.kernel.generate(snapshots))
@@ -299,7 +310,19 @@ class HighQualityGenerator:
                     repaired_rows, repaired_approvals if isinstance(repaired_approvals, list) else [],
                     plan, snapshots, seeds, knowledge, seed_rejections, candidates_per_cycle,
                 )
-        if not accepted and snapshots.catalog.info.get("source") == "local_offline_field_snapshot":
+        # The critique model is useful for explaining a concrete defect, but
+        # it is not an authority on economic narrative.  A full batch can be
+        # rejected merely because the model paraphrases the plan differently.
+        # When *every initial draft* hits that condition, construct candidates
+        # from the already validated plan and run the exact same deterministic
+        # expression, mechanism, duplicate, correlation and quality gates.
+        # This is deliberately narrower than the offline-catalog fallback:
+        # malformed model drafts still do not receive a bypass.
+        critique_only_exhaustion = bool(candidate_rows) and all_critic_rejected and not deterministic_draft_rejected
+        if not accepted and (
+            snapshots.catalog.info.get("source") == "local_offline_field_snapshot"
+            or critique_only_exhaustion
+        ):
             fallback_rows = self._deterministic_fallback_rows(plan, snapshots, seeds, knowledge)
             if fallback_rows:
                 fallback_approvals = [{"approved": True} for _ in fallback_rows]
@@ -309,7 +332,15 @@ class HighQualityGenerator:
                 )
                 if accepted:
                     _reject(seed_rejections, "DETERMINISTIC_LOCAL_FALLBACK_USED")
-        return HighQualityResult(tuple(seeds), knowledge, tuple(accepted), seed_rejections, len(candidate_rows) + repaired_count)
+                    if critique_only_exhaustion:
+                        _reject(seed_rejections, "LLM_CRITIQUE_RECOVERED_BY_DETERMINISTIC_GATES")
+        accepted = self._select_portfolio(
+            accepted,
+            snapshots,
+            candidates_per_cycle=candidates_per_cycle,
+            rejections=seed_rejections,
+        )
+        return HighQualityResult(tuple(seeds), knowledge, accepted, seed_rejections, len(candidate_rows) + repaired_count)
 
     def _call_llm(self, **kwargs: Any) -> dict[str, Any]:
         try:
@@ -336,8 +367,6 @@ class HighQualityGenerator:
         used_behaviors: set[str] = set()
         used_pairs: set[tuple[str, tuple[str, ...]]] = set()
         for index, row in enumerate(candidate_rows):
-            if len(accepted) >= min(5, max(1, int(candidates_per_cycle))):
-                break
             if not isinstance(row, dict):
                 _reject(rejections, "INVALID_LLM_CANDIDATE")
                 continue
@@ -375,6 +404,50 @@ class HighQualityGenerator:
             used_behaviors.add(behavior_signature(outcome.expression))
             used_pairs.add((operator_topology(outcome.expression), tuple(sorted(extract_fields(outcome.expression)))))
         return accepted, used_behaviors, used_pairs
+
+    def _select_portfolio(
+        self,
+        candidates: list[AcceptedCandidate],
+        snapshots: LocalSnapshots,
+        *,
+        candidates_per_cycle: int,
+        rejections: dict[str, int],
+    ) -> tuple[AcceptedCandidate, ...]:
+        if not candidates:
+            return ()
+        selection = select_candidates(
+            candidates,
+            inventory=snapshots.inventory.records,
+            feedback=snapshots.feedback,
+            limit=candidates_per_cycle,
+            pending_limit=self.portfolio_pending_limit,
+            limits=self.portfolio_limits,
+            mode=self.portfolio_mode,
+        )
+        for reason, count in selection.rejection_counts.items():
+            for _ in range(count):
+                _reject(rejections, reason)
+        decisions = {
+            str(item.get("expression") or ""): item
+            for item in selection.decisions
+        }
+        enriched: list[AcceptedCandidate] = []
+        for candidate in selection.accepted:
+            decision = decisions.get(candidate.expression, {})
+            evidence = dict(candidate.quality_evidence)
+            evidence["portfolio_selection"] = {
+                "policy_version": self.portfolio_limits.policy_version,
+                "mode": self.portfolio_mode,
+                "inventory_hash": selection.inventory_hash,
+                "decision": decision.get("decision", "ACCEPT"),
+                "reason": decision.get("reason", "SELECTED"),
+                "would_accept": bool(decision.get("would_accept", True)),
+                "feedback_penalty": decision.get("feedback_penalty", {}),
+                "occupancy": decision.get("occupancy", 0),
+                "vector": decision.get("vector", {}),
+            }
+            enriched.append(replace(candidate, quality_evidence=evidence))
+        return tuple(enriched)
 
     def _select_seeds(self, candidates: list[Any], snapshots: LocalSnapshots) -> tuple[list[Any], dict[str, int]]:
         rejections: dict[str, int] = {}
@@ -663,7 +736,7 @@ class HighQualityGenerator:
             if row.get("_mechanism_roles_completed")
             else "llm_declared_roles"
         )
-        if score < self.quality_threshold:
+        if score < self._quality_threshold(snapshots):
             return "LOW_LOCAL_QUALITY"
         settings = _settings(row.get("settings"), snapshots.catalog.info)
         return AcceptedCandidate(
@@ -676,6 +749,11 @@ class HighQualityGenerator:
                 or ("LLM_LOCALLY_GROUNDED_PLAN" if plan.get("_locally_grounded") else "LLM_REFINED_V50")
             ),
         )
+
+    def _quality_threshold(self, snapshots: LocalSnapshots) -> float:
+        if snapshots.catalog.info.get("source") == "local_offline_field_snapshot":
+            return self.offline_quality_threshold
+        return self.quality_threshold
 
     def _quality_score(
         self,
@@ -710,6 +788,8 @@ class HighQualityGenerator:
             "local_quality_score_definition": "local candidate ranking only; not platform Sharpe or Fitness",
             "generator_contract_version": "generation-hq-v2",
             "catalog_legal": True,
+            "catalog_source": snapshots.catalog_source,
+            "catalog_age_hours": round(snapshots.catalog_age_hours, 3),
             "knowledge_grounded": bool(refs),
             "field_count": len(fields),
             "feedback_refs": sorted(feedback_refs),

@@ -122,6 +122,57 @@ class _LLM:
         return {"approved": [{"approved": True, "expression": "approved", "critique": "mechanism and catalog checked"}]}
 
 
+def test_production_defaults_to_enforce_and_cli_allows_shadow(monkeypatch) -> None:
+    from alpha_mining.generation import production
+
+    captured = []
+
+    def fake_run_cycle(config, **_kwargs):
+        captured.append(config)
+        return production.CycleSummary("test-cycle", "COMPLETE")
+
+    monkeypatch.setattr(production, "run_cycle", fake_run_cycle)
+    monkeypatch.setattr(production.time, "sleep", lambda _seconds: None)
+
+    assert production.ProductionConfig().portfolio_mode == "enforce"
+    assert production.main(["--once"]) == 0
+    assert captured[-1].portfolio_mode == "enforce"
+    assert production.main(["--once", "--portfolio-mode", "shadow"]) == 0
+    assert captured[-1].portfolio_mode == "shadow"
+
+
+def test_rejection_digest_exposes_primary_reasons() -> None:
+    from alpha_mining.generation.production import _rejection_digest
+
+    assert _rejection_digest({"LOW_LOCAL_QUALITY": 6, "UNKNOWN_OPERATOR": 3}) == (
+        "LOW_LOCAL_QUALITY:6,UNKNOWN_OPERATOR:3"
+    )
+
+
+def test_partial_offline_catalog_uses_explicit_longer_age_window(tmp_path) -> None:
+    from datetime import datetime, timedelta, timezone
+
+    from alpha_mining.generation.snapshots import load_local_snapshots
+
+    cached_at = (datetime.now(timezone.utc) - timedelta(hours=200)).timestamp()
+    context = {"cached_at": cached_at, "region": "USA", "universe": "TOP3000", "delay": 1}
+    (tmp_path / ".alpha_datasets_cache.json").write_text(
+        json.dumps({**context, "dataset_ids": ["fund"], "records": [{"id": "fund"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / ".alpha_datafields_cache.json").write_text(
+        json.dumps({**context, "rows": [{"id": "fund_a", "_ds": "fund", "type": "MATRIX"}]}),
+        encoding="utf-8",
+    )
+
+    snapshots = load_local_snapshots(root=tmp_path, allow_partial_offline=True)
+
+    assert snapshots.catalog_source == "root-dot-cache-partial-offline"
+    assert 199 < snapshots.catalog_age_hours < 201
+    assert len(snapshots.catalog.operators) == 15
+    assert snapshots.catalog.info["source"] == "local_offline_field_snapshot"
+
+
 def test_production_cycle_uses_llm_knowledge_and_never_platform_io(tmp_path, monkeypatch) -> None:
     from alpha_mining.generation.production import ProductionConfig, run_cycle
 
@@ -370,6 +421,10 @@ def test_unresolved_plan_scope_is_grounded_locally_before_candidate_generation(t
     assert summary.queue_rows[0]["generator_source"] == "LLM_LOCALLY_GROUNDED_PLAN"
     evidence = json.loads(summary.queue_rows[0]["quality_evidence_json"])
     assert evidence["plan_locally_grounded"] is True
+    assert evidence["catalog_source"] == "root-dot-cache"
+    assert evidence["catalog_age_hours"] >= 0
+    assert evidence["portfolio_selection"]["mode"] == "enforce"
+    assert evidence["portfolio_selection"]["decision"] == "ACCEPT"
 
 
 def test_non_llm_generation_failure_is_not_reported_as_llm_unavailable(tmp_path) -> None:

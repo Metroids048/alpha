@@ -148,6 +148,19 @@ class FactoryOrchestrator:
         )
         try:
             result = self._call_simulation(lease)
+        except SimulationOutcomeUnknown as exc:
+            detail = self._sanitize_error(f"{type(exc).__name__}: {exc}")
+            self.requests.finalize_failure(
+                lease.request_hash,
+                lease_started_at=lease.lease_started_at,
+                status="UNKNOWN",
+                error=detail,
+            )
+            return CandidateExecutionResult(
+                lease.request_hash,
+                error_category="SIMULATION_UNCERTAIN",
+                error_message=detail,
+            )
         except Exception as exc:
             detail = self._sanitize_error(f"{type(exc).__name__}: {exc}")
             self.requests.finalize_failure(lease.request_hash, lease_started_at=lease.lease_started_at, error=detail)

@@ -1,4 +1,4 @@
-SYSTEM_LANGUAGE = 'English'
+SYSTEM_LANGUAGE = 'Chinese'
 
 use_local_corr = True
 

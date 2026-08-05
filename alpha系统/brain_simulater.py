@@ -15,6 +15,7 @@ CREDENTIALS_FILE = "brain_credentials.json"
 
 from common_config import *
 from pc_range import estimate_pc_range
+from queue_workbench import QueueWorkbench
 
 import re
 import os
@@ -10510,6 +10511,10 @@ class MainWindow(QMainWindow):
         # Ctrl+Shift+T to Tune current tab
         QShortcut(QKeySequence("Ctrl+Shift+T"), self, self._tune_current_tab)
 
+        # The queue workbench is a thin client over alpha_mining.  It does not
+        # instantiate the legacy BrainClient or its submit worker.
+        self.queue_workbench = QueueWorkbench()
+        self.tab_widget.addTab(self.queue_workbench, "Queue")
         self._content_layout.addWidget(self.tab_widget, stretch=1)
         main_layout.addWidget(content_widget, stretch=1)
 
@@ -12818,7 +12823,7 @@ class MainWindow(QMainWindow):
 
     def _on_tab_close(self, index: int):
         tab = self.tab_widget.widget(index)
-        if tab and tab.is_running():
+        if tab and hasattr(tab, "is_running") and tab.is_running():
             QMessageBox.warning(self, T("Tab Busy"), T("Cannot close a tab while simulation is running."))
             return
         self.tab_widget.removeTab(index)

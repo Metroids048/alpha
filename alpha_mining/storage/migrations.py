@@ -509,6 +509,53 @@ CREATE INDEX IF NOT EXISTS idx_settings_trials_budget ON settings_trials(created
 CREATE INDEX IF NOT EXISTS idx_settings_trials_lineage ON settings_trials(parent_candidate_id,tune_stage);
 """,
     ),
+    (
+        22,
+        """
+CREATE TABLE IF NOT EXISTS candidate_work_items (
+ candidate_id TEXT PRIMARY KEY,
+ request_hash TEXT NOT NULL DEFAULT '',
+ payload_json TEXT NOT NULL DEFAULT '{}',
+ source_evidence_json TEXT NOT NULL DEFAULT '{}',
+ state TEXT NOT NULL,
+ alpha_id TEXT NOT NULL DEFAULT '',
+ metrics_json TEXT NOT NULL DEFAULT '{}',
+ checks_json TEXT NOT NULL DEFAULT '[]',
+ quality_reasons_json TEXT NOT NULL DEFAULT '[]',
+ description_status TEXT NOT NULL DEFAULT 'NOT_PREPARED',
+ submission_status TEXT NOT NULL DEFAULT 'NOT_SUBMITTED',
+ parent_candidate_id TEXT NOT NULL DEFAULT '',
+ tune_child_count INTEGER NOT NULL DEFAULT 0,
+ last_error_category TEXT NOT NULL DEFAULT '',
+ last_error TEXT NOT NULL DEFAULT '',
+ created_at TEXT NOT NULL,
+ updated_at TEXT NOT NULL,
+ UNIQUE(request_hash)
+);
+CREATE INDEX IF NOT EXISTS idx_candidate_work_items_state ON candidate_work_items(state,updated_at);
+CREATE INDEX IF NOT EXISTS idx_candidate_work_items_alpha ON candidate_work_items(alpha_id);
+CREATE TABLE IF NOT EXISTS candidate_work_events (
+ event_id TEXT PRIMARY KEY,
+ candidate_id TEXT NOT NULL,
+ event_at TEXT NOT NULL,
+ event_type TEXT NOT NULL,
+ old_state TEXT NOT NULL DEFAULT '',
+ new_state TEXT NOT NULL DEFAULT '',
+ details_json TEXT NOT NULL DEFAULT '{}',
+ FOREIGN KEY(candidate_id) REFERENCES candidate_work_items(candidate_id)
+);
+CREATE INDEX IF NOT EXISTS idx_candidate_work_events_item ON candidate_work_events(candidate_id,event_at);
+CREATE TABLE IF NOT EXISTS candidate_batch_intents (
+ batch_id TEXT PRIMARY KEY,
+ candidate_ids_json TEXT NOT NULL,
+ payload_hash TEXT NOT NULL,
+ status TEXT NOT NULL,
+ created_at TEXT NOT NULL,
+ confirmed_at TEXT,
+ last_error TEXT NOT NULL DEFAULT ''
+);
+""",
+    ),
 )
 
 

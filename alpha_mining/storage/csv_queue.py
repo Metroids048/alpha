@@ -22,7 +22,9 @@ CANDIDATE_FIELDS = (
     "feedback_refs_json", "anti_corr_design", "expected_turnover_behavior", "local_quality_score",
     "novelty_score", "self_corr_risk_score", "quality_evidence_json", "llm_model",
     "knowledge_usage_mode", "degraded", "local_score", "priority_score", "queue_status",
-    "alpha_id", "retry_count", "last_error_category", "last_error", "field_skeleton",
+    "quality_status", "quality_reasons_json", "metrics_json", "checks_json",
+    "description_status", "submission_status", "alpha_id", "retry_count",
+    "last_error_category", "last_error", "field_skeleton",
 )
 
 EVENT_FIELDS = (
