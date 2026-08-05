@@ -45,6 +45,7 @@ from alpha_mining.storage.work_items import (
 
 
 LOG = logging.getLogger("alpha_mining.generation.production")
+MAX_NO_EVIDENCE_SKIPS = 3
 
 
 @dataclass(frozen=True)
@@ -187,31 +188,39 @@ def run_cycle(
             detail=summary.detail,
         )
         return summary
+    forced_refresh = False
     if (
         runtime_state is not None
         and runtime_state.last_enqueued == 0
         and runtime_state.last_input_fingerprint == fingerprint
     ):
-        runtime_state.zero_output_streak += 1
-        wait_seconds = _backoff_seconds(
-            config.interval_seconds, runtime_state.zero_output_streak
-        )
-        summary = _summary_from_snapshot(
-            cycle_id,
-            "NO_NEW_EVIDENCE",
-            snapshots,
-            existing_rows,
-            detail="catalog, grounded feedback and candidate inventory are unchanged",
-            pending_total=pending_before,
-            next_wait_seconds=wait_seconds,
-        )
-        _log_cycle(
-            cycle_id,
-            summary.state,
-            pending=summary.pending_total,
-            next_round_wait=wait_seconds,
-        )
-        return summary
+        # The first zero-output generation already records streak=1.  Allow
+        # three additional quiet rounds before forcing a fresh LLM attempt.
+        if runtime_state.zero_output_streak <= MAX_NO_EVIDENCE_SKIPS:
+            runtime_state.zero_output_streak += 1
+            wait_seconds = _backoff_seconds(
+                config.interval_seconds, runtime_state.zero_output_streak
+            )
+            summary = _summary_from_snapshot(
+                cycle_id,
+                "NO_NEW_EVIDENCE",
+                snapshots,
+                existing_rows,
+                detail="catalog, grounded feedback and candidate inventory are unchanged",
+                pending_total=pending_before,
+                next_wait_seconds=wait_seconds,
+            )
+            _log_cycle(
+                cycle_id,
+                summary.state,
+                pending=summary.pending_total,
+                next_round_wait=wait_seconds,
+            )
+            return summary
+        # Force a fresh LLM attempt after a finite quiet period.  Keep the
+        # streak until the attempt succeeds so transport/local failures are
+        # retried immediately instead of being mistaken for empty output.
+        forced_refresh = True
 
     owned_llm = False
     if llm is None:
@@ -281,7 +290,9 @@ def run_cycle(
         runtime_state.last_input_fingerprint = fingerprint
         runtime_state.last_enqueued = enqueued
         if enqueued == 0:
-            runtime_state.zero_output_streak = max(1, runtime_state.zero_output_streak)
+            runtime_state.zero_output_streak = (
+                1 if forced_refresh else max(1, runtime_state.zero_output_streak)
+            )
         else:
             runtime_state.zero_output_streak = 0
     summary = CycleSummary(

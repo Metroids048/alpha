@@ -662,12 +662,57 @@ def test_unchanged_zero_output_cycle_skips_llm_and_increases_backoff(tmp_path) -
     first = run_cycle(config, llm=llm, kernel=_Kernel(), runtime_state=state)
     calls_after_first = len(llm.calls)
     second = run_cycle(config, llm=llm, kernel=_Kernel(), runtime_state=state)
+    third = run_cycle(config, llm=llm, kernel=_Kernel(), runtime_state=state)
+    fourth = run_cycle(config, llm=llm, kernel=_Kernel(), runtime_state=state)
+    fifth = run_cycle(config, llm=llm, kernel=_Kernel(), runtime_state=state)
 
     assert first.enqueued == 0
     assert calls_after_first == 3
     assert second.state == "NO_NEW_EVIDENCE"
-    assert len(llm.calls) == calls_after_first
+    assert third.state == "NO_NEW_EVIDENCE"
+    assert fourth.state == "NO_NEW_EVIDENCE"
     assert second.next_wait_seconds == 900
+    assert third.next_wait_seconds == 1800
+    assert fourth.next_wait_seconds == 3600
+    assert fifth.state == "COMPLETE"
+    assert len(llm.calls) == calls_after_first + 3
+
+
+def test_forced_refresh_failure_is_retried_instead_of_skipped(tmp_path) -> None:
+    from alpha_mining.generation.production import GenerationLoopState, ProductionConfig, run_cycle
+
+    class FailingRefreshLLM(_LLM):
+        def generate_json(self, *, system_prompt, user_prompt, json_schema):
+            if len(self.calls) == 0:
+                return super().generate_json(
+                    system_prompt=system_prompt, user_prompt=user_prompt, json_schema=json_schema
+                )
+            if len(self.calls) == 1:
+                self.calls.append(user_prompt)
+                return {"candidates": []}
+            if len(self.calls) == 2:
+                self.calls.append(user_prompt)
+                return {"approved": []}
+            if len(self.calls) >= 3:
+                raise RuntimeError("temporary transport failure")
+            raise AssertionError("unexpected call sequence")
+
+    _write_catalog(tmp_path)
+    llm = FailingRefreshLLM()
+    state = GenerationLoopState()
+    config = ProductionConfig(root=tmp_path, database=tmp_path / "history.sqlite", interval_seconds=300)
+
+    first = run_cycle(config, llm=llm, kernel=_Kernel(), runtime_state=state)
+    assert first.enqueued == 0
+    run_cycle(config, llm=llm, kernel=_Kernel(), runtime_state=state)
+    run_cycle(config, llm=llm, kernel=_Kernel(), runtime_state=state)
+    run_cycle(config, llm=llm, kernel=_Kernel(), runtime_state=state)
+    failed = run_cycle(config, llm=llm, kernel=_Kernel(), runtime_state=state)
+    retry = run_cycle(config, llm=llm, kernel=_Kernel(), runtime_state=state)
+
+    assert failed.state == "LLM_UNAVAILABLE"
+    assert retry.state == "LLM_UNAVAILABLE"
+    assert len(llm.calls) == 3
 
 
 def test_pending_limit_waits_for_consumer_without_calling_llm(tmp_path) -> None:

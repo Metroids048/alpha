@@ -233,6 +233,7 @@ class HighQualityGenerator:
             seed_rejections.get(reason, 0) for reason in _REPAIRABLE_DRAFT_REJECTIONS
         )
         repaired_count = 0
+        repaired_critic_all_approved = False
         if not accepted and candidate_rows and (all_critic_rejected or deterministic_draft_rejected):
             try:
                 repaired = self._call_llm(
@@ -306,6 +307,13 @@ class HighQualityGenerator:
                 repaired_approvals = repaired_critique.get("approved") if isinstance(repaired_critique, dict) else []
                 if isinstance(repaired_approvals, bool):
                     repaired_approvals = [{"approved": repaired_approvals} for _ in repaired_rows]
+                repaired_critic_all_approved = (
+                    len(repaired_approvals) == len(repaired_rows)
+                    and all(
+                        isinstance(approval, dict) and bool(approval.get("approved"))
+                        for approval in repaired_approvals
+                    )
+                )
                 accepted, _, _ = self._screen_rows(
                     repaired_rows, repaired_approvals if isinstance(repaired_approvals, list) else [],
                     plan, snapshots, seeds, knowledge, seed_rejections, candidates_per_cycle,
@@ -319,9 +327,17 @@ class HighQualityGenerator:
         # This is deliberately narrower than the offline-catalog fallback:
         # malformed model drafts still do not receive a bypass.
         critique_only_exhaustion = bool(candidate_rows) and all_critic_rejected and not deterministic_draft_rejected
+        # A complete catalog still needs a bounded deterministic escape hatch
+        # when the model has gone through the repair pass but every repaired
+        # row failed the same local gates.  The repair-count guard is
+        # intentional: an initial malformed draft must keep the historical
+        # fail-closed behavior and cannot receive a fallback without a repair
+        # attempt first.
+        repair_exhaustion = repaired_count > 0 and repaired_critic_all_approved
         if not accepted and (
             snapshots.catalog.info.get("source") == "local_offline_field_snapshot"
             or critique_only_exhaustion
+            or repair_exhaustion
         ):
             fallback_rows = self._deterministic_fallback_rows(plan, snapshots, seeds, knowledge)
             if fallback_rows:

@@ -130,6 +130,90 @@ class _CritiqueOnlyRejectingLLM(_TwoCandidateLLM):
         }
 
 
+class _RepairThenRejectingLLM:
+    """Models the production path where repair rows still fail local gates."""
+
+    model_id = "fake-deepseek"
+
+    def __init__(self) -> None:
+        self.calls = 0
+        self.knowledge_ref = ""
+
+    def generate_json(self, *, system_prompt, user_prompt, json_schema):
+        del system_prompt, json_schema
+        self.calls += 1
+        if self.calls == 1:
+            refs = re.findall(r'"ref_id":\s*"([^"]+)"', user_prompt)
+            self.knowledge_ref = refs[0]
+            return {
+                "research_direction": "fundamental quality",
+                "hypothesis": "slow information diffusion",
+                "economic_mechanism": "fundamental information is incorporated gradually",
+                "expected_horizon": "medium",
+                "fields_to_use": ["fund_a", "fund_b"],
+                "operators_to_use": ["rank", "ts_rank", "group_neutralize"],
+                "anti_correlation_plan": "use distinct fields and slow transforms",
+                "expected_turnover_behavior": "medium-low",
+                "historical_failures_to_avoid": ["SELF_CORRELATION"],
+                "knowledge_refs": [self.knowledge_ref],
+            }
+        if self.calls == 2:
+            rows = []
+            for index in range(10):
+                expression = f"unknown_operator_{index}(fund_a)"
+                rows.append({
+                    "expression": expression,
+                    "settings": {},
+                    "economic_rationale": "A slow fundamental signal captures persistent information diffusion.",
+                    "novelty_reason": "The draft explores a distinct transformation.",
+                    "anti_corr_design": "A field-specific signal avoids broad market exposure.",
+                    "parent_seed": "group_neutralize(ts_rank(fund_a,63),market)",
+                    "knowledge_refs": [self.knowledge_ref],
+                    "feedback_patterns_used": [],
+                    "likely_failure_modes": ["LOW_SHARPE"],
+                    "field_roles": [{"field_id": "fund_a", "role": "economic input"}],
+                    "operator_roles": [{"operator": f"unknown_operator_{index}", "role": "invalid draft transform"}],
+                    "turnover_controls": [],
+                    "correlation_diversifiers": ["fund_a"],
+                })
+            return {"candidates": rows}
+        if self.calls == 3:
+            return {"approved": [{"approved": True} for _ in range(10)]}
+        if self.calls == 4:
+            expression = "ts_rank(fund_a,126)"
+            return {"candidates": [{
+                "expression": expression,
+                "settings": {},
+                "economic_rationale": "A slow fundamental signal captures persistent information diffusion.",
+                "novelty_reason": "The repair uses a long time-series window.",
+                "anti_corr_design": "A single grounded field avoids unsupported cross-dataset exposure.",
+                "parent_seed": "group_neutralize(ts_rank(fund_a,63),market)",
+                "knowledge_refs": [self.knowledge_ref],
+                "feedback_patterns_used": [],
+                "likely_failure_modes": ["LOW_SHARPE"],
+                "field_roles": [{"field_id": "fund_a", "role": "economic input"}],
+                "operator_roles": [
+                    {"operator": "ts_rank", "role": "slow persistence"},
+                    {"operator": "rank", "role": "unused extra operator"},
+                ],
+                "turnover_controls": ["ts_rank"],
+                "correlation_diversifiers": ["fund_a"],
+            }]}
+        if self.calls == 5:
+            return {"approved": [{"approved": True}]}
+        raise AssertionError("unexpected extra LLM call")
+
+
+class _RepairCritiqueRejectingLLM(_RepairThenRejectingLLM):
+    def generate_json(self, *, system_prompt, user_prompt, json_schema):
+        if self.calls == 4:
+            self.calls += 1
+            return {"approved": [{"approved": False, "critique": "explicit correlation risk"}]}
+        return super().generate_json(
+            system_prompt=system_prompt, user_prompt=user_prompt, json_schema=json_schema
+        )
+
+
 def test_same_cycle_proxy_similarity_gate_keeps_only_one_highly_similar_candidate(tmp_path: Path) -> None:
     from alpha_mining.generation.production import ProductionConfig, run_cycle
 
@@ -156,6 +240,39 @@ def test_narrative_only_critic_rejection_recovers_through_deterministic_gates(tm
     assert summary.enqueued == 1
     assert (summary.rejections or {}).get("LLM_CRITIQUE_RECOVERED_BY_DETERMINISTIC_GATES") == 1
     assert summary.queue_rows[0]["quality_evidence_json"]
+
+
+def test_repair_rows_rejected_by_local_gates_recover_without_bypassing_validation(tmp_path: Path) -> None:
+    from alpha_mining.generation.production import ProductionConfig, run_cycle
+
+    _write_catalog(tmp_path)
+    llm = _RepairThenRejectingLLM()
+    summary = run_cycle(
+        ProductionConfig(root=tmp_path, database=tmp_path / "history.sqlite"),
+        llm=llm, kernel=_Kernel(),
+    )
+
+    assert summary.enqueued == 1
+    assert llm.calls == 5
+    assert (summary.rejections or {}).get("UNKNOWN_OPERATOR", 0) == 10
+    assert (summary.rejections or {}).get("MECHANISM_OPERATOR_MISMATCH", 0) >= 1
+    assert (summary.rejections or {}).get("DETERMINISTIC_LOCAL_FALLBACK_USED") == 1
+    evidence = json.loads(summary.queue_rows[0]["quality_evidence_json"])
+    assert evidence["generator_contract_version"] == "generation-hq-v2"
+
+
+def test_repair_critic_rejection_does_not_trigger_deterministic_fallback(tmp_path: Path) -> None:
+    from alpha_mining.generation.production import ProductionConfig, run_cycle
+
+    _write_catalog(tmp_path)
+    summary = run_cycle(
+        ProductionConfig(root=tmp_path, database=tmp_path / "history.sqlite"),
+        llm=_RepairCritiqueRejectingLLM(), kernel=_Kernel(),
+    )
+
+    assert summary.enqueued == 0
+    assert (summary.rejections or {}).get("LLM_CRITIQUE_REJECTED", 0) >= 1
+    assert "DETERMINISTIC_LOCAL_FALLBACK_USED" not in (summary.rejections or {})
 
 
 def test_existing_pending_inventory_is_included_in_similarity_gate(tmp_path: Path) -> None:
