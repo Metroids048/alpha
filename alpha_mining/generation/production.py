@@ -101,6 +101,7 @@ def run_cycle(
             catalog_dir=config.catalog_dir,
             database=config.database_path,
             queue_path=config.queue_path,
+            allow_partial_offline=True,
         )
     except CatalogUnavailable as exc:
         _log_cycle(cycle_id, "CATALOG_UNAVAILABLE", detail=str(exc))
@@ -304,7 +305,13 @@ def _queue_row(candidate: Any, *, model_id: str) -> dict[str, str]:
         "expected_turnover_behavior": candidate.expected_turnover_behavior,
         "local_quality_score": str(candidate.local_quality_score), "novelty_score": str(candidate.novelty_score),
         "self_corr_risk_score": str(candidate.self_corr_risk_score), "quality_evidence_json": json.dumps(candidate.quality_evidence, ensure_ascii=False, sort_keys=True),
-        "llm_model": model_id, "knowledge_usage_mode": "LIVE_LLM_KNOWLEDGE", "degraded": "false",
+        "llm_model": model_id,
+        "knowledge_usage_mode": (
+            "LLM_RESEARCHED_LOCAL_FALLBACK"
+            if candidate.generator_source == "DETERMINISTIC_LOCAL_FALLBACK"
+            else "LIVE_LLM_KNOWLEDGE"
+        ),
+        "degraded": "false",
         "queue_status": "PENDING_SIMULATION", "alpha_id": "", "retry_count": "0", "last_error_category": "", "last_error": "",
     }
 

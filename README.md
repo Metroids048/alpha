@@ -23,14 +23,10 @@
 
 本地 SQLite、认证状态、浏览器配置、Cookie 和运行数据均保持 Git 忽略，不进入代码历史。运行产物统一放在 `数据/本地运行产物/`（报告 / 状态 / 数据库 / 备份）。
 
-故障恢复：如果入口输出 state=CATALOG_UNAVAILABLE，这不是“生成了 0 个合格 Alpha”，而是本地完整目录尚未具备生成条件。目录同步是独立的运维动作；生成入口本身不会联网。完成同步后再运行：
+故障恢复：如果入口输出 `CATALOG_UNAVAILABLE`，说明本地字段或数据集缓存缺失，而不是“生成了 0 个合格 Alpha”。先恢复这两份本地缓存；平台目录同步只是后续刷新元数据的可选运维动作，生成入口本身不会联网。
 
-    python -m alpha_mining platform probe
-    python -m alpha_mining platform catalog-sync
-    python 生成Alpha.py
-
-生产生成（需要完整本地 catalog 与 DeepSeek 配置）：
+生产生成（需要本地字段/数据集缓存与 DeepSeek 配置）：
 
     python 生成Alpha.py
 
-只有 datasets、data-fields、operators 三类目录都可从本地快照读取，生成入口才会继续；`--once` 在目录不可用时返回退出码 8，常驻模式记录 `CATALOG_UNAVAILABLE` 后等待重试。
+完整运行优先读取 datasets、data-fields、operators 三类本地快照；如果仅缺少 operators 快照，生成入口会使用字段/数据集磁盘缓存和内置离线算子语法继续运行。缺少字段或数据集缓存时才会报告 `CATALOG_UNAVAILABLE`；`--once` 返回非零，常驻模式记录状态后等待重试。整个入口仍不联网。

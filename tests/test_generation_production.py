@@ -3,8 +3,10 @@ from __future__ import annotations
 import json
 import re
 import socket
+import sys
 import time
 from pathlib import Path
+from types import SimpleNamespace
 
 
 def _mechanism_contract(expression: str) -> dict[str, object]:
@@ -150,6 +152,87 @@ def test_production_cycle_uses_llm_knowledge_and_never_platform_io(tmp_path, mon
     assert rows[0]["knowledge_refs_json"]
 
 
+def test_production_cycle_uses_partial_offline_catalog_without_platform_io(tmp_path, monkeypatch) -> None:
+    from alpha_mining.generation.production import ProductionConfig, run_cycle
+
+    now = time.time()
+    (tmp_path / ".alpha_datasets_cache.json").write_text(
+        json.dumps({"cached_at": now, "dataset_ids": ["fund"], "records": [{"id": "fund"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / ".alpha_datafields_cache.json").write_text(
+        json.dumps(
+            {"cached_at": now, "rows": [{"id": "fund_a", "_ds": "fund", "type": "MATRIX", "description": "quality"}]}
+        ),
+        encoding="utf-8",
+    )
+
+    class OfflineKernel:
+        def generate(self, *_args, **_kwargs):
+            return [SimpleNamespace(expression="ts_rank(fund_a,63)", score=1.0)]
+
+    class OfflineLLM:
+        model_id = "offline-test"
+
+        def __init__(self) -> None:
+            self.calls = 0
+            self.knowledge_ref = ""
+
+        def generate_json(self, *, system_prompt, user_prompt, json_schema):
+            del system_prompt, json_schema
+            self.calls += 1
+            if self.calls == 1:
+                self.knowledge_ref = re.search(r'"ref_id":\s*"([^"]+)"', user_prompt).group(1)
+                return {
+                    "research_direction": "fundamental quality",
+                    "hypothesis": "quality persists",
+                    "economic_mechanism": "slow fundamental information diffusion",
+                    "expected_horizon": "medium",
+                    "fields_to_use": ["fund_a"],
+                    "operators_to_use": ["ts_rank", "ts_mean"],
+                    "anti_correlation_plan": "use a distinct slow transform",
+                    "expected_turnover_behavior": "medium-low",
+                    "historical_failures_to_avoid": ["SELF_CORRELATION"],
+                    "knowledge_refs": [self.knowledge_ref],
+                }
+            if self.calls == 2:
+                expression = "ts_mean(fund_a,63)"
+                return {"candidates": [{
+                    "expression": expression,
+                    "settings": {},
+                    "economic_rationale": "Slow-moving fundamental quality information persists over a medium horizon.",
+                    "novelty_reason": "Uses a different local time-series transform than the seed.",
+                    "anti_corr_design": "A medium window reduces short-horizon crowding.",
+                    "parent_seed": "ts_rank(fund_a,63)",
+                    "knowledge_refs": [self.knowledge_ref],
+                    "feedback_patterns_used": [],
+                    "likely_failure_modes": ["LOW_SHARPE"],
+                    **_mechanism_contract(expression),
+                }]}
+            return {"approved": [{"approved": True, "expression": "ts_mean(fund_a,63)", "critique": "local catalog checked"}]}
+
+    def offline_only(*_args, **_kwargs):
+        raise AssertionError("partial offline production generation attempted network access")
+
+    platform_modules_before = {
+        name for name in sys.modules if name == "alpha_mining.platform" or name.startswith("alpha_mining.platform.")
+    }
+    monkeypatch.setattr(socket, "getaddrinfo", offline_only)
+    monkeypatch.setattr(socket, "create_connection", offline_only)
+    summary = run_cycle(
+        ProductionConfig(root=tmp_path, database=tmp_path / "history.sqlite", candidates_per_cycle=1),
+        llm=OfflineLLM(),
+        kernel=OfflineKernel(),
+    )
+
+    assert summary.state == "COMPLETE"
+    assert summary.catalog_operators == 15
+    assert summary.state != "CATALOG_UNAVAILABLE"
+    assert {
+        name for name in sys.modules if name == "alpha_mining.platform" or name.startswith("alpha_mining.platform.")
+    } == platform_modules_before
+
+
 def test_llm_unavailable_never_writes_degraded_candidate(tmp_path) -> None:
     from alpha_mining.generation.production import ProductionConfig, run_cycle
 
@@ -227,6 +310,66 @@ def test_invalid_research_plan_is_repaired_before_candidate_generation(tmp_path)
     assert len(llm.calls) == 4
     assert "PLAN_UNKNOWN_FIELD" in (result.rejections or {})
     assert '"cap"' in llm.prompts[1]
+
+
+def test_unresolved_plan_scope_is_grounded_locally_before_candidate_generation(tmp_path) -> None:
+    from alpha_mining.generation.production import ProductionConfig, run_cycle
+
+    _write_catalog(tmp_path)
+    now = time.time()
+    (tmp_path / ".alpha_datasets_cache.json").write_text(
+        json.dumps({"cached_at": now, "dataset_ids": ["fund", "other"], "records": [{"id": "fund"}, {"id": "other"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / ".alpha_datafields_cache.json").write_text(
+        json.dumps({"cached_at": now, "rows": [
+            {"id": "fund_a", "_ds": "fund", "type": "MATRIX", "description": "quality"},
+            {"id": "fund_b", "_ds": "fund", "type": "MATRIX", "description": "value"},
+            {"id": "other_a", "_ds": "other", "type": "MATRIX", "description": "unrelated"},
+        ]}),
+        encoding="utf-8",
+    )
+
+    class ScopeFailureLLM(_LLM):
+        def generate_json(self, *, system_prompt, user_prompt, json_schema):
+            del system_prompt, json_schema
+            self.calls.append(user_prompt)
+            if len(self.calls) in {1, 2}:
+                refs = re.findall(r'"ref_id":\s*"([^"]+)"', user_prompt)
+                if refs:
+                    self.knowledge_ref = refs[0]
+                return {
+                    "research_direction": "fundamental quality", "hypothesis": "quality persists",
+                    "economic_mechanism": "slow fundamental information diffusion", "expected_horizon": "medium",
+                    "fields_to_use": ["fund_a", "other_a"], "operators_to_use": ["rank", "ts_rank", "group_neutralize", "sub"],
+                    "anti_correlation_plan": "use a distinct fundamental field", "expected_turnover_behavior": "medium-low",
+                    "historical_failures_to_avoid": ["SELF_CORRELATION"], "knowledge_refs": [self.knowledge_ref],
+                }
+            if len(self.calls) == 3:
+                expression = "group_neutralize(ts_rank(fund_a,63),market)"
+                return {"candidates": [{
+                    "expression": expression, "settings": {},
+                    "economic_rationale": "Slow-moving fundamental quality information persists over a medium horizon.",
+                    "novelty_reason": "Uses a grounded local field and a slow transform.",
+                    "anti_corr_design": "Uses a medium window and sector-neutralized field-specific signal.",
+                    "parent_seed": expression, "knowledge_refs": [self.knowledge_ref], "feedback_patterns_used": [],
+                    "likely_failure_modes": ["LOW_SHARPE"], **_mechanism_contract(expression),
+                }]}
+            if len(self.calls) == 4:
+                return {"approved": [{"approved": True, "critique": "grounded plan and candidate"}]}
+            raise AssertionError("unexpected extra LLM call")
+
+    summary = run_cycle(
+        ProductionConfig(root=tmp_path, database=tmp_path / "history.sqlite"),
+        llm=ScopeFailureLLM(), kernel=_Kernel(),
+    )
+
+    assert summary.enqueued == 1
+    assert len(summary.queue_rows) == 1
+    assert len(summary.rejections or {}) >= 1
+    assert summary.queue_rows[0]["generator_source"] == "LLM_LOCALLY_GROUNDED_PLAN"
+    evidence = json.loads(summary.queue_rows[0]["quality_evidence_json"])
+    assert evidence["plan_locally_grounded"] is True
 
 
 def test_non_llm_generation_failure_is_not_reported_as_llm_unavailable(tmp_path) -> None:

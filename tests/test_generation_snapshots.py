@@ -52,6 +52,62 @@ def test_snapshot_loader_requires_complete_local_catalog_and_summarises_feedback
     assert len(snapshots.feedback.self_corr_risk) == 1
 
 
+def test_snapshot_loader_explicitly_allows_partial_offline_catalog(tmp_path: Path) -> None:
+    from alpha_mining.generation.snapshots import load_local_snapshots
+
+    now = time.time()
+    (tmp_path / ".alpha_datasets_cache.json").write_text(
+        json.dumps({"cached_at": now, "dataset_ids": ["ds"], "records": [{"id": "ds"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / ".alpha_datafields_cache.json").write_text(
+        json.dumps({"cached_at": now, "rows": [{"id": "field", "_ds": "ds", "type": "MATRIX"}]}),
+        encoding="utf-8",
+    )
+
+    snapshots = load_local_snapshots(
+        root=tmp_path,
+        database=tmp_path / "history.sqlite",
+        allow_partial_offline=True,
+    )
+
+    assert snapshots.catalog_source == "root-dot-cache-partial-offline"
+    assert len(snapshots.catalog.fields) == 1
+    assert "rank" in snapshots.catalog.operators
+
+
+def test_snapshot_loader_prefers_later_complete_catalog_over_earlier_partial_explicit_path(tmp_path: Path) -> None:
+    from alpha_mining.generation.snapshots import load_local_snapshots
+
+    _write_dot_catalog(tmp_path)
+    root_operator_path = tmp_path / ".alpha_operators_cache.json"
+    root_operator = json.loads(root_operator_path.read_text(encoding="utf-8"))
+    root_operator["records"] = [{"name": "root_only", "signature": "root_only(x)", "arity": 1}]
+    root_operator_path.write_text(json.dumps(root_operator), encoding="utf-8")
+
+    explicit = tmp_path / "explicit"
+    explicit.mkdir()
+    now = time.time()
+    (explicit / ".alpha_datasets_cache.json").write_text(
+        json.dumps({"cached_at": now, "dataset_ids": ["ds"], "records": [{"id": "ds"}]}),
+        encoding="utf-8",
+    )
+    (explicit / ".alpha_datafields_cache.json").write_text(
+        json.dumps({"cached_at": now, "rows": [{"id": "field", "_ds": "ds", "type": "MATRIX"}]}),
+        encoding="utf-8",
+    )
+
+    snapshots = load_local_snapshots(
+        root=tmp_path,
+        catalog_dir=explicit,
+        database=tmp_path / "history.sqlite",
+        allow_partial_offline=True,
+    )
+
+    assert snapshots.catalog_source == "root-dot-cache"
+    assert "root_only" in snapshots.catalog.operators
+
+
 def test_v50_kernel_uses_pure_primitives_without_worldquant_pipeline(tmp_path: Path) -> None:
     from alpha_mining.generation.snapshots import load_local_snapshots
     from alpha_mining.generation.v50_kernel import V50Kernel

@@ -96,6 +96,7 @@ def load_catalog_snapshot(
     root: Path | str = ".",
     catalog_dir: Path | str | None = None,
     allow_stale: bool = True,
+    allow_partial_offline: bool = False,
 ) -> tuple[MetadataCache, Path, str, float]:
     """Load a complete catalog from an explicit, finite list of locations."""
 
@@ -110,6 +111,7 @@ def load_catalog_snapshot(
         )
     )
     errors: list[str] = []
+    partial_candidates: list[tuple[Path, str]] = []
     for path, source, protocol in candidates:
         try:
             if protocol == "auto":
@@ -124,6 +126,19 @@ def load_catalog_snapshot(
             return metadata, path, source, _age_hours(metadata.info)
         except (MetadataCacheMissing, MetadataCacheStale, MetadataCacheError) as exc:
             errors.append(f"{source}:{type(exc).__name__}:{str(exc)[:180]}")
+            if allow_partial_offline:
+                partial_candidates.append((path, source))
+    if allow_partial_offline:
+        for path, source in partial_candidates:
+            try:
+                metadata = MetadataCache.load_for_offline_generation(
+                    path,
+                    max_age_hours=168,
+                    allow_stale=False,
+                )
+                return metadata, path, f"{source}-partial-offline", _age_hours(metadata.info)
+            except (MetadataCacheMissing, MetadataCacheStale, MetadataCacheError) as fallback_exc:
+                errors.append(f"{source}-partial-offline:{type(fallback_exc).__name__}:{str(fallback_exc)[:180]}")
     raise CatalogUnavailable("CATALOG_UNAVAILABLE; " + " | ".join(errors))
 
 
@@ -133,9 +148,14 @@ def load_local_snapshots(
     catalog_dir: Path | str | None = None,
     database: Path | str | None = None,
     queue_path: Path | str | None = None,
+    allow_partial_offline: bool = False,
 ) -> LocalSnapshots:
     root_path = Path(root)
-    catalog, source_dir, source, age = load_catalog_snapshot(root=root_path, catalog_dir=catalog_dir)
+    catalog, source_dir, source, age = load_catalog_snapshot(
+        root=root_path,
+        catalog_dir=catalog_dir,
+        allow_partial_offline=allow_partial_offline,
+    )
     db_path = Path(database) if database is not None else root_path / "数据" / "本地运行产物" / "数据库" / "research_memory.sqlite"
     queue = Path(queue_path) if queue_path is not None else root_path / "待提交Alpha列表.csv"
     queue_rows = _read_queue(queue)

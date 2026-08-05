@@ -13,11 +13,11 @@ Record only recurring, verified lessons that should change future work. Keep eac
 - Scope: <global project / path / workflow>
 - Review date: <date or triggering condition>
 
-### 2026-08-03 — 生产入口可调用不等于平台链路已验收
+### 2026-08-04 — 离线入口不得被完整平台 catalog 门禁阻塞
 
-- Repeated failure: 入口代码能启动，但连续输出 generated=0 / CATALOG_UNAVAILABLE，现场仍被描述为“链路已打通”。
-- Root cause: catalog 门禁缺少 operators 快照，且平台访问状态为 RATE_LIMITED、保存会话 stale。
-- Evidence: 生成Alpha.py --once 返回退出码 8；platform access-status 显示 RATE_LIMITED；.alpha_operators_cache.json 不存在。
-- New rule or automation: 交付前同时核对入口执行结果、platform access-status 和三份 catalog 缓存；默认常驻模式遇 catalog 阻塞只做受控 backoff，不伪造生成成功。
-- Scope: alpha 生成入口 / 平台恢复流程
-- Review date: 下一次完成真实只读 probe + catalog-sync 后
+- Repeated failure: 后续生成链融合把缺少 `.alpha_operators_cache.json` 视为 `生成Alpha.py` 的硬阻塞，覆盖了既有完全离线运行约定。
+- Root cause: `5d04cca` 的纯本地入口沿用了完整 catalog 加载器，未启用已有的字段/数据集离线缓存回退。
+- Evidence: 修复前 `生成Alpha.py --once` 返回 8；修复后真实 `--once` 以 5697 本地字段和 15 个内置算子完成，退出码 0，未访问 WorldQuant；全量 pytest 通过。
+- New rule or automation: 离线入口优先完整本地快照，缺少 operators 时必须回退到本地字段/数据集缓存和内置语法；平台会话只属于刷新、simulate 和提交路径。
+- Scope: alpha 生成入口 / 本地 catalog 加载
+- Review date: 下次调整 catalog 加载策略时

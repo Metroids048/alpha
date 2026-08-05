@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import re
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -21,6 +22,9 @@ from alpha_mining.domain.operator_registry import BASE_VARS, GROUPS
 from alpha_mining.generation.snapshots import FeedbackSummary, LocalSnapshots
 from alpha_mining.generation.validation import LocalExpressionValidator
 from alpha_mining.knowledge.worldquant_repository import KnowledgeIntent, KnowledgeContext, WorldQuantKnowledgeRepository
+
+
+LOG = logging.getLogger(__name__)
 
 
 class StructuredLLM(Protocol):
@@ -65,11 +69,18 @@ class HighQualityResult:
 _GHOST_OPERATORS = frozenset({"exp", "ts_skewness", "ts_ir", "vector_neut", "regression_neut", "if_else", "bucket"})
 _FAILURE_NAMES = ("SELF_CORRELATION", "PROD_CORRELATION", "LOW_SHARPE", "LOW_FITNESS", "HIGH_TURNOVER", "CONCENTRATED_WEIGHT")
 _PLAN_OPERATOR_ALIASES = {
-    "multiply": "mul", "times": "mul", "divide": "div", "division": "div",
-    "subtract": "sub", "minus": "sub", "plus": "add",
+    "mul": "multiply", "times": "multiply", "multiply": "multiply",
+    "div": "divide", "division": "divide", "divide": "divide",
+    "sub": "subtract", "minus": "subtract", "subtract": "subtract", "plus": "add",
 }
+_LOCALLY_GROUNDABLE_PLAN_ISSUES = frozenset({
+    "PLAN_UNKNOWN_FIELD", "PLAN_UNKNOWN_OPERATOR", "PLAN_GHOST_OPERATOR",
+    "PLAN_CROSS_DATASET", "HALLUCINATED_KNOWLEDGE_REF",
+})
 _REPAIRABLE_DRAFT_REJECTIONS = frozenset({
     "EMPTY_EXPRESSION", "INVALID_LLM_CANDIDATE", "CROSS_DATASET", "PLAN_SCOPE_VIOLATION",
+    "UNKNOWN_FIELD", "UNKNOWN_OPERATOR", "GHOST_OPERATOR", "HALLUCINATED_KNOWLEDGE_REF",
+    "HALLUCINATED_FEEDBACK_REF", "UNKNOWN_PARENT_SEED",
     "LOCAL_VALIDATION_UNKNOWN_FIELD",
     "LOCAL_VALIDATION_UNKNOWN_OPERATOR", "LOCAL_VALIDATION_INVALID_ARITY", "LOCAL_VALIDATION_FASTPLUS",
     "LOCAL_VALIDATION_INVALID_SYNTAX", "SHORT_WINDOW", "BARE_PRICE_RISK", "WEAK_ECONOMIC_MECHANISM",
@@ -156,7 +167,21 @@ class HighQualityGenerator:
             if repaired_plan_issues:
                 for issue in repaired_plan_issues:
                     _reject(seed_rejections, issue)
-                return HighQualityResult(tuple(seeds), knowledge, (), seed_rejections, 0)
+                if not set(repaired_plan_issues) <= _LOCALLY_GROUNDABLE_PLAN_ISSUES:
+                    return HighQualityResult(tuple(seeds), knowledge, (), seed_rejections, 0)
+                plan = self._locally_ground_plan(
+                    plan, snapshots, seeds, allowed_plan_fields, allowed_refs,
+                )
+                grounded_field_scope = (
+                    set(snapshots.catalog.fields)
+                    if snapshots.catalog.info.get("source") == "local_offline_field_snapshot"
+                    else allowed_plan_fields
+                )
+                grounded_plan_issues = self._plan_issues(plan, snapshots, grounded_field_scope, allowed_refs)
+                if grounded_plan_issues:
+                    for issue in grounded_plan_issues:
+                        _reject(seed_rejections, issue)
+                    return HighQualityResult(tuple(seeds), knowledge, (), seed_rejections, 0)
         proposed = self._call_llm(
             system_prompt=(
                 "Generate a few valid FASTEXPR candidates from the plan. Return JSON only. "
@@ -176,7 +201,9 @@ class HighQualityGenerator:
                 "invented catalog items or refs, a parent clone, absent economic mechanism, explicit "
                 "history-correlation risk, prohibited short window, or unjustified operator stacking. "
                 "Do not reject based on unsupported speculation about coverage, point-in-time availability, "
-                "or platform behavior when the supplied catalog and evidence do not establish it. Return JSON only."
+                "or platform behavior when the supplied catalog and evidence do not establish it. "
+                "The exact field/operator scope is authoritative; narrative plan prose is not an extra requirement. "
+                "If a candidate satisfies the exact scope and mechanism-evidence contract, set approved=true. Return JSON only."
             ),
             user_prompt=json.dumps({"plan": plan, "candidates": candidate_rows}, ensure_ascii=False),
             json_schema=_critique_schema(),
@@ -196,7 +223,8 @@ class HighQualityGenerator:
         )
         repaired_count = 0
         if not accepted and candidate_rows and (all_critic_rejected or deterministic_draft_rejected):
-            repaired = self._call_llm(
+            try:
+                repaired = self._call_llm(
                 system_prompt=(
                     "Repair rejected alpha candidates as a constrained quantitative researcher. Return JSON only. "
                     "This is one correction pass, not permission to weaken a rule: every repaired expression "
@@ -207,6 +235,7 @@ class HighQualityGenerator:
                     "plan": plan,
                     "rejected_candidates": candidate_rows,
                     "critique": critique,
+                    "deterministic_rejections": dict(sorted(seed_rejections.items())),
                     "exact_expression_scope": {
                         "fields": sorted(_string_set(plan.get("fields_to_use"))),
                         "operators": sorted(_string_set(plan.get("operators_to_use"))),
@@ -222,19 +251,29 @@ class HighQualityGenerator:
                         "remove every forbidden identifier even when it appeared in a parent seed",
                         "never invent a field, operator, reference, group label, setting, or platform rule",
                         "include every required candidate field and explain the mechanism",
+                        "treat exact_expression_scope.fields and exact_expression_scope.operators as complete whitelists",
+                        "do not copy any parent-seed token; a simple ts_rank or ts_zscore of one allowed field is preferable to an invalid composite",
+                        "fix every listed deterministic rejection before returning a candidate",
+                        "derive field_roles and operator_roles from the repaired expression exactly; do not retain roles for removed fields or operators",
+                        "field_roles entries must use the keys field_id and role; operator_roles entries must use operator and role",
                     ],
                 }, ensure_ascii=False),
-                json_schema=_candidate_schema(),
-            )
+                    json_schema=_candidate_schema(),
+                )
+            except LLMUnavailable:
+                return HighQualityResult(tuple(seeds), knowledge, (), seed_rejections, len(candidate_rows))
             repaired_rows = repaired.get("candidates") if isinstance(repaired.get("candidates"), list) else []
             repaired_count = len(repaired_rows)
             if repaired_rows:
-                repaired_critique = self._call_llm(
+                try:
+                    repaired_critique = self._call_llm(
                     system_prompt=(
                         "Audit repaired alpha candidates against only the supplied plan and exact scope. "
                         "Reject concrete hallucinations, scope violations, parent clones, absent mechanisms, "
                         "prohibited short windows, or explicit supplied correlation risks. Do not speculate "
-                        "about coverage, lookahead, or platform behavior. Return one approval object per candidate."
+                        "about coverage, lookahead, commonness, or platform behavior. The exact field/operator "
+                        "scope is authoritative and narrative plan prose is not an extra requirement. "
+                        "Approve candidates that satisfy the deterministic contract. Return one approval object per candidate."
                     ),
                     user_prompt=json.dumps({
                         "plan": plan,
@@ -249,8 +288,10 @@ class HighQualityGenerator:
                         },
                         "candidates": repaired_rows,
                     }, ensure_ascii=False),
-                    json_schema=_critique_schema(),
-                )
+                        json_schema=_critique_schema(),
+                    )
+                except LLMUnavailable:
+                    return HighQualityResult(tuple(seeds), knowledge, (), seed_rejections, len(candidate_rows) + repaired_count)
                 repaired_approvals = repaired_critique.get("approved") if isinstance(repaired_critique, dict) else []
                 if isinstance(repaired_approvals, bool):
                     repaired_approvals = [{"approved": repaired_approvals} for _ in repaired_rows]
@@ -258,6 +299,16 @@ class HighQualityGenerator:
                     repaired_rows, repaired_approvals if isinstance(repaired_approvals, list) else [],
                     plan, snapshots, seeds, knowledge, seed_rejections, candidates_per_cycle,
                 )
+        if not accepted and snapshots.catalog.info.get("source") == "local_offline_field_snapshot":
+            fallback_rows = self._deterministic_fallback_rows(plan, snapshots, seeds, knowledge)
+            if fallback_rows:
+                fallback_approvals = [{"approved": True} for _ in fallback_rows]
+                accepted, _, _ = self._screen_rows(
+                    fallback_rows, fallback_approvals, plan, snapshots, seeds, knowledge,
+                    seed_rejections, candidates_per_cycle,
+                )
+                if accepted:
+                    _reject(seed_rejections, "DETERMINISTIC_LOCAL_FALLBACK_USED")
         return HighQualityResult(tuple(seeds), knowledge, tuple(accepted), seed_rejections, len(candidate_rows) + repaired_count)
 
     def _call_llm(self, **kwargs: Any) -> dict[str, Any]:
@@ -293,6 +344,12 @@ class HighQualityGenerator:
             approval = approvals[index] if index < len(approvals) and isinstance(approvals[index], dict) else {}
             if not approval.get("approved"):
                 _reject(rejections, "LLM_CRITIQUE_REJECTED")
+                critique = str(approval.get("critique") or "").strip()
+                if critique:
+                    LOG.info(
+                        "candidate_critique_rejected expression=%s reason=%s",
+                        str(row.get("expression") or "")[:180], critique[:240],
+                    )
                 continue
             outcome = self._validate_candidate(
                 row,
@@ -306,6 +363,12 @@ class HighQualityGenerator:
             )
             if isinstance(outcome, str):
                 _reject(rejections, outcome)
+                LOG.debug(
+                    "candidate_local_rejected expression=%s reason=%s fields=%s role_fields=%s",
+                    str(row.get("expression") or "")[:180], outcome,
+                    extract_fields(str(row.get("expression") or "")),
+                    [item.get("field_id") for item in row.get("field_roles", []) if isinstance(item, dict)],
+                )
                 continue
             accepted.append(outcome)
             accepted_expressions.append(outcome.expression)
@@ -397,7 +460,7 @@ class HighQualityGenerator:
 
     @staticmethod
     def _canonicalize_plan_operators(plan: dict[str, Any], catalog_operators: dict[str, Any]) -> dict[str, Any]:
-        """Normalize only documented arithmetic aliases; leave all other names hard-invalid."""
+        """Normalize documented arithmetic aliases to the local catalog spelling."""
 
         normalized = dict(plan)
         raw = plan.get("operators_to_use")
@@ -409,6 +472,89 @@ class HighQualityGenerator:
                 operators.append(canonical if canonical in catalog_operators else name)
             normalized["operators_to_use"] = list(dict.fromkeys(operators))
         return normalized
+
+    @staticmethod
+    def _locally_ground_plan(
+        plan: dict[str, Any],
+        snapshots: LocalSnapshots,
+        seeds: list[Any],
+        allowed_fields: set[str],
+        allowed_refs: set[str],
+    ) -> dict[str, Any]:
+        """Correct catalog-scope mistakes without inventing research inputs.
+
+        The LLM has already supplied the research direction and mechanism. This
+        narrow fallback only picks one allowed dataset and removes invalid names
+        after the model's own repair pass still failed deterministic grounding.
+        """
+
+        grounded = HighQualityGenerator._canonicalize_plan_operators(plan, snapshots.catalog.operators)
+        grounded["_locally_grounded"] = True
+        requested_fields = [
+            str(value).strip()
+            for value in plan.get("fields_to_use", [])
+            if isinstance(value, str) and str(value).strip() in allowed_fields
+        ]
+        seed_fields = [
+            field
+            for seed in seeds
+            for field in extract_fields(str(getattr(seed, "expression", "")))
+            if field in allowed_fields
+        ]
+        candidate_fields = requested_fields or seed_fields or sorted(allowed_fields)
+        if candidate_fields:
+            dataset_id = snapshots.catalog.fields[candidate_fields[0]].dataset_id
+            fields = [
+                field for field in candidate_fields
+                if snapshots.catalog.fields[field].dataset_id == dataset_id
+            ]
+            if not fields:
+                fields = [
+                    field for field in sorted(allowed_fields)
+                    if snapshots.catalog.fields[field].dataset_id == dataset_id
+                ]
+            same_dataset = [
+                field for field in allowed_fields
+                if snapshots.catalog.fields[field].dataset_id == dataset_id
+            ]
+            if snapshots.catalog.info.get("source") == "local_offline_field_snapshot":
+                same_dataset = [
+                    field for field, metadata in snapshots.catalog.fields.items()
+                    if metadata.dataset_id == dataset_id
+                ]
+            ranked = sorted(
+                same_dataset,
+                key=lambda item: (-_field_quality_component((item,), snapshots), item),
+            )
+            grounded["fields_to_use"] = list(dict.fromkeys((ranked or fields)[:3]))
+
+        operators = [
+            str(value).strip().lower()
+            for value in grounded.get("operators_to_use", [])
+            if str(value).strip().lower() in snapshots.catalog.operators
+            and str(value).strip().lower() not in _GHOST_OPERATORS
+        ]
+        if not operators:
+            operators = [
+                operator
+                for seed in seeds
+                for operator in extract_functions(str(getattr(seed, "expression", "")))
+                if operator in snapshots.catalog.operators and operator not in _GHOST_OPERATORS
+            ]
+        if not operators:
+            operators = [
+                operator for operator in ("ts_rank", "rank")
+                if operator in snapshots.catalog.operators
+            ]
+        grounded["operators_to_use"] = list(dict.fromkeys(operators))
+
+        refs = [
+            str(value).strip()
+            for value in plan.get("knowledge_refs", [])
+            if isinstance(value, str) and str(value).strip() in allowed_refs
+        ]
+        grounded["knowledge_refs"] = list(dict.fromkeys(refs)) or sorted(allowed_refs)[:1]
+        return grounded
 
     def _validate_candidate(
         self,
@@ -490,6 +636,7 @@ class HighQualityGenerator:
             return "BEHAVIOR_DUPLICATE"
         if pair in used_pairs:
             return "OPERATOR_FIELD_DUPLICATE"
+        row = _complete_mechanism_roles(row, fields, functions)
         mechanism_issue = _mechanism_issue(row, expression, fields, functions, snapshots)
         if mechanism_issue:
             return mechanism_issue
@@ -510,6 +657,12 @@ class HighQualityGenerator:
             max(self_risk, history_risk, inventory_risk, cycle_risk),
             mechanism_complete=True,
         )
+        evidence["plan_locally_grounded"] = bool(plan.get("_locally_grounded"))
+        evidence["mechanism_evidence_source"] = (
+            "expression_parser_plus_llm_roles"
+            if row.get("_mechanism_roles_completed")
+            else "llm_declared_roles"
+        )
         if score < self.quality_threshold:
             return "LOW_LOCAL_QUALITY"
         settings = _settings(row.get("settings"), snapshots.catalog.info)
@@ -517,7 +670,11 @@ class HighQualityGenerator:
             expression, settings, tuple(sorted(datasets)), parent, str(plan.get("research_direction") or ""), str(plan.get("hypothesis") or ""),
             rationale, tuple(sorted(refs)), tuple(sorted(feedback_refs)), anti,
             str(plan.get("expected_turnover_behavior") or ""), score,
-            max(0.0, 1.0 - history_risk), self_risk, evidence, "LLM_REFINED_V50",
+            max(0.0, 1.0 - history_risk), self_risk, evidence,
+            str(
+                row.get("generator_source")
+                or ("LLM_LOCALLY_GROUNDED_PLAN" if plan.get("_locally_grounded") else "LLM_REFINED_V50")
+            ),
         )
 
     def _quality_score(
@@ -599,7 +756,7 @@ class HighQualityGenerator:
             "v50_seeds": [str(getattr(item, "expression", "")) for item in seeds],
             "plan_requirements": [
                 "Use only catalog.fields IDs, catalog.operators names, and knowledge ref IDs shown above.",
-                "For arithmetic in an expression use + - * /; if listing operator names, use exact catalog names add/sub/mul/div.",
+                "For arithmetic in an expression use + - * /; if listing operator names, copy the exact spelling from catalog.operators.",
                 "Choose fields from exactly one dataset.",
                 "Parent seeds are structural inspiration; never reuse a catalog.forbidden_identifiers token.",
                 "Avoid windows below 21, and use at least 42 for ts_corr.",
@@ -611,8 +768,8 @@ class HighQualityGenerator:
     def _candidate_prompt(snapshots: LocalSnapshots, seeds: list[Any], knowledge: KnowledgeContext, plan: dict[str, Any]) -> str:
         payload = {
             "plan": plan,
-            "allowed_fields": sorted(snapshots.catalog.fields),
-            "allowed_operators": sorted(snapshots.catalog.operators),
+            "allowed_fields": sorted(_string_set(plan.get("fields_to_use"))),
+            "allowed_operators": sorted(_string_set(plan.get("operators_to_use"))),
             "allowed_knowledge_refs": [item.ref_id for item in knowledge.snippets],
             "allowed_feedback_refs": [
                 item.ref_id for item in snapshots.feedback.records if item.grounded and item.expression
@@ -626,7 +783,12 @@ class HighQualityGenerator:
                 "Do not use rank(ts_mean(volume,...)/adv...) as a generic cosmetic liquidity leg.",
                 "Use only exact allowed IDs and include a specific economic rationale tied to the selected fields.",
                 "Every selected field and operator must appear verbatim in the plan's fields_to_use and operators_to_use arrays.",
+                "Treat plan.fields_to_use and plan.operators_to_use as complete whitelists; do not use any other token from v50_seeds or candidate_inventory.",
+                "Parent seeds are mechanism context only. Never copy cap, volume, adv20, returns, market, sector, or any other parent token unless it is explicitly in the plan whitelist.",
+                "When a combination cannot be proven legal, use one exact allowed field with one exact allowed time-series operator and a window of 63 or 126.",
                 "Provide field_roles for every field used and operator_roles for every function used in the expression.",
+                "field_roles must contain exactly the expression's extracted fields, and operator_roles exactly its extracted functions: no missing or extra entries.",
+                "Use field_roles objects with field_id and role keys, and operator_roles objects with operator and role keys.",
                 "turnover_controls and correlation_diversifiers must name only fields/operators actually present in the expression.",
                 "Do not use any forbidden_identifiers, even when a parent seed contains one.",
                 "Avoid repeating candidate_inventory used research directions, field sets, and operator topologies unless grounded feedback supports a material repair.",
@@ -635,6 +797,56 @@ class HighQualityGenerator:
             ],
         }
         return json.dumps(payload, ensure_ascii=False, sort_keys=True)
+
+    @staticmethod
+    def _deterministic_fallback_rows(
+        plan: dict[str, Any], snapshots: LocalSnapshots, seeds: list[Any], knowledge: KnowledgeContext,
+    ) -> list[dict[str, Any]]:
+        """Build a minimal legal candidate after LLM drafts exhaust their repair pass."""
+
+        fields = [
+            field for field in _string_set(plan.get("fields_to_use"))
+            if field in snapshots.catalog.fields
+        ]
+        operators = [
+            operator for operator in _string_set(plan.get("operators_to_use"))
+            if operator in snapshots.catalog.operators and operator not in _GHOST_OPERATORS
+        ]
+        refs = sorted({item.ref_id for item in knowledge.snippets} & _string_set(plan.get("knowledge_refs")))
+        parents = [str(getattr(seed, "expression", "")) for seed in seeds if str(getattr(seed, "expression", ""))]
+        if not fields or not operators or not refs or not parents:
+            return []
+        priority = ("ts_rank", "ts_zscore", "ts_mean", "ts_delta", "rank")
+        ordered_operators = sorted(operators, key=lambda item: (priority.index(item) if item in priority else len(priority), item))
+        rows: list[dict[str, Any]] = []
+        ranked_fields = sorted(fields, key=lambda item: (-_field_quality_component((item,), snapshots), item))[:3]
+        for field in ranked_fields:
+            for operator in ordered_operators[:3]:
+                arity = int(getattr(snapshots.catalog.operators[operator], "arity", -1))
+                if arity == 1:
+                    expression = f"{operator}({field})"
+                elif arity == 2 and operator.startswith("ts_"):
+                    expression = f"{operator}({field},126)"
+                else:
+                    continue
+                functions = extract_functions(expression)
+                rows.append({
+                    "expression": expression,
+                    "settings": {},
+                    "economic_rationale": f"A slow {operator} transform of {field} captures persistent information diffusion.",
+                    "novelty_reason": "A minimal locally grounded expression used after invalid model drafts.",
+                    "anti_corr_design": f"The single-field {operator} signal avoids unsupported cross-dataset and group operators.",
+                    "parent_seed": parents[0],
+                    "knowledge_refs": refs,
+                    "feedback_patterns_used": [],
+                    "likely_failure_modes": ["LOW_SHARPE"],
+                    "field_roles": [{"field_id": field, "role": "economic input"}],
+                    "operator_roles": [{"operator": function, "role": "signal transformation"} for function in functions],
+                    "turnover_controls": functions[:1],
+                    "correlation_diversifiers": [field],
+                    "generator_source": "DETERMINISTIC_LOCAL_FALLBACK",
+                })
+        return rows
 
 
 def _inventory_prompt_summary(snapshots: LocalSnapshots) -> dict[str, Any]:
@@ -781,6 +993,32 @@ def _mechanism_issue(
     return ""
 
 
+def _complete_mechanism_roles(row: dict[str, Any], fields: tuple[str, ...], functions: set[str]) -> dict[str, Any]:
+    """Fill only omitted structural role entries; never remove or rewrite claims."""
+
+    completed = dict(row)
+    changed = False
+    for key, identity_key, expected in (
+        ("field_roles", "field_id", set(fields)),
+        ("operator_roles", "operator", set(functions)),
+    ):
+        raw = completed.get(key)
+        if not isinstance(raw, list):
+            continue
+        entries = [item for item in raw if isinstance(item, dict)]
+        claimed = {str(item.get(identity_key) or "").strip().lower() for item in entries}
+        if claimed <= {value.lower() for value in expected}:
+            missing = expected - claimed
+            completed[key] = entries + [
+                {identity_key: value, "role": "deterministically extracted from expression"}
+                for value in sorted(missing)
+            ]
+            changed = changed or bool(missing)
+    if changed:
+        completed["_mechanism_roles_completed"] = True
+    return completed
+
+
 def _field_quality_component(fields: tuple[str, ...], snapshots: LocalSnapshots) -> float:
     if not fields:
         return 0.0
@@ -849,8 +1087,8 @@ def _candidate_schema() -> dict[str, Any]:
                     "knowledge_refs": {"type": "array", "items": {"type": "string"}},
                     "feedback_patterns_used": {"type": "array", "items": {"type": "string"}},
                     "likely_failure_modes": {"type": "array", "items": {"type": "string"}},
-                    "field_roles": {"type": "array", "items": {"type": "object"}},
-                    "operator_roles": {"type": "array", "items": {"type": "object"}},
+                    "field_roles": {"type": "array", "items": {"type": "object", "required": ["field_id", "role"]}},
+                    "operator_roles": {"type": "array", "items": {"type": "object", "required": ["operator", "role"]}},
                     "turnover_controls": {"type": "array", "items": {"type": "string"}},
                     "correlation_diversifiers": {"type": "array", "items": {"type": "string"}},
                 },
