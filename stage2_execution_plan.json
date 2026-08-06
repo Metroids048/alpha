@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-08-06T14:00:00Z",
+  "stage": "stage2_seed_dedup",
+  "actions": [
+    {
+      "step": "2.1",
+      "action": "expand_v50_seed_pool",
+      "file": "alpha_mining/generation/production.py",
+      "change": "V50Kernel(seed_pool_size=150)",
+      "expected": "\u79cd\u5b50\u591a\u6837\u6027\u589e\u52a0\uff0c\u91cd\u590d\u6982\u7387\u964d\u4f4e"
+    },
+    {
+      "step": "2.2",
+      "action": "add_topology_dedup",
+      "file": "alpha_mining/generation/high_quality.py",
+      "change": "\u5728_generate_with_v50()\u6dfb\u52a0structure_signature\u53bb\u91cd",
+      "expected": "SEED_TOPOLOGY_DUPLICATE: 10 -> <3"
+    },
+    {
+      "step": "2.3",
+      "action": "run_generation_test",
+      "command": "python \u751f\u6210Alpha.py --once",
+      "expected": "enqueued > 0, rejected < 15"
+    }
+  ]
+}

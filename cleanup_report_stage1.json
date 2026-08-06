@@ -1,0 +1,19 @@
+{
+  "timestamp": "2026-08-06T13:13:29.135762",
+  "action": "stage1_cleanup",
+  "before": {
+    "total": 13,
+    "legacy_issue": 8,
+    "pending_simulation": 5,
+    "rejected": 8
+  },
+  "after": {
+    "total": 8,
+    "rejected_obsolete": 8,
+    "pending_simulation_moved": 5
+  },
+  "changes": {
+    "legacy_marked_obsolete": 8,
+    "pending_moved_to_separate_file": 5
+  }
+}

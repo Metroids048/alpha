@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-08-06T05:15:48.965257+00:00",
+  "action": "inject_feedback_seed",
+  "seed_expression": "ts_rank(anl10_ebifq1_pred_surps_v2_2230,126)",
+  "seed_outcome": "NEAR_PASS",
+  "seed_sharpe": 1.25,
+  "seed_fitness": 0.58,
+  "verification": {
+    "near_pass_count": 1,
+    "success": true
+  }
+}

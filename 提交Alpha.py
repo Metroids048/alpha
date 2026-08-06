@@ -19,6 +19,21 @@ _ROOT = Path(__file__).resolve().parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+# Load .env file for WQ credentials
+try:
+    from dotenv import load_dotenv
+    load_dotenv(_ROOT / ".env")
+except ImportError:
+    # Fallback: manual .env parsing
+    env_file = _ROOT / ".env"
+    if env_file.exists():
+        import os
+        for line in env_file.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, _, val = line.partition("=")
+                os.environ.setdefault(key.strip(), val.strip())
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Alpha 队列准备与受保护批次提交")
@@ -38,7 +53,7 @@ def main(argv: list[str] | None = None) -> int:
     database = Path(args.database)
     if database.resolve() == (_ROOT / "数据" / "本地运行产物" / "数据库" / "research_memory.sqlite").resolve():
         initialize_authoritative_database(database, _ROOT / "research_memory.sqlite")
-    service = CandidateWorkflowService(database)
+    service = CandidateWorkflowService(database, max_simulations_per_24h=100)
     service.store.import_csv(Path(args.input))
     service.store.project_csv(Path(args.input), _ROOT / "数据" / "本地运行产物" / "状态" / "generation_queue_events.csv")
 

@@ -1,0 +1,53 @@
+[
+  {
+    "name": "momentum_simple",
+    "expression": "rank(ts_delta(close, 10))",
+    "mechanism": "momentum",
+    "operator_family": "rank(ts_delta(field, #))",
+    "datasets": [
+      "sharadar_sf1"
+    ],
+    "rationale": "Simple momentum: 10-day price change ranked cross-sectionally"
+  },
+  {
+    "name": "value_ratio",
+    "expression": "rank(earnings_yield)",
+    "mechanism": "value",
+    "operator_family": "rank(field)",
+    "datasets": [
+      "fundamental6"
+    ],
+    "rationale": "Pure value: earnings yield without time-series ops"
+  },
+  {
+    "name": "volatility_inverse",
+    "expression": "-ts_std_dev(returns, 20)",
+    "mechanism": "low_volatility",
+    "operator_family": "-ts_std_dev(field, #)",
+    "datasets": [
+      "pv1"
+    ],
+    "rationale": "Low-risk anomaly: inverse volatility"
+  },
+  {
+    "name": "cross_sectional_strength",
+    "expression": "group_rank(close / ts_mean(close, 50), sector)",
+    "mechanism": "relative_strength",
+    "operator_family": "group_rank(field / ts_mean(field, #), sector)",
+    "datasets": [
+      "sharadar_sf1"
+    ],
+    "rationale": "Sector relative strength"
+  },
+  {
+    "name": "hybrid_quality_momentum",
+    "expression": "rank(roe) * ts_rank(close, 126)",
+    "mechanism": "quality_momentum",
+    "operator_family": "rank(field) * ts_rank(field, #)",
+    "datasets": [
+      "fundamental6",
+      "sharadar_sf1"
+    ],
+    "rationale": "Quality (ROE) combined with momentum"
+  }
+]

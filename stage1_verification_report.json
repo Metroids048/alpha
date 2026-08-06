@@ -1,0 +1,42 @@
+{
+  "timestamp": "2026-08-06T13:57:53.048518",
+  "stage": "stage1_verification",
+  "before": {
+    "feedback": 0,
+    "positive": 0,
+    "near_pass": 0,
+    "enqueued": 0,
+    "pending": 5,
+    "rejected": 25,
+    "top_rejection": "SEED_TOPOLOGY_DUPLICATE:10"
+  },
+  "after": {
+    "feedback": 1,
+    "positive": 0,
+    "near_pass": 1,
+    "enqueued": 0,
+    "pending": 5,
+    "rejected": 24,
+    "top_rejections": {
+      "SEED_TOPOLOGY_DUPLICATE": 10,
+      "LLM_CRITIQUE_REJECTED": 5,
+      "UNKNOWN_OPERATOR": 3,
+      "PLAN_CROSS_DATASET": 2,
+      "PLAN_UNKNOWN_FIELD": 2
+    }
+  },
+  "improvements": [
+    "\u2705 \u53cd\u9988\u79cd\u5b50\u751f\u6548: feedback 0\u21921, near_pass 0\u21921",
+    "\u2705 dual-ledger\u51b2\u7a81\u5df2\u89e3\u51b3",
+    "\u2705 \u65e7\u5408\u540c\u5019\u9009\u5df2\u6e05\u7406"
+  ],
+  "remaining_issues": [
+    "\u274c \u79cd\u5b50\u91cd\u590d\u4ecd\u9ad8: SEED_TOPOLOGY_DUPLICATE:10 (41%)",
+    "\u274c LLM\u6279\u8bc4\u62d2\u7edd: 5\u4e2a\u5019\u9009\u56e0\u4e0d\u7b26\u5408\u8ba1\u5212\u88ab\u62d2",
+    "\u274c \u4ecd\u672a\u5165\u961f: enqueued=0"
+  ],
+  "next_actions": [
+    "\u9636\u6bb52: \u79cd\u5b50\u53bb\u91cd\u5f3a\u5316\uff08\u6269\u5c55\u79cd\u5b50\u6c60 + \u62d3\u6251\u53bb\u91cd\uff09",
+    "\u4fee\u590dLLM_CRITIQUE\u95ee\u9898\uff08\u7b97\u5b50\u4e0e\u8ba1\u5212\u4e0d\u5339\u914d\uff09"
+  ]
+}

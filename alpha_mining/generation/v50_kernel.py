@@ -61,7 +61,7 @@ class V50Kernel:
             delay=int(snapshots.catalog.info.get("delay") or 1),
             budget=self.seed_pool_size,
             field_top_n=len(rows),
-            candidate_multiplier=1,
+            candidate_multiplier=3,  # 阶段2: 每个种子生成3个变体, 5种子->15候选
             min_candidates_floor=1,
             alpha_models_enabled=False,
             generate_template_rescue=False,
@@ -98,12 +98,13 @@ class V50Kernel:
         )
         # Near-pass amplification is strictly additive and remains subject to
         # the downstream hard gates.  Its absence is a valid zero-output case.
-        near_records = [
-            {"expression": item.expression, "sharpe": 1.1}
-            for item in snapshots.feedback.near_pass
-            if item.expression
+        # 阶段1: 同时amplify positive和near_pass，让bootstrap种子生效
+        amplify_records = [
+            {"expression": item.expression, "sharpe": 1.5 if item.outcome.upper() in {"PASS", "READY_TO_SUBMIT"} else 1.1}
+            for item in snapshots.feedback.records
+            if item.expression and item.outcome.upper() in {"PASS", "READY_TO_SUBMIT", "NEAR_PASS"}
         ]
-        if near_records:
+        if amplify_records:
             amplifier = v50.NearPassAmplifier(config, catalog, validator)
-            candidates = amplifier.amplify(near_records, history_seen | {item.expression for item in candidates}) + candidates
+            candidates = amplifier.amplify(amplify_records, history_seen | {item.expression for item in candidates}) + candidates
         return V50SeedBatch(tuple(candidates[: self.seed_pool_size]), catalog, pools, novelty)

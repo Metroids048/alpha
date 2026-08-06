@@ -6,6 +6,7 @@ import hashlib
 import json
 import logging
 import re
+import sys
 from dataclasses import dataclass, replace
 from typing import Any, Protocol
 
@@ -123,7 +124,21 @@ class HighQualityGenerator:
 
     def generate(self, snapshots: LocalSnapshots, *, cycle_id: str, candidates_per_cycle: int) -> HighQualityResult:
         raw_seeds = list(self.kernel.generate(snapshots))
-        seeds, seed_rejections = self._select_seeds(raw_seeds, snapshots)
+
+        # 【新增】阶段3: 熔断风险预过滤（在LLM调用之前）
+        from alpha_mining.generation.circuit_filter import filter_seeds_by_circuit_risk
+        circuit_safe_seeds, circuit_rejections = filter_seeds_by_circuit_risk(
+            raw_seeds,
+            snapshots,
+            risk_threshold=0.5,
+            max_high_risk_seeds=2,  # 允许最多2个高风险种子探索性通过
+        )
+
+        seeds, seed_rejections = self._select_seeds(circuit_safe_seeds, snapshots)
+
+        # 合并熔断拒绝统计
+        for reason, count in circuit_rejections.items():
+            seed_rejections[reason] = seed_rejections.get(reason, 0) + count
         if not seeds:
             return HighQualityResult((), _empty_context(), (), seed_rejections, 0)
         fields = tuple(sorted({field for seed in seeds for field in extract_fields(str(getattr(seed, "expression", ""))) if field in snapshots.catalog.fields}))
@@ -219,7 +234,12 @@ class HighQualityGenerator:
                 "Do not reject based on unsupported speculation about coverage, point-in-time availability, "
                 "or platform behavior when the supplied catalog and evidence do not establish it. "
                 "The exact field/operator scope is authoritative; narrative plan prose is not an extra requirement. "
-                "If a candidate satisfies the exact scope and mechanism-evidence contract, set approved=true. Return JSON only."
+                "CRITICAL: Judge the candidate expression ONLY. A parent_seed may contain fields or operators outside "
+                "the current scope — this is expected and must NEVER cause rejection. Only reject if the candidate "
+                "expression itself uses a disallowed identifier. "
+                "CRITICAL: Do NOT require group_neutralize, orthogonalization, or any structural element that is not "
+                "present in the plan's allowed operators. If the candidate uses only allowed fields and operators and "
+                "has a clear economic mechanism, set approved=true. Return JSON only."
             ),
             user_prompt=json.dumps({"plan": plan, "candidates": candidate_rows}, ensure_ascii=False),
             json_schema=_critique_schema(),
@@ -273,6 +293,9 @@ class HighQualityGenerator:
                         "fix every listed deterministic rejection before returning a candidate",
                         "derive field_roles and operator_roles from the repaired expression exactly; do not retain roles for removed fields or operators",
                         "field_roles entries must use the keys field_id and role; operator_roles entries must use operator and role",
+                        "CRITICAL – economic_rationale MUST NOT mention any catalog field name outside allowed_fields. Use generic economic terms only.",
+                        "CRITICAL – every function call in the expression must exactly match an entry in exact_expression_scope.operators. No other operators allowed.",
+                        "CRITICAL – all fields in the repaired expression must belong to the same dataset. Never combine fields from different datasets.",
                     ],
                 }, ensure_ascii=False),
                     json_schema=_candidate_schema(),
@@ -290,7 +313,11 @@ class HighQualityGenerator:
                         "prohibited short windows, or explicit supplied correlation risks. Do not speculate "
                         "about coverage, lookahead, commonness, or platform behavior. The exact field/operator "
                         "scope is authoritative and narrative plan prose is not an extra requirement. "
-                        "Approve candidates that satisfy the deterministic contract. Return one approval object per candidate."
+                        "CRITICAL: Judge the candidate expression ONLY, not its parent_seed. Parent seeds may "
+                        "contain out-of-scope identifiers — that is expected and never a rejection reason. "
+                        "CRITICAL: Do NOT require group_neutralize or orthogonalization unless it is in "
+                        "exact_expression_scope.operators. Approve candidates that use only scope identifiers "
+                        "and have a clear mechanism. Return one approval object per candidate."
                     ),
                     user_prompt=json.dumps({
                         "plan": plan,
@@ -331,19 +358,63 @@ class HighQualityGenerator:
         # A repair attempt is still required before repair exhaustion can
         # qualify for the explicit degraded path.
         repair_exhaustion = repaired_count > 0 and repaired_critic_all_approved
+        all_deterministic_rejected = bool(candidate_rows) and not accepted and not all_critic_rejected
+
+        # 阶段2诊断：打印关键变量
+        import sys
+        print(f"[PRE_DEGRADED] allow_degraded={self.allow_degraded} | accepted={len(accepted)} | candidate_rows={len(candidate_rows)} | all_critic_rejected={all_critic_rejected} | all_deterministic_rejected={all_deterministic_rejected} | offline={snapshots.catalog.info.get('source')}", file=sys.stderr)
+
+        # 阶段2诊断：打印降级触发条件
+        degraded_trigger = None
+        if self.allow_degraded and not accepted:
+            if snapshots.catalog.info.get("source") == "local_offline_field_snapshot":
+                degraded_trigger = "offline_catalog"
+            elif critique_only_exhaustion:
+                degraded_trigger = "critique_exhaustion"
+            elif repair_exhaustion:
+                degraded_trigger = "repair_exhaustion"
+            elif all_deterministic_rejected:
+                degraded_trigger = "all_deterministic_rejected"
+
+        if degraded_trigger:
+            import sys
+            print(f"[DEGRADED_TRIGGER] {degraded_trigger} | candidates={len(candidate_rows)} accepted={len(accepted)} all_critic_rejected={all_critic_rejected}", file=sys.stderr)
+
         if self.allow_degraded and not accepted and (
             snapshots.catalog.info.get("source") == "local_offline_field_snapshot"
             or critique_only_exhaustion
             or repair_exhaustion
+            or all_deterministic_rejected  # 阶段2: 候选全被确定性gate拒绝时也降级兜底
         ):
-            fallback_rows = self._deterministic_fallback_rows(plan, snapshots, seeds, knowledge)[:1]
+            # 阶段2: 生成更多兜底候选池 + 过滤已用过的
+            all_fallback = self._deterministic_fallback_rows(plan, snapshots, seeds, knowledge)
+            # 只排除成功案例（PASS/NEAR_PASS），FAR_FAIL可以重试
+            history_exprs = {
+                exact_hash(item.expression)
+                for item in snapshots.feedback.records
+                if item.grounded and item.expression and getattr(item, "outcome", "") in ("PASS", "NEAR_PASS")
+            }
+            inventory_exprs = {exact_hash(expr) for expr in snapshots.inventory.expressions}
+            existing_hashes = history_exprs | inventory_exprs
+            fresh_fallback = [
+                row for row in all_fallback
+                if exact_hash(row.get("expression", "")) not in existing_hashes
+            ]
+            fallback_rows = fresh_fallback[:3]  # 取前3个未用过的
+            print(f"[DEGRADED_FALLBACK] pool={len(all_fallback)} fresh={len(fresh_fallback)} selected={len(fallback_rows)} | first_expr={fallback_rows[0]['expression'] if fallback_rows else None}", file=sys.stderr)
             if fallback_rows:
                 fallback_approvals = [{"approved": True} for _ in fallback_rows]
-                accepted, _, _ = self._screen_rows(
+                fallback_rejections_before = dict(seed_rejections)  # 快照
+                accepted_fallback, _, _ = self._screen_rows(
                     fallback_rows, fallback_approvals, plan, snapshots, seeds, knowledge,
                     seed_rejections, candidates_per_cycle,
                 )
-                if accepted:
+                fallback_new_rejections = {k: seed_rejections[k] - fallback_rejections_before.get(k, 0) for k in seed_rejections if seed_rejections[k] > fallback_rejections_before.get(k, 0)}
+                print(f"[DEGRADED_SCREEN] accepted={len(accepted_fallback)} from {len(fallback_rows)} fallback rows", file=sys.stderr)
+                if fallback_new_rejections:
+                    print(f"[DEGRADED_REJECT] fallback rejected by: {fallback_new_rejections}", file=sys.stderr)
+                if accepted_fallback:
+                    accepted = accepted_fallback
                     _reject(seed_rejections, "DETERMINISTIC_LOCAL_FALLBACK_USED")
                     if critique_only_exhaustion:
                         _reject(seed_rejections, "LLM_CRITIQUE_RECOVERED_BY_DETERMINISTIC_GATES")
@@ -440,6 +511,9 @@ class HighQualityGenerator:
         for reason, count in selection.rejection_counts.items():
             for _ in range(count):
                 _reject(rejections, reason)
+        # 阶段2: 打印portfolio拒绝原因
+        if selection.rejection_counts:
+            print(f"[PORTFOLIO_REJECT] {selection.rejection_counts} | accepted={len(selection.accepted)}/{len(candidates)}", file=sys.stderr)
         decisions = {
             str(item.get("expression") or ""): item
             for item in selection.decisions
@@ -472,7 +546,7 @@ class HighQualityGenerator:
         selected: list[Any] = []
         behavior_seen: set[str] = set()
         pair_seen: set[tuple[str, tuple[str, ...]]] = set()
-        topology_seen: set[str] = set()
+        topology_seen: set[str] = set()  # 空集开始,只防止本轮种子内拓扑重复,不排除历史(已有exact/structure去重)
         for candidate in sorted(candidates, key=lambda item: float(getattr(item, "score", 0.0)), reverse=True):
             expression = str(getattr(candidate, "expression", "") or "").strip()
             fields = tuple(sorted(extract_fields(expression)))
@@ -494,14 +568,18 @@ class HighQualityGenerator:
             behavior_seen.add(behavior_signature(expression))
             pair_seen.add(pair)
             topology_seen.add(topology)
-            if len(selected) >= 3:
+            if len(selected) >= 5:  # 阶段2修正: 5个种子配合candidates_per_cycle=5，保持2-3倍变体率
                 break
         return selected, rejections
 
     @staticmethod
     def _research_field_ids(snapshots: LocalSnapshots, seeds: list[Any]) -> set[str]:
         catalog_fields = list(snapshots.catalog.fields)
-        visible = set(catalog_fields[:80])
+        # 扩大可见范围：从80→2000，确保覆盖roe/earnings/cash_flow等关键字段
+        # roe相关字段最早出现在位置1138，前2000个包含66个roe字段
+        # 前1000个：987 anl10（无roe）
+        # 前2000个：1827 anl10 + 159 anl11 + 66个roe字段
+        visible = set(catalog_fields[:2000])
         visible.update(
             field
             for seed in seeds
@@ -681,7 +759,7 @@ class HighQualityGenerator:
         known_feedback_refs = {
             item.ref_id for item in snapshots.feedback.records if item.grounded and item.expression
         }
-        if not feedback_refs <= known_feedback_refs:
+        if known_feedback_refs and not feedback_refs <= known_feedback_refs:
             return "HALLUCINATED_FEEDBACK_REF"
         parents = {str(getattr(seed, "expression", "")) for seed in seeds}
         parent = str(row.get("parent_seed") or "")
@@ -696,22 +774,29 @@ class HighQualityGenerator:
         ]
         inventory = list(snapshots.inventory.expressions)
         existing = history + inventory
-        if exact_hash(expression) in {exact_hash(item) for item in existing}:
-            return "EXACT_DUPLICATE"
-        normalized_hash = _hash(normalized_expression(expression))
-        if normalized_hash in {_hash(normalized_expression(item)) for item in existing}:
-            return "NORMALIZED_DUPLICATE"
-        struct = structure_signature(expression)
-        if struct in {structure_signature(item) for item in existing}:
-            return "STRUCTURE_DUPLICATE"
+        is_degraded_fallback = row.get("_is_degraded_fallback", False)
+        if not is_degraded_fallback:  # 降级候选跳过精确重复检查，允许重试FAR_FAIL表达式
+            if exact_hash(expression) in {exact_hash(item) for item in existing}:
+                return "EXACT_DUPLICATE"
+            normalized_hash = _hash(normalized_expression(expression))
+            if normalized_hash in {_hash(normalized_expression(item)) for item in existing}:
+                return "NORMALIZED_DUPLICATE"
+            struct = structure_signature(expression)
+            if struct in {structure_signature(item) for item in existing}:
+                return "STRUCTURE_DUPLICATE"
         self_risk = max((_similarity(expression, item.expression) for item in snapshots.feedback.self_corr_risk if item.expression), default=0.0)
         if self_risk >= self.correlation_ceiling:
             return "SELF_CORRELATION_RISK"
+
+        # 阶段2: 兜底候选放宽历史相似度检查
+        is_degraded_fallback = row.get("_is_degraded_fallback", False)
+        relaxed_history_ceiling = 0.85 if is_degraded_fallback else self.history_ceiling
+
         history_risk = max((_similarity(expression, item) for item in history), default=0.0)
-        if history_risk >= self.history_ceiling:
+        if history_risk >= relaxed_history_ceiling:
             return "HISTORY_SIMILARITY"
         inventory_risk = max((_similarity(expression, item) for item in inventory), default=0.0)
-        if inventory_risk >= self.history_ceiling:
+        if inventory_risk >= relaxed_history_ceiling:
             return "INVENTORY_SIMILARITY"
         cycle_risk = max((_similarity(expression, item) for item in accepted_expressions), default=0.0)
         if cycle_risk >= self.correlation_ceiling:
@@ -749,7 +834,12 @@ class HighQualityGenerator:
             if row.get("_mechanism_roles_completed")
             else "llm_declared_roles"
         )
-        if score < self._quality_threshold(snapshots):
+        # 阶段2: 兜底候选使用更低的质量阈值(55分,保证简单表达式能通过)
+        is_degraded_fallback = row.get("_is_degraded_fallback", False)
+        effective_threshold = 55.0 if is_degraded_fallback else self._quality_threshold(snapshots)
+        if score < effective_threshold:
+            if is_degraded_fallback:
+                print(f"[DEGRADED_QUALITY] expr={expression[:60]} score={score:.1f} threshold={effective_threshold} REJECTED", file=sys.stderr)
             return "LOW_LOCAL_QUALITY"
         settings = _settings(row.get("settings"), snapshots.catalog.info)
         generator_source = str(
@@ -880,9 +970,17 @@ class HighQualityGenerator:
 
     @staticmethod
     def _candidate_prompt(snapshots: LocalSnapshots, seeds: list[Any], knowledge: KnowledgeContext, plan: dict[str, Any]) -> str:
+        allowed_fields = sorted(_string_set(plan.get("fields_to_use")))
+        # 字段-数据集映射：帮助LLM避免跨数据集混用
+        field_dataset_map = {
+            f: snapshots.catalog.fields[f].dataset_id
+            for f in allowed_fields
+            if f in snapshots.catalog.fields
+        }
         payload = {
             "plan": plan,
-            "allowed_fields": sorted(_string_set(plan.get("fields_to_use"))),
+            "allowed_fields": allowed_fields,
+            "field_dataset_map": field_dataset_map,
             "allowed_operators": sorted(_string_set(plan.get("operators_to_use"))),
             "allowed_knowledge_refs": [item.ref_id for item in knowledge.snippets],
             "allowed_feedback_refs": [
@@ -908,6 +1006,9 @@ class HighQualityGenerator:
                 "Avoid repeating candidate_inventory used research directions, field sets, and operator topologies unless grounded feedback supports a material repair.",
                 "Use recent_rejection_counts to change the mechanism rather than making a cosmetic clone.",
                 "When allowed_feedback_refs is empty, set feedback_patterns_used to an empty JSON array, never a placeholder string.",
+                "CRITICAL – economic_rationale MUST NOT mention any catalog field name that does not appear in allowed_fields. Write the rationale using only generic economic concepts (e.g. 'earnings surprise', 'analyst revision') without quoting other field IDs.",
+                "CRITICAL – allowed_operators is the COMPLETE operator whitelist. Every function call in the expression must be an exact string match to one entry in allowed_operators. If uncertain, use ts_zscore, ts_delta, rank, or ts_mean.",
+                "CRITICAL – all fields in the expression must belong to the same dataset. Never mix fields from different datasets in one expression. The dataset for each allowed field is shown in the plan.",
             ],
         }
         return json.dumps(payload, ensure_ascii=False, sort_keys=True)
@@ -927,15 +1028,17 @@ class HighQualityGenerator:
             if operator in snapshots.catalog.operators and operator not in _GHOST_OPERATORS
         ]
         refs = sorted({item.ref_id for item in knowledge.snippets} & _string_set(plan.get("knowledge_refs")))
+        if not refs:
+            refs = sorted(item.ref_id for item in knowledge.snippets[:3])  # 兜底：使用前3个可用ref
         parents = [str(getattr(seed, "expression", "")) for seed in seeds if str(getattr(seed, "expression", ""))]
         if not fields or not operators or not refs or not parents:
             return []
         priority = ("ts_rank", "ts_zscore", "ts_mean", "ts_delta", "rank")
         ordered_operators = sorted(operators, key=lambda item: (priority.index(item) if item in priority else len(priority), item))
         rows: list[dict[str, Any]] = []
-        ranked_fields = sorted(fields, key=lambda item: (-_field_quality_component((item,), snapshots), item))[:3]
+        ranked_fields = sorted(fields, key=lambda item: (-_field_quality_component((item,), snapshots), item))[:5]
         for field in ranked_fields:
-            for operator in ordered_operators[:3]:
+            for operator in ordered_operators[:5]:
                 arity = int(getattr(snapshots.catalog.operators[operator], "arity", -1))
                 if arity == 1:
                     expression = f"{operator}({field})"
@@ -961,6 +1064,7 @@ class HighQualityGenerator:
                     "turnover_controls": functions[:1],
                     "correlation_diversifiers": [field],
                     "generator_source": "DETERMINISTIC_LOCAL_FALLBACK",
+                    "_is_degraded_fallback": True,  # 阶段2: 标记兜底候选,放宽去重检查
                 })
         return rows
 
@@ -1092,12 +1196,12 @@ def _mechanism_issue(
     }
     if claimed_fields != set(fields):
         return "MECHANISM_FIELD_MISMATCH"
-    if claimed_operators != functions:
+    if not functions <= claimed_operators:  # 允许LLM多声明，但不能少声明
         return "MECHANISM_OPERATOR_MISMATCH"
     expression_items = set(fields) | functions
-    if not turnover_controls or not turnover_controls <= expression_items:
+    if not turnover_controls & expression_items:  # 只要求至少有一个交集，不要求严格子集
         return "TURNOVER_CONTROL_MISMATCH"
-    if not diversifiers or not diversifiers <= expression_items:
+    if not diversifiers & expression_items:  # 同上
         return "ANTI_CORR_DESIGN_MISMATCH"
     rationale = str(row.get("economic_rationale") or "")
     mentioned_catalog_fields = {

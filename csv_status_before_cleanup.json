@@ -1,0 +1,10 @@
+{
+  "timestamp": "2026-08-06T13:12:44.718056",
+  "total_rows": 13,
+  "legacy_issue_count": 8,
+  "pending_simulation_count": 5,
+  "status_distribution": {
+    "REJECTED_LOCAL_REVALIDATION": 8,
+    "PENDING_SIMULATION": 5
+  }
+}

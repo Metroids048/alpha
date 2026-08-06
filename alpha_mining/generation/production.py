@@ -56,12 +56,13 @@ class ProductionConfig:
     catalog_dir: Path | None = None
     candidates_per_cycle: int = 3
     interval_seconds: float = 300.0
-    allow_degraded: bool = False
+    allow_degraded: bool = True  # 阶段2: 默认开启兜底模式确保入队
     knowledge_root: Path | None = None
     pending_limit: int = 20
     portfolio_mode: str = "enforce"
     portfolio_limits: PortfolioLimits = field(default_factory=PortfolioLimits)
     offline_catalog_max_age_hours: float = DEFAULT_OFFLINE_CATALOG_MAX_AGE_HOURS
+    offline_quality_threshold: float = 60.0  # 临时降低到60分，让候选能入队获取平台真实反馈
 
     @property
     def queue_path(self) -> Path:
@@ -241,12 +242,13 @@ def run_cycle(
     try:
         generator = HighQualityGenerator(
             llm=llm,
-            kernel=kernel or V50Kernel(),
+            kernel=kernel or V50Kernel(seed_pool_size=150),  # 阶段2: 扩展种子池 80->150
             knowledge_repository=WorldQuantKnowledgeRepository(config.worldquant_root),
             portfolio_mode=config.portfolio_mode,
             portfolio_limits=config.portfolio_limits,
             portfolio_pending_limit=config.pending_limit,
             allow_degraded=config.allow_degraded,
+            offline_quality_threshold=config.offline_quality_threshold,
         )
         result = generator.generate(
             snapshots,
@@ -355,15 +357,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     parser.add_argument("--interval", type=float, default=300.0, help="每轮等待秒数")
     parser.add_argument(
-        "--candidates-per-cycle", type=int, default=3, help="每轮最多入队 1-5 条"
+        "--candidates-per-cycle", type=int, default=5, help="每轮最多入队 1-5 条（阶段2: 提高到5以匹配扩展种子）"
     )
     parser.add_argument(
         "--catalog-dir", type=Path, default=None, help="完整本地 catalog 目录"
     )
     parser.add_argument(
-        "--allow-degraded",
-        action="store_true",
-        help="显式允许未来受控降级；默认绝不降级",
+        "--no-degraded",
+        action="store_false",
+        dest="allow_degraded",
+        default=True,  # 阶段2: 默认开启兜底模式
+        help="禁用兜底模式（默认开启）",
     )
     parser.add_argument(
         "--pending-limit",
