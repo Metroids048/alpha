@@ -56,6 +56,9 @@ class AcceptedCandidate:
     self_corr_risk_score: float
     quality_evidence: dict[str, Any]
     generator_source: str
+    context_refs: tuple[str, ...] = ()
+    knowledge_context_hash: str = ""
+    degraded: bool = False
 
 
 @dataclass(frozen=True)
@@ -102,6 +105,7 @@ class HighQualityGenerator:
         portfolio_mode: str = "enforce",
         portfolio_limits: PortfolioLimits | None = None,
         portfolio_pending_limit: int = 20,
+        allow_degraded: bool = False,
     ) -> None:
         self.llm = llm
         self.kernel = kernel
@@ -115,6 +119,7 @@ class HighQualityGenerator:
             raise ValueError("portfolio mode must be 'shadow' or 'enforce'")
         self.portfolio_limits = portfolio_limits or PortfolioLimits()
         self.portfolio_pending_limit = max(1, int(portfolio_pending_limit))
+        self.allow_degraded = bool(allow_degraded)
 
     def generate(self, snapshots: LocalSnapshots, *, cycle_id: str, candidates_per_cycle: int) -> HighQualityResult:
         raw_seeds = list(self.kernel.generate(snapshots))
@@ -318,28 +323,20 @@ class HighQualityGenerator:
                     repaired_rows, repaired_approvals if isinstance(repaired_approvals, list) else [],
                     plan, snapshots, seeds, knowledge, seed_rejections, candidates_per_cycle,
                 )
-        # The critique model is useful for explaining a concrete defect, but
-        # it is not an authority on economic narrative.  A full batch can be
-        # rejected merely because the model paraphrases the plan differently.
-        # When *every initial draft* hits that condition, construct candidates
-        # from the already validated plan and run the exact same deterministic
-        # expression, mechanism, duplicate, correlation and quality gates.
-        # This is deliberately narrower than the offline-catalog fallback:
-        # malformed model drafts still do not receive a bypass.
+        # The deterministic escape hatch is intentionally opt-in.  Even when
+        # the critic rejects only narrative or repaired rows exhaust local gates,
+        # normal production remains fail-closed unless the operator explicitly
+        # accepts a single degraded candidate for later platform verification.
         critique_only_exhaustion = bool(candidate_rows) and all_critic_rejected and not deterministic_draft_rejected
-        # A complete catalog still needs a bounded deterministic escape hatch
-        # when the model has gone through the repair pass but every repaired
-        # row failed the same local gates.  The repair-count guard is
-        # intentional: an initial malformed draft must keep the historical
-        # fail-closed behavior and cannot receive a fallback without a repair
-        # attempt first.
+        # A repair attempt is still required before repair exhaustion can
+        # qualify for the explicit degraded path.
         repair_exhaustion = repaired_count > 0 and repaired_critic_all_approved
-        if not accepted and (
+        if self.allow_degraded and not accepted and (
             snapshots.catalog.info.get("source") == "local_offline_field_snapshot"
             or critique_only_exhaustion
             or repair_exhaustion
         ):
-            fallback_rows = self._deterministic_fallback_rows(plan, snapshots, seeds, knowledge)
+            fallback_rows = self._deterministic_fallback_rows(plan, snapshots, seeds, knowledge)[:1]
             if fallback_rows:
                 fallback_approvals = [{"approved": True} for _ in fallback_rows]
                 accepted, _, _ = self._screen_rows(
@@ -755,15 +752,36 @@ class HighQualityGenerator:
         if score < self._quality_threshold(snapshots):
             return "LOW_LOCAL_QUALITY"
         settings = _settings(row.get("settings"), snapshots.catalog.info)
+        generator_source = str(
+            row.get("generator_source")
+            or ("LLM_LOCALLY_GROUNDED_PLAN" if plan.get("_locally_grounded") else "LLM_REFINED_V50")
+        )
+        degraded = generator_source == "DETERMINISTIC_LOCAL_FALLBACK"
+        evidence["degraded"] = degraded
+        research_direction = str(
+            (row.get("research_direction") if degraded else plan.get("research_direction")) or ""
+        )
+        hypothesis = str((row.get("hypothesis") if degraded else plan.get("hypothesis")) or "")
         return AcceptedCandidate(
-            expression, settings, tuple(sorted(datasets)), parent, str(plan.get("research_direction") or ""), str(plan.get("hypothesis") or ""),
-            rationale, tuple(sorted(refs)), tuple(sorted(feedback_refs)), anti,
-            str(plan.get("expected_turnover_behavior") or ""), score,
-            max(0.0, 1.0 - history_risk), self_risk, evidence,
-            str(
-                row.get("generator_source")
-                or ("LLM_LOCALLY_GROUNDED_PLAN" if plan.get("_locally_grounded") else "LLM_REFINED_V50")
-            ),
+            expression=expression,
+            settings=settings,
+            datasets=tuple(sorted(datasets)),
+            parent_seed=parent,
+            research_direction=research_direction,
+            hypothesis=hypothesis,
+            economic_rationale=rationale,
+            knowledge_refs=tuple(sorted(refs)),
+            feedback_refs=tuple(sorted(feedback_refs)),
+            anti_corr_design=anti,
+            expected_turnover_behavior=str(plan.get("expected_turnover_behavior") or ""),
+            local_quality_score=score,
+            novelty_score=max(0.0, 1.0 - history_risk),
+            self_corr_risk_score=self_risk,
+            quality_evidence=evidence,
+            generator_source=generator_source,
+            context_refs=tuple(item.ref_id for item in knowledge.snippets),
+            knowledge_context_hash=str(knowledge.context_hash or ""),
+            degraded=degraded,
         )
 
     def _quality_threshold(self, snapshots: LocalSnapshots) -> float:
@@ -898,7 +916,7 @@ class HighQualityGenerator:
     def _deterministic_fallback_rows(
         plan: dict[str, Any], snapshots: LocalSnapshots, seeds: list[Any], knowledge: KnowledgeContext,
     ) -> list[dict[str, Any]]:
-        """Build a minimal legal candidate after LLM drafts exhaust their repair pass."""
+        """Build one of the legal candidates available to explicit degraded mode."""
 
         fields = [
             field for field in _string_set(plan.get("fields_to_use"))
@@ -929,6 +947,8 @@ class HighQualityGenerator:
                 rows.append({
                     "expression": expression,
                     "settings": {},
+                    "research_direction": f"degraded {operator} signal on {field}",
+                    "hypothesis": f"{operator} applied to {field} may capture persistent information diffusion",
                     "economic_rationale": f"A slow {operator} transform of {field} captures persistent information diffusion.",
                     "novelty_reason": "A minimal locally grounded expression used after invalid model drafts.",
                     "anti_corr_design": f"The single-field {operator} signal avoids unsupported cross-dataset and group operators.",

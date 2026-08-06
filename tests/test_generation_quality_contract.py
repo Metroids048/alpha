@@ -228,7 +228,7 @@ def test_same_cycle_proxy_similarity_gate_keeps_only_one_highly_similar_candidat
     assert float(summary.queue_rows[0]["local_quality_score"]) <= 85.0
 
 
-def test_narrative_only_critic_rejection_recovers_through_deterministic_gates(tmp_path: Path) -> None:
+def test_narrative_only_critic_rejection_fails_closed_by_default(tmp_path: Path) -> None:
     from alpha_mining.generation.production import ProductionConfig, run_cycle
 
     _write_catalog(tmp_path)
@@ -237,12 +237,12 @@ def test_narrative_only_critic_rejection_recovers_through_deterministic_gates(tm
         llm=_CritiqueOnlyRejectingLLM(), kernel=_Kernel(),
     )
 
-    assert summary.enqueued == 1
-    assert (summary.rejections or {}).get("LLM_CRITIQUE_RECOVERED_BY_DETERMINISTIC_GATES") == 1
-    assert summary.queue_rows[0]["quality_evidence_json"]
+    assert summary.enqueued == 0
+    assert "DETERMINISTIC_LOCAL_FALLBACK_USED" not in (summary.rejections or {})
+    assert "LLM_CRITIQUE_RECOVERED_BY_DETERMINISTIC_GATES" not in (summary.rejections or {})
 
 
-def test_repair_rows_rejected_by_local_gates_recover_without_bypassing_validation(tmp_path: Path) -> None:
+def test_repair_rows_rejected_by_local_gates_fail_closed_by_default(tmp_path: Path) -> None:
     from alpha_mining.generation.production import ProductionConfig, run_cycle
 
     _write_catalog(tmp_path)
@@ -252,12 +252,44 @@ def test_repair_rows_rejected_by_local_gates_recover_without_bypassing_validatio
         llm=llm, kernel=_Kernel(),
     )
 
-    assert summary.enqueued == 1
+    assert summary.enqueued == 0
     assert llm.calls == 5
     assert (summary.rejections or {}).get("UNKNOWN_OPERATOR", 0) == 10
     assert (summary.rejections or {}).get("MECHANISM_OPERATOR_MISMATCH", 0) >= 1
+    assert "DETERMINISTIC_LOCAL_FALLBACK_USED" not in (summary.rejections or {})
+
+
+def test_explicit_degraded_mode_enqueues_one_semantically_grounded_fallback(tmp_path: Path) -> None:
+    from alpha_mining.generation.production import ProductionConfig, run_cycle
+
+    _write_catalog(tmp_path)
+    summary = run_cycle(
+        ProductionConfig(
+            root=tmp_path,
+            database=tmp_path / "history.sqlite",
+            candidates_per_cycle=5,
+            allow_degraded=True,
+        ),
+        llm=_RepairThenRejectingLLM(),
+        kernel=_Kernel(),
+    )
+
+    assert summary.enqueued == 1
+    assert len(summary.queue_rows) == 1
     assert (summary.rejections or {}).get("DETERMINISTIC_LOCAL_FALLBACK_USED") == 1
-    evidence = json.loads(summary.queue_rows[0]["quality_evidence_json"])
+    row = summary.queue_rows[0]
+    assert row["generator_source"] == "DETERMINISTIC_LOCAL_FALLBACK"
+    assert row["degraded"] == "true"
+    assert row["knowledge_usage_mode"] == "DEGRADED_DETERMINISTIC_FALLBACK"
+    assert row["research_direction"].startswith("degraded ")
+    assert "fund_a" in row["economic_hypothesis"]
+    assert "ts_rank" in row["economic_hypothesis"]
+    assert row["economic_hypothesis"] != "slow information diffusion"
+    assert json.loads(row["context_refs_json"])
+    assert row["knowledge_context_hash"]
+    assert row["parameter_skeleton"]
+    assert row["field_skeleton"]
+    evidence = json.loads(row["quality_evidence_json"])
     assert evidence["generator_contract_version"] == "generation-hq-v2"
 
 

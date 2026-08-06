@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import json
+import sqlite3
 from pathlib import Path
+
+import pytest
 
 
 class FakeGateway:
@@ -28,6 +32,55 @@ def _candidate() -> dict[str, object]:
         "candidate_id": "candidate-1", "request_hash": "request-1", "expression": "rank(fixture_close)",
         "region": "USA", "universe": "TOP3000", "delay": "1", "decay": "0", "neutralization": "SUBINDUSTRY", "truncation": "0.08",
     }
+
+
+def _candidate_with_provenance() -> dict[str, object]:
+    return {
+        **_candidate(),
+        "operator_family": "rank",
+        "research_direction": "fundamental quality",
+        "economic_hypothesis": "slow fixture information diffusion",
+        "datasets": json.dumps(["fixture"]),
+        "exact_hash": "exact-1",
+        "parameter_skeleton": "rank(FIELD)",
+        "field_skeleton": "rank(fixture_close)",
+        "knowledge_usage_mode": "LIVE_LLM_KNOWLEDGE",
+        "knowledge_refs_json": json.dumps(["worldquant:fixture#1"]),
+        "context_refs_json": json.dumps(["worldquant:fixture#1", "worldquant:fixture#2"]),
+        "knowledge_context_hash": "context-hash-1",
+        "degraded": "true",
+        "parent_template": "rank(parent_fixture)",
+        "parent_candidate_id": "parent-1",
+        "repair_action": "DECAY_FINE",
+    }
+
+
+def _write_catalog(root: Path) -> None:
+    import time
+
+    context = {"cached_at": time.time(), "region": "USA", "universe": "TOP3000", "delay": 1}
+    (root / ".alpha_datasets_cache.json").write_text(
+        json.dumps({**context, "dataset_ids": ["fixture"], "records": [{"id": "fixture"}]}),
+        encoding="utf-8",
+    )
+    (root / ".alpha_datafields_cache.json").write_text(
+        json.dumps({**context, "rows": [{"id": "fixture_close", "_ds": "fixture", "type": "MATRIX"}]}),
+        encoding="utf-8",
+    )
+    (root / ".alpha_operators_cache.json").write_text(
+        json.dumps({**context, "records": [{"name": "rank", "signature": "rank(x)", "arity": 1}]}),
+        encoding="utf-8",
+    )
+
+
+def _outcome(database: Path) -> tuple[object, ...]:
+    with sqlite3.connect(database) as con:
+        return con.execute(
+            """SELECT expression,outcome,quality_status,knowledge_refs_json,context_refs_json,
+                      knowledge_context_hash,degraded,parent_template,parent_candidate_id,repair_action,
+                      error_category,error_message
+               FROM candidate_outcomes"""
+        ).fetchone()
 
 
 def test_pending_candidate_is_simulated_and_quality_classified(tmp_path: Path) -> None:
@@ -90,3 +143,137 @@ def test_batch_preparation_never_performs_platform_write(tmp_path: Path) -> None
     assert not batch.ready_for_confirmation
     assert gateway.posts == 0
     assert service.store.get_item("candidate-1").state == WorkflowStatus.AWAITING_BATCH_CONFIRMATION.value
+
+
+class MetricsGateway(FakeGateway):
+    def __init__(self, metrics, *, checks=None) -> None:
+        super().__init__(checks=checks)
+        self.metrics = metrics
+
+    def simulate(self, **_kwargs):
+        from alpha_mining.factory.orchestrator import SimulationResult
+
+        self.posts += 1
+        return SimulationResult("alpha-1", "COMPLETE", self.metrics, self.checks, {})
+
+
+class ErrorGateway(FakeGateway):
+    def __init__(self, *, uncertain: bool) -> None:
+        super().__init__()
+        self.uncertain = uncertain
+
+    def simulate(self, **_kwargs):
+        self.posts += 1
+        if self.uncertain:
+            from alpha_mining.factory.contracts import SimulationOutcomeUnknown
+
+            raise SimulationOutcomeUnknown("external status cannot be confirmed")
+        raise RuntimeError("transport failed")
+
+
+def test_active_simulation_persists_authoritative_outcome_and_provenance(tmp_path: Path) -> None:
+    from alpha_mining.factory.operator_service import CandidateWorkflowService
+    from alpha_mining.generation.snapshots import load_feedback_summary
+
+    database = tmp_path / "research.sqlite"
+    candidate = _candidate_with_provenance()
+    service = CandidateWorkflowService(database, FakeGateway())
+    service.store.upsert_candidate(candidate)
+
+    service.prepare_once()
+
+    row = _outcome(database)
+    assert row[0] == candidate["expression"]
+    assert row[1:3] == ("READY_TO_SUBMIT", "READY_TO_SUBMIT")
+    assert json.loads(row[3]) == ["worldquant:fixture#1"]
+    assert json.loads(row[4]) == ["worldquant:fixture#1", "worldquant:fixture#2"]
+    assert row[5:10] == ("context-hash-1", 1, "rank(parent_fixture)", "parent-1", "DECAY_FINE")
+    assert row[10:] == ("", "")
+
+    feedback = load_feedback_summary(database, queue_rows=[{key: str(value) for key, value in candidate.items()}])
+    assert len(feedback.records) == 1
+    assert feedback.records[0].expression == candidate["expression"]
+    assert feedback.records[0].outcome == "READY_TO_SUBMIT"
+    assert feedback.records[0].grounded is True
+
+
+@pytest.mark.parametrize(
+    ("metrics", "expected"),
+    [
+        ({"sharpe": 1.4, "fitness": 1.2, "turnover": 0.2}, "NEAR_PASS"),
+        ({"sharpe": 0.5, "fitness": 0.4, "turnover": 0.9}, "FAR_FAIL"),
+    ],
+)
+def test_active_simulation_persists_quality_classification(tmp_path: Path, metrics, expected: str) -> None:
+    from alpha_mining.factory.operator_service import CandidateWorkflowService
+
+    database = tmp_path / f"{expected}.sqlite"
+    service = CandidateWorkflowService(database, MetricsGateway(metrics))
+    service.store.upsert_candidate(_candidate_with_provenance())
+
+    service.prepare_once()
+
+    assert _outcome(database)[1:3] == (expected, expected)
+
+
+@pytest.mark.parametrize(("uncertain", "expected", "category"), [(True, "UNKNOWN", "SIMULATION_UNCERTAIN"), (False, "FAILED", "SIMULATION_FAILED")])
+def test_active_simulation_persists_unknown_and_failed_outcomes(tmp_path: Path, uncertain: bool, expected: str, category: str) -> None:
+    from alpha_mining.factory.operator_service import CandidateWorkflowService
+
+    database = tmp_path / f"{expected}.sqlite"
+    service = CandidateWorkflowService(database, ErrorGateway(uncertain=uncertain))
+    service.store.upsert_candidate(_candidate_with_provenance())
+
+    service.prepare_once()
+
+    row = _outcome(database)
+    assert row[1] == expected
+    assert row[10] == category
+    assert row[11]
+
+
+def test_waiting_checks_outcome_upgrades_once_to_final_result(tmp_path: Path) -> None:
+    from alpha_mining.factory.operator_service import CandidateWorkflowService
+
+    database = tmp_path / "waiting.sqlite"
+    gateway = FakeGateway(checks=[{"name": "SELF_CORRELATION", "result": "PASS"}])
+    service = CandidateWorkflowService(database, gateway)
+    service.store.upsert_candidate(_candidate_with_provenance())
+
+    service.prepare_once()
+    assert _outcome(database)[1] == "WAITING_CHECKS"
+
+    gateway.checks = [
+        {"name": "SELF_CORRELATION", "result": "PASS"},
+        {"name": "PROD_CORRELATION", "result": "PASS"},
+    ]
+    service.prepare_once()
+    assert _outcome(database)[1:3] == ("READY_TO_SUBMIT", "READY_TO_SUBMIT")
+
+    with sqlite3.connect(database) as con:
+        assert con.execute("SELECT COUNT(*) FROM candidate_outcomes").fetchone()[0] == 1
+
+
+def test_next_generation_snapshot_reads_active_simulation_feedback_without_csv_dependency(tmp_path: Path) -> None:
+    from alpha_mining.factory.operator_service import CandidateWorkflowService
+    from alpha_mining.generation.snapshots import load_local_snapshots
+
+    _write_catalog(tmp_path)
+    database = tmp_path / "research.sqlite"
+    candidate = _candidate_with_provenance()
+    service = CandidateWorkflowService(database, FakeGateway())
+    service.store.upsert_candidate(candidate)
+
+    service.prepare_once()
+    snapshots = load_local_snapshots(
+        root=tmp_path,
+        database=database,
+        queue_path=tmp_path / "missing-queue.csv",
+    )
+
+    assert len(snapshots.feedback.positive) == 1
+    feedback = snapshots.feedback.positive[0]
+    assert feedback.expression == candidate["expression"]
+    assert feedback.request_hash
+    assert feedback.grounded is True
+    assert feedback.ref_id.startswith("feedback:sqlite:")

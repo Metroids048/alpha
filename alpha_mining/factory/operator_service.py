@@ -7,6 +7,7 @@ This module owns orchestration only.  Platform traffic remains inside
 
 from __future__ import annotations
 
+import json
 import sqlite3
 import time
 from dataclasses import dataclass
@@ -16,6 +17,7 @@ from typing import Any, Callable, Iterable, Protocol
 
 from alpha_mining.factory.control import FactoryControl
 from alpha_mining.factory.orchestrator import FactoryOrchestrator, ResearchSpec
+from alpha_mining.generation.feedback import CandidateFeedbackStore, record_candidate_outcome
 from alpha_mining.quality.decision import QualityStatus, evaluate_quality
 from alpha_mining.simulate.settings_optimizer import SettingsOptimizer, TuneStage
 from alpha_mining.storage.work_items import CandidateWorkItem, CandidateWorkStore, WorkflowStatus
@@ -68,6 +70,7 @@ class CandidateWorkflowService:
             gateway = PlatformGateway(database=self.database)
         self.gateway = gateway
         self.orchestrator = FactoryOrchestrator(self.database, gateway)
+        self.feedback = CandidateFeedbackStore(self.database)
         self.progress_sink = progress_sink or (lambda _event: None)
         self.max_simulations_per_round = max(1, int(max_simulations_per_round))
         self.max_simulations_per_24h = max(1, int(max_simulations_per_24h))
@@ -180,16 +183,26 @@ class CandidateWorkflowService:
         self.store.transition(item.candidate_id, WorkflowStatus.SIMULATING.value, event_type="SIMULATION_STARTED")
         self._emit(item, WorkflowStatus.SIMULATING.value, "simulation request leased")
         proposal = self._proposal(item)
-        execution = self.orchestrator.execute_candidate(proposal, self._settings(item))
+        settings = self._settings(item)
+        execution = self.orchestrator.execute_candidate(proposal, settings)
         if execution.result is None:
             uncertain = execution.error_category == "SIMULATION_UNCERTAIN"
             state = WorkflowStatus.SIMULATION_UNCERTAIN.value if uncertain else WorkflowStatus.FAR_FAIL.value
+            record_candidate_outcome(
+                self.feedback, proposal, execution.request_hash,
+                outcome="UNKNOWN" if uncertain else "FAILED", result=None,
+                error_category=execution.error_category, error_message=execution.error_message, settings=settings,
+            )
             self.store.transition(item.candidate_id, state, event_type="SIMULATION_UNCERTAIN" if uncertain else "SIMULATION_FAILED", error_category=execution.error_category, error=execution.error_message)
             self._emit(item, state, execution.error_message)
             return False
         result = execution.result
         decision = evaluate_quality(alpha_id=result.alpha_id, status=result.status, metrics=result.metrics, checks=result.checks, prod_corr_exception_confirmed=bool((result.raw or {}).get("prodCorrExceptionConfirmed")))
         state = decision.status.value
+        record_candidate_outcome(
+            self.feedback, proposal, execution.request_hash, outcome=state, result=result,
+            quality_reasons=decision.reasons, settings=settings,
+        )
         self.store.transition(item.candidate_id, state, event_type="QUALITY_EVALUATED", alpha_id=result.alpha_id, metrics=result.metrics, checks=result.checks, quality_reasons=decision.reasons)
         refreshed = self.store.get_item(item.candidate_id)
         if decision.status is QualityStatus.READY_TO_SUBMIT and refreshed is not None:
@@ -207,6 +220,16 @@ class CandidateWorkflowService:
             self._emit(item, item.state, f"check refresh deferred: {type(exc).__name__}")
             return
         decision = evaluate_quality(alpha_id=item.alpha_id, status="COMPLETE", metrics=current.get("metrics") or {}, checks=current.get("checks") or {}, prod_corr_exception_confirmed=bool((current.get("raw") or {}).get("prodCorrExceptionConfirmed")))
+        proposal = self._proposal(item)
+        result = SimpleNamespace(
+            alpha_id=item.alpha_id, status="COMPLETE", metrics=current.get("metrics") or {},
+            checks=current.get("checks") or [], raw=current.get("raw") or {},
+        )
+        record_candidate_outcome(
+            self.feedback, proposal, self._feedback_request_hash(item),
+            outcome=decision.status.value, result=result, quality_reasons=decision.reasons,
+            settings=self._settings(item),
+        )
         self.store.transition(item.candidate_id, decision.status.value, event_type="CHECKS_REFRESHED", metrics=current.get("metrics") or {}, checks=current.get("checks") or [], quality_reasons=decision.reasons)
         if decision.status is QualityStatus.READY_TO_SUBMIT:
             refreshed = self.store.get_item(item.candidate_id)
@@ -263,15 +286,66 @@ class CandidateWorkflowService:
 
     @staticmethod
     def _proposal(item: CandidateWorkItem) -> SimpleNamespace:
+        from alpha_mining.domain.expression_normalization import expression_identity
+
         payload = item.payload
+        expression = str(payload.get("expression") or "")
+        identity = expression_identity(expression)
+        family = str(payload.get("operator_family") or "QUEUE")
         return SimpleNamespace(
-            candidate_id=item.candidate_id, expression=str(payload.get("expression") or ""), topic_id="", hypothesis_id="",
-            research_family=str(payload.get("operator_family") or "QUEUE"), strategy_family=str(payload.get("operator_family") or "QUEUE"),
-            mechanism=str(payload.get("economic_hypothesis") or "queue"), dataset=str(payload.get("datasets") or "UNKNOWN"),
-            exact_hash=str(payload.get("exact_hash") or ""), parameter_skeleton=str(payload.get("parameter_skeleton") or ""),
-            field_skeleton=str(payload.get("field_skeleton") or ""), knowledge_usage_mode=str(payload.get("knowledge_usage_mode") or "NONE"),
-            knowledge_refs=(), context_refs=(), knowledge_context_hash="", degraded=False, parent_candidate_id=item.parent_candidate_id,
+            candidate_id=item.candidate_id,
+            expression=expression,
+            topic_id=str(payload.get("topic_id") or payload.get("research_direction") or ""),
+            hypothesis_id=str(payload.get("hypothesis_id") or ""),
+            research_family=str(payload.get("research_direction") or family),
+            strategy_family=family,
+            mechanism=str(payload.get("economic_hypothesis") or payload.get("economic_rationale") or "queue"),
+            dataset=CandidateWorkflowService._dataset(payload.get("datasets")),
+            parent_template=str(payload.get("parent_template") or payload.get("parent_seed") or ""),
+            exact_hash=str(payload.get("exact_hash") or identity.exact_hash),
+            parameter_skeleton=str(payload.get("parameter_skeleton") or identity.parameter_skeleton),
+            field_skeleton=str(payload.get("field_skeleton") or identity.field_skeleton),
+            knowledge_usage_mode=str(payload.get("knowledge_usage_mode") or "NONE"),
+            knowledge_refs=CandidateWorkflowService._string_tuple(payload.get("knowledge_refs_json") or payload.get("knowledge_refs")),
+            context_refs=CandidateWorkflowService._string_tuple(payload.get("context_refs_json") or payload.get("context_refs")),
+            knowledge_context_hash=str(payload.get("knowledge_context_hash") or ""),
+            degraded=CandidateWorkflowService._bool(payload.get("degraded")),
+            parent_candidate_id=str(payload.get("parent_candidate_id") or item.parent_candidate_id or ""),
+            repair_origin=str(payload.get("repair_action") or payload.get("tune_stage") or ""),
         )
+
+    def _feedback_request_hash(self, item: CandidateWorkItem) -> str:
+        with sqlite3.connect(self.database) as con:
+            row = con.execute(
+                "SELECT request_hash FROM candidate_outcomes WHERE candidate_id=? ORDER BY observed_at DESC LIMIT 1",
+                (item.candidate_id,),
+            ).fetchone()
+        return str(row[0]) if row else item.request_hash
+
+    @staticmethod
+    def _string_tuple(value: Any) -> tuple[str, ...]:
+        if isinstance(value, (list, tuple, set)):
+            return tuple(str(item) for item in value if str(item))
+        if not isinstance(value, str) or not value.strip():
+            return ()
+        try:
+            decoded = json.loads(value)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return (value.strip(),)
+        if isinstance(decoded, (list, tuple, set)):
+            return tuple(str(item) for item in decoded if str(item))
+        return (str(decoded),) if str(decoded) else ()
+
+    @staticmethod
+    def _dataset(value: Any) -> str:
+        values = CandidateWorkflowService._string_tuple(value)
+        return values[0] if values else "UNKNOWN"
+
+    @staticmethod
+    def _bool(value: Any) -> bool:
+        if isinstance(value, bool):
+            return value
+        return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
 
     def _emit(self, item: CandidateWorkItem, state: str, message: str, *, simulated: int = 0) -> None:
         self.progress_sink(WorkflowProgress(item.candidate_id, state, message, simulated))

@@ -139,6 +139,9 @@ def test_production_defaults_to_enforce_and_cli_allows_shadow(monkeypatch) -> No
     assert captured[-1].portfolio_mode == "enforce"
     assert production.main(["--once", "--portfolio-mode", "shadow"]) == 0
     assert captured[-1].portfolio_mode == "shadow"
+    assert captured[-1].allow_degraded is False
+    assert production.main(["--once", "--allow-degraded"]) == 0
+    assert captured[-1].allow_degraded is True
 
 
 def test_rejection_digest_exposes_primary_reasons() -> None:

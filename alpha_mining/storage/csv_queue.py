@@ -19,12 +19,14 @@ CANDIDATE_FIELDS = (
     "normalized_hash", "structure_signature", "behavior_signature", "canonical_signature",
     "generator_source", "parent_template", "parent_seed", "research_direction",
     "economic_hypothesis", "economic_rationale", "description_draft", "knowledge_refs_json",
-    "feedback_refs_json", "anti_corr_design", "expected_turnover_behavior", "local_quality_score",
+    "context_refs_json", "knowledge_context_hash", "feedback_refs_json", "anti_corr_design",
+    "expected_turnover_behavior", "local_quality_score",
     "novelty_score", "self_corr_risk_score", "quality_evidence_json", "llm_model",
     "knowledge_usage_mode", "degraded", "local_score", "priority_score", "queue_status",
     "quality_status", "quality_reasons_json", "metrics_json", "checks_json",
     "description_status", "submission_status", "alpha_id", "retry_count",
-    "last_error_category", "last_error", "field_skeleton",
+    "last_error_category", "last_error", "parameter_skeleton", "field_skeleton",
+    "parent_candidate_id", "repair_action",
 )
 
 EVENT_FIELDS = (

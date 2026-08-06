@@ -17,6 +17,7 @@ from alpha_mining.common import load_workspace_env
 from alpha_mining.domain.expression_normalization import (
     behavior_signature,
     exact_hash,
+    expression_identity,
     extract_fields,
     normalized_expression,
     operator_topology,
@@ -245,6 +246,7 @@ def run_cycle(
             portfolio_mode=config.portfolio_mode,
             portfolio_limits=config.portfolio_limits,
             portfolio_pending_limit=config.pending_limit,
+            allow_degraded=config.allow_degraded,
         )
         result = generator.generate(
             snapshots,
@@ -457,12 +459,14 @@ def _summary_from_snapshot(
 
 def _queue_row(candidate: Any, *, model_id: str) -> dict[str, str]:
     settings = candidate.settings
+    identity = expression_identity(candidate.expression)
     payload = json.dumps(
         {"expression": candidate.expression, "settings": settings},
         ensure_ascii=False,
         sort_keys=True,
     )
     request_hash = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    degraded = bool(getattr(candidate, "degraded", False))
     return {
         "candidate_id": hashlib.sha256(
             ("candidate:" + request_hash).encode("utf-8")
@@ -482,7 +486,8 @@ def _queue_row(candidate: Any, *, model_id: str) -> dict[str, str]:
         ),
         "datasets": json.dumps(candidate.datasets, ensure_ascii=False),
         "operator_family": operator_topology(candidate.expression),
-        "exact_hash": exact_hash(candidate.expression),
+        "exact_hash": identity.exact_hash,
+        "parameter_skeleton": identity.parameter_skeleton,
         "normalized_hash": hashlib.sha256(
             normalized_expression(candidate.expression).encode("utf-8")
         ).hexdigest(),
@@ -496,6 +501,8 @@ def _queue_row(candidate: Any, *, model_id: str) -> dict[str, str]:
         "economic_hypothesis": candidate.hypothesis,
         "economic_rationale": candidate.economic_rationale,
         "knowledge_refs_json": json.dumps(candidate.knowledge_refs, ensure_ascii=False),
+        "context_refs_json": json.dumps(getattr(candidate, "context_refs", ()), ensure_ascii=False),
+        "knowledge_context_hash": str(getattr(candidate, "knowledge_context_hash", "") or ""),
         "feedback_refs_json": json.dumps(candidate.feedback_refs, ensure_ascii=False),
         "anti_corr_design": candidate.anti_corr_design,
         "expected_turnover_behavior": candidate.expected_turnover_behavior,
@@ -507,16 +514,17 @@ def _queue_row(candidate: Any, *, model_id: str) -> dict[str, str]:
         ),
         "llm_model": model_id,
         "knowledge_usage_mode": (
-            "LLM_RESEARCHED_LOCAL_FALLBACK"
-            if candidate.generator_source == "DETERMINISTIC_LOCAL_FALLBACK"
+            "DEGRADED_DETERMINISTIC_FALLBACK"
+            if degraded
             else "LIVE_LLM_KNOWLEDGE"
         ),
-        "degraded": "false",
+        "degraded": str(degraded).lower(),
         "queue_status": "PENDING_SIMULATION",
         "alpha_id": "",
         "retry_count": "0",
         "last_error_category": "",
         "last_error": "",
+        "field_skeleton": identity.field_skeleton,
     }
 
 

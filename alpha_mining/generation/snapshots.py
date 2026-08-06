@@ -199,20 +199,20 @@ def load_feedback_summary(
             with sqlite3.connect(db) as con:
                 columns = {row[1] for row in con.execute("PRAGMA table_info(candidate_outcomes)")}
                 wanted = [
-                    "request_hash", "candidate_id", "outcome", "strategy_family", "dataset", "field_skeleton",
+                    "request_hash", "candidate_id", "expression", "outcome", "strategy_family", "dataset", "field_skeleton",
                     "checks_json", "quality_reasons_json", "error_category", "self_correlation", "prod_correlation",
                 ]
                 if "candidate_outcomes" in _tables(con):
                     query = "SELECT " + ",".join(name if name in columns else "''" for name in wanted) + " FROM candidate_outcomes"
                     for row in con.execute(query):
                         (
-                            request_hash, candidate_id, outcome, family, dataset, field_skeleton,
+                            request_hash, candidate_id, stored_expression, outcome, family, dataset, field_skeleton,
                             checks_json, quality_reasons_json, error_category, self_corr, prod_corr,
                         ) = row
                         request_hash = str(request_hash or "")
                         candidate_id = str(candidate_id or "")
                         source = by_request.get(request_hash) or by_candidate.get(candidate_id) or {}
-                        expression = str(source.get("expression") or "").strip()
+                        expression = str(stored_expression or source.get("expression") or "").strip()
                         failures = _failure_types(
                             checks_json, quality_reasons_json, error_category, self_corr, prod_corr, outcome,
                         )
@@ -385,7 +385,6 @@ def _dataset_value(primary: object, fallback: object) -> str:
 
 
 def _failure_types(*values: object) -> list[str]:
-    text = " ".join(str(value or "") for value in values).upper()
     aliases = {
         "SHARPE_LOW": "LOW_SHARPE",
         "FITNESS_LOW": "LOW_FITNESS",
@@ -393,14 +392,51 @@ def _failure_types(*values: object) -> list[str]:
         "TURNOVER_LOW": "LOW_TURNOVER",
         "PRODUCTION_CORRELATION": "PROD_CORRELATION",
     }
-    canonical_text = text + " " + " ".join(
-        canonical for source, canonical in aliases.items() if source in text
-    )
     known = (
         "SELF_CORRELATION", "PROD_CORRELATION", "LOW_SHARPE", "LOW_FITNESS",
         "HIGH_TURNOVER", "LOW_TURNOVER", "CONCENTRATED_WEIGHT", "NEAR_PASS",
     )
-    return [item for item in known if item in canonical_text]
+    failures: set[str] = set()
+    for value in values:
+        parsed = _json_value(value)
+        if isinstance(parsed, list):
+            for item in parsed:
+                if isinstance(item, dict):
+                    name = aliases.get(str(item.get("name") or "").upper(), str(item.get("name") or "").upper())
+                    status = str(item.get("result") or item.get("status") or "").upper()
+                    if name in known and status in {"FAIL", "FAILED", "REJECTED", "ERROR"}:
+                        failures.add(name)
+                else:
+                    _collect_failure_tokens(str(item or ""), failures, aliases, known)
+            continue
+        _collect_failure_tokens(str(value or ""), failures, aliases, known)
+    return [item for item in known if item in failures]
+
+
+def _json_value(value: object) -> object:
+    if not isinstance(value, str):
+        return value
+    try:
+        return json.loads(value)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return value
+
+
+def _collect_failure_tokens(
+    value: str,
+    failures: set[str],
+    aliases: dict[str, str],
+    known: tuple[str, ...],
+) -> None:
+    text = str(value or "").upper()
+    if text in {"PASS", "PASSED", "COMPLETE", "READY_TO_SUBMIT", "WAITING_CHECKS"}:
+        return
+    for source, canonical in aliases.items():
+        if source in text:
+            failures.add(canonical)
+    for item in known:
+        if item in text:
+            failures.add(item)
 
 
 def _stable_ref(namespace: str, value: str) -> str:
