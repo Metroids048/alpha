@@ -114,6 +114,7 @@ class HighQualityGenerator:
         portfolio_mode: str = "enforce",
         portfolio_limits: PortfolioLimits | None = None,
         portfolio_pending_limit: int = 20,
+        settings_contract: Any | None = None,
         allow_degraded: bool = False,
     ) -> None:
         self.llm = llm
@@ -128,6 +129,7 @@ class HighQualityGenerator:
             raise ValueError("portfolio mode must be 'shadow' or 'enforce'")
         self.portfolio_limits = portfolio_limits or PortfolioLimits()
         self.portfolio_pending_limit = max(1, int(portfolio_pending_limit))
+        self.settings_contract = settings_contract
         self.allow_degraded = bool(allow_degraded)
 
     def generate(self, snapshots: LocalSnapshots, *, cycle_id: str, candidates_per_cycle: int) -> HighQualityResult:
@@ -511,6 +513,8 @@ class HighQualityGenerator:
     ) -> tuple[AcceptedCandidate, ...]:
         if not candidates:
             return ()
+        catalog = getattr(snapshots, "catalog", None)
+        catalog_fields = getattr(catalog, "fields", {})
         selection = select_candidates(
             candidates,
             inventory=snapshots.inventory.records,
@@ -519,6 +523,8 @@ class HighQualityGenerator:
             pending_limit=self.portfolio_pending_limit,
             limits=self.portfolio_limits,
             mode=self.portfolio_mode,
+            eligible_dataset_count=len({field.dataset_id for field in catalog_fields.values()}),
+            eligible_field_count=len(catalog_fields),
         )
         for reason, count in selection.rejection_counts.items():
             for _ in range(count):
@@ -649,6 +655,24 @@ class HighQualityGenerator:
         return visible
 
     @staticmethod
+    def _research_dataset_priority(
+        snapshots: LocalSnapshots,
+        allowed_fields: set[str],
+    ) -> tuple[str, ...]:
+        """Order viable datasets by active pending occupancy, then deterministically."""
+
+        viable = {
+            str(snapshots.catalog.fields[field].dataset_id)
+            for field in allowed_fields
+            if field in snapshots.catalog.fields
+        }
+        occupancy: dict[str, int] = {dataset: 0 for dataset in viable}
+        for item in snapshots.inventory.records:
+            if item.queue_status == "PENDING_SIMULATION" and item.dataset in occupancy:
+                occupancy[item.dataset] += 1
+        return tuple(sorted(viable, key=lambda dataset: (occupancy[dataset], dataset)))
+
+    @staticmethod
     def _plan_issues(
         plan: dict[str, Any],
         snapshots: LocalSnapshots,
@@ -684,6 +708,9 @@ class HighQualityGenerator:
         # inflated the count that diagnosis reads.
         if len(datasets) > 1:
             issues.append("PLAN_CROSS_DATASET")
+        priority = HighQualityGenerator._research_dataset_priority(snapshots, allowed_fields)
+        if len(priority) >= 3 and datasets and next(iter(datasets)) != priority[0]:
+            issues.append("PLAN_DATASET_CONCENTRATION")
         if not refs or not refs <= allowed_refs:
             issues.append("HALLUCINATED_KNOWLEDGE_REF")
         return tuple(dict.fromkeys(issues))
@@ -872,6 +899,9 @@ class HighQualityGenerator:
         row = _complete_mechanism_roles(
             row, fields, functions, tolerated_operators=_symbol_operator_names(expression),
         )
+        narrative_issue = _narrative_expression_issue(row, plan, fields, functions)
+        if narrative_issue:
+            return narrative_issue
         mechanism_issue = _mechanism_issue(row, expression, fields, functions, snapshots)
         if mechanism_issue:
             return mechanism_issue
@@ -907,7 +937,12 @@ class HighQualityGenerator:
         effective_threshold = self._quality_threshold(snapshots)
         if score < effective_threshold:
             return "LOW_LOCAL_QUALITY"
-        settings = _settings(row.get("settings"), snapshots.catalog.info)
+        try:
+            settings = _settings(row.get("settings"), snapshots.catalog.info)
+            if self.settings_contract is not None:
+                settings = self.settings_contract.prepare(settings)
+        except ValueError:
+            return "INVALID_SIMULATION_SETTINGS"
         generator_source = str(
             row.get("generator_source")
             or ("LLM_LOCALLY_GROUNDED_PLAN" if plan.get("_locally_grounded") else "LLM_REFINED_V50")
@@ -1014,6 +1049,8 @@ class HighQualityGenerator:
         cold_start = not feedback_attainable
         evidence = {
             "local_quality_score_definition": "local candidate ranking only; not platform Sharpe or Fitness",
+            "quality_stage": "LOCAL_UNVERIFIED",
+            "platform_verified": False,
             "generator_contract_version": "generation-hq-v2",
             "catalog_legal": True,
             "catalog_source": snapshots.catalog_source,
@@ -1032,7 +1069,7 @@ class HighQualityGenerator:
                 "field_quality": round(field_component, 2),
                 "grounded_feedback": round(feedback_component, 2),
                 "novelty_low_similarity": round(novelty_component, 2),
-                "mechanism_expression_consistency": round(mechanism_component, 2),
+                "mechanism_role_consistency": round(mechanism_component, 2),
                 "knowledge_relevance": round(knowledge_component, 2),
                 "structural_depth": round(structure_component, 2),
                 "turnover_complexity_concentration_risk": round(risk_component, 2),
@@ -1045,6 +1082,7 @@ class HighQualityGenerator:
     def _research_prompt(snapshots: LocalSnapshots, seeds: list[Any], knowledge: KnowledgeContext, cycle_id: str) -> str:
         catalog = snapshots.catalog
         allowed_field_ids = HighQualityGenerator._research_field_ids(snapshots, seeds)
+        dataset_priority = HighQualityGenerator._research_dataset_priority(snapshots, allowed_field_ids)
         # Name only operators this catalog actually exposes.  Naming a family the
         # catalog lacks makes the plan unsatisfiable: the offline snapshot in use
         # carries no grouping operator at all, so demanding one produced a plan
@@ -1073,6 +1111,7 @@ class HighQualityGenerator:
                 # Derived from the grouping so the dataset list cannot advertise a
                 # dataset that has no selectable field in this payload.
                 "datasets": sorted(_fields_by_dataset),
+                "dataset_priority": list(dataset_priority),
                 "fields_by_dataset": _fields_by_dataset,
                 "operators": sorted(set(catalog.operators) - _GHOST_OPERATORS),
                 "forbidden_identifiers": sorted(BASE_VARS - set(catalog.fields)),
@@ -1092,6 +1131,9 @@ class HighQualityGenerator:
                 "catalog.fields_by_dataset is keyed by dataset. First pick exactly ONE of those keys, "
                 "then draw every field in fields_to_use from that one key's list. A fields_to_use array "
                 "spanning two keys is refused as PLAN_CROSS_DATASET, and the whole plan is discarded.",
+                "When catalog.dataset_priority lists at least three datasets, choose its first dataset. "
+                "It is derived from active pending occupancy, so choosing another dataset is refused as "
+                "PLAN_DATASET_CONCENTRATION unless the catalog itself cannot support the plan.",
                 "Parent seeds are structural inspiration; never reuse a catalog.forbidden_identifiers token.",
                 "Avoid windows below 21, and use at least 42 for ts_corr.",
                 "operators_to_use becomes the COMPLETE whitelist for the next step, which cannot "
@@ -1160,6 +1202,9 @@ class HighQualityGenerator:
                 "symbol counts. A generic description such as \"slow window\" satisfies neither and "
                 "is rejected as TURNOVER_CONTROL_MISMATCH or ANTI_CORR_DESIGN_MISMATCH.",
                 "Use only exact allowed IDs and include a specific economic rationale tied to the selected fields.",
+                "Every concrete technical claim in research_direction, hypothesis, economic_rationale, anti_corr_design, "
+                "and expected_turnover_behavior needs expression evidence. Do not claim price/returns, volume/adv20, "
+                "market-cap scaling, a group-neutralization, ts_decay_linear, or a revision leg unless it is actually used.",
                 "Every selected field and operator must appear verbatim in the plan's fields_to_use and operators_to_use arrays.",
                 "Treat plan.fields_to_use and plan.operators_to_use as complete whitelists; do not use any other token from v50_seeds or candidate_inventory.",
                 "Parent seeds are mechanism context only. Never copy cap, volume, adv20, returns, market, sector, or any other parent token unless it is explicitly in the plan whitelist.",
@@ -1345,6 +1390,7 @@ def _inventory_prompt_summary(snapshots: LocalSnapshots) -> dict[str, Any]:
 def revalidate_pending_rows(
     rows: list[dict[str, str]],
     snapshots: LocalSnapshots,
+    settings_contract: Any | None = None,
 ) -> tuple[list[dict[str, str]], list[tuple[str, str]]]:
     """Quarantine legacy pending rows that cannot prove the v2 quality contract.
 
@@ -1352,7 +1398,6 @@ def revalidate_pending_rows(
     owned terminal states are never touched, and no row is deleted.
     """
 
-    del snapshots  # The v2 evidence marker is the deterministic revalidation boundary.
     updated: list[dict[str, str]] = []
     changes: list[tuple[str, str]] = []
     for source in rows:
@@ -1370,6 +1415,25 @@ def revalidate_pending_rows(
             row["last_error_category"] = "LEGACY_CONTRACT_MISSING_EVIDENCE"
             row["last_error"] = "candidate lacks generation-hq-v2 deterministic quality evidence"
             changes.append((str(row.get("candidate_id") or ""), row["last_error_category"]))
+        elif settings_contract is not None:
+            try:
+                settings_contract.prepare(
+                    _settings(
+                        {
+                            key: row.get(key)
+                            for key in (
+                                "alpha_type", "region", "universe", "delay", "decay",
+                                "neutralization", "truncation", "language",
+                            )
+                        },
+                        snapshots.catalog.info,
+                    )
+                )
+            except ValueError:
+                row["queue_status"] = "REJECTED_LOCAL_REVALIDATION"
+                row["last_error_category"] = "INVALID_SIMULATION_SETTINGS"
+                row["last_error"] = "candidate settings do not match the synchronized platform schema"
+                changes.append((str(row.get("candidate_id") or ""), row["last_error_category"]))
         updated.append(row)
     return updated, changes
 
@@ -1536,6 +1600,59 @@ def _symbol_operator_names(expression: str) -> set[str]:
 
 def _bare_price_expression(fields: tuple[str, ...]) -> bool:
     return bool(fields) and all(field.lower() in {"close", "open", "high", "low", "vwap", "price"} for field in fields)
+
+
+def _narrative_expression_issue(
+    row: dict[str, Any],
+    plan: dict[str, Any],
+    fields: tuple[str, ...],
+    functions: set[str],
+) -> str:
+    """Reject only explicit technical claims that lack an expression witness.
+
+    This bounded vocabulary intentionally avoids inferring whether an abstract
+    economics statement is true. It covers the concrete ingredients that the
+    generator previously copied from parent seeds without carrying them into the
+    resulting expression.
+    """
+
+    text = " ".join(
+        str(source.get(key) or "")
+        for source, keys in (
+            (plan, ("research_direction", "hypothesis", "economic_mechanism", "expected_turnover_behavior")),
+            (row, ("economic_rationale", "anti_corr_design", "expected_turnover_behavior")),
+        )
+        for key in keys
+    ).casefold()
+    field_names = {field.casefold() for field in fields}
+
+    def has_field(*names: str) -> bool:
+        return any(
+            name in field_names or any(re.search(rf"(?:^|_){re.escape(name)}(?:_|$)", field) for field in field_names)
+            for name in names
+        )
+
+    has_price = has_field("close", "open", "high", "low", "vwap", "price", "returns")
+    has_volume = has_field("volume", "adv20", "adv")
+    has_cap = has_field("cap", "market_cap", "marketcap")
+    has_revision = any("revision" in field or re.search(r"(?:^|_)rev(?:_|$)", field) for field in field_names)
+    if re.search(r"\b(price[ -]?volume|volume confirmation)\b", text) and not (has_price and has_volume):
+        return "NARRATIVE_EXPRESSION_CONTRADICTION"
+    if re.search(r"\bprice momentum\b", text) and not has_price:
+        return "NARRATIVE_EXPRESSION_CONTRADICTION"
+    if re.search(r"\breturns? (momentum|signal|leg|component)\b", text) and not has_field("returns"):
+        return "NARRATIVE_EXPRESSION_CONTRADICTION"
+    if re.search(r"\b(adv20|volume) (liquidity |momentum |signal|leg|component|confirmation)", text) and not has_volume:
+        return "NARRATIVE_EXPRESSION_CONTRADICTION"
+    if re.search(r"\b(market[ -]?cap(?:italization)? scaling|cap[ -]?scaled)\b", text) and not has_cap:
+        return "NARRATIVE_EXPRESSION_CONTRADICTION"
+    if re.search(r"\b(group|sector|industry)[ -]?neutraliz", text) and not any(item.startswith("group_") for item in functions):
+        return "NARRATIVE_EXPRESSION_CONTRADICTION"
+    if "ts_decay_linear" in text and "ts_decay_linear" not in functions:
+        return "NARRATIVE_EXPRESSION_CONTRADICTION"
+    if re.search(r"\brevision leg\b", text) and not has_revision:
+        return "NARRATIVE_EXPRESSION_CONTRADICTION"
+    return ""
 
 
 def _mechanism_issue(

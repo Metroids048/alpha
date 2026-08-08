@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 
 from alpha_mining.generation.high_quality import HighQualityGenerator
-from alpha_mining.generation.snapshots import CandidateInventory, LocalSnapshots
+from alpha_mining.generation.snapshots import CandidateInventory, InventoryRecord, LocalSnapshots
 from alpha_mining.generation.snapshots import FeedbackSummary
 from alpha_mining.offline.metadata import (
     DatasetMetadata,
@@ -117,6 +117,33 @@ def test_empty_fields_are_not_reported_as_cross_dataset() -> None:
 
     assert "PLAN_UNKNOWN_FIELD" in issues
     assert "PLAN_CROSS_DATASET" not in issues
+
+
+def test_plan_rejects_the_most_occupied_dataset_when_three_are_available() -> None:
+    snapshots = _snapshots()
+    fields = dict(snapshots.catalog.fields)
+    fields["gamma_one"] = _field("gamma_one", "ds_gamma")
+    datasets = dict(snapshots.catalog.datasets)
+    datasets["ds_gamma"] = DatasetMetadata(dataset_id="ds_gamma", name="ds_gamma", category="g")
+    catalog = MetadataCache(
+        cache_dir=Path("."), operators=snapshots.catalog.operators, fields=fields,
+        datasets=datasets, info=snapshots.catalog.info,
+    )
+    occupied = InventoryRecord(
+        ref_id="pending", candidate_id="pending", request_hash="pending",
+        expression="rank(alpha_one)", queue_status="PENDING_SIMULATION", family="rank",
+        dataset="ds_alpha", data_fields=("alpha_one",),
+    )
+    scoped = LocalSnapshots(
+        catalog=catalog, catalog_dir=Path("."), catalog_source="test", catalog_age_hours=0,
+        feedback=snapshots.feedback, inventory=CandidateInventory(records=(occupied,)),
+    )
+
+    issues = HighQualityGenerator._plan_issues(
+        _plan(fields_to_use=["alpha_one"]), scoped, set(fields), _REFS
+    )
+
+    assert "PLAN_DATASET_CONCENTRATION" in issues
 
 
 def test_research_prompt_groups_fields_by_dataset() -> None:

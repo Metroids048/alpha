@@ -16,6 +16,43 @@ from alpha_mining.filter.ladder_check import (
 )
 
 
+def _write_simulation_settings_schema(directory: Path) -> None:
+    """Provide the synchronized settings contract required by fake POSTs."""
+    import json
+    import time
+
+    (directory / ".alpha_simulation_settings_cache.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "simulation-settings-v1",
+                "fetched_at": time.time(),
+                "context": {"region": "USA", "universe": "TOP3000", "delay": 1},
+                "defaults": {
+                    "alpha_type": "REGULAR",
+                    "region": "USA",
+                    "universe": "TOP3000",
+                    "delay": 1,
+                    "decay": 4,
+                    "neutralization": "MARKET",
+                    "truncation": 0.08,
+                    "language": "FASTEXPR",
+                },
+                "allowed_values": {
+                    "alpha_type": ["REGULAR"],
+                    "region": ["USA"],
+                    "universe": ["TOP3000"],
+                    "delay": [1],
+                    "decay": [4],
+                    "neutralization": ["MARKET"],
+                    "truncation": [0.08],
+                    "language": ["FASTEXPR"],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
 # ── ladder_check pure functions ───────────────────────────────────────────────
 
 
@@ -221,7 +258,9 @@ class TestRunYearlyLadderCheck:
         assert ok is True
         assert "skip" in note
 
-    def test_passes_when_all_years_ok(self, tmp_path: Path) -> None:
+    def test_passes_when_all_years_ok(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        _write_simulation_settings_schema(tmp_path)
+        monkeypatch.chdir(tmp_path)
         pipe, fake_sess, mod = _make_pipeline_with_ladder(tmp_path)
 
         call_count = [0]
@@ -259,7 +298,9 @@ class TestRunYearlyLadderCheck:
         assert ok is True
         assert "pass" in note
 
-    def test_fails_when_one_year_below_threshold(self, tmp_path: Path) -> None:
+    def test_fails_when_one_year_below_threshold(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        _write_simulation_settings_schema(tmp_path)
+        monkeypatch.chdir(tmp_path)
         pipe, fake_sess, mod = _make_pipeline_with_ladder(tmp_path)
         year_counter = [0]
 

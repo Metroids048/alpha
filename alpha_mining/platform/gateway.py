@@ -18,6 +18,7 @@ from alpha_mining.factory.contracts import (
 
 from .client import BASE_URL, PlatformReadError, ReadOnlyPlatformClient
 from .protocol import alpha_id_from_progress, extract_checks, extract_metrics
+from .simulation_contract import SimulationSettingsContract
 
 
 @dataclass
@@ -30,6 +31,7 @@ class PlatformGateway:
     poll_interval: float = 2.0
     max_poll_seconds: float = 600.0
     sleeper: Callable[[float], None] = time.sleep
+    settings_schema_path: str | Path = ".alpha_simulation_settings_cache.json"
 
     def __post_init__(self) -> None:
         self.client = ReadOnlyPlatformClient(
@@ -43,6 +45,10 @@ class PlatformGateway:
 
     def authenticate(self) -> None:
         self.client.authenticate()
+
+    @property
+    def simulation_settings_contract(self) -> SimulationSettingsContract:
+        return SimulationSettingsContract.load(self.settings_schema_path)
 
     def fetch_alpha(self, alpha_id: str) -> dict[str, Any]:
         return self.client.fetch_alpha(alpha_id)
@@ -116,7 +122,10 @@ class PlatformGateway:
         kind = str(alpha_type or "REGULAR").upper()
         body: dict[str, Any] = {}
         if not location:
-            payload: dict[str, Any] = {"type": kind, "settings": dict(settings)}
+            canonical_settings = self.simulation_settings_contract.prepare(settings)
+            if kind != str(canonical_settings["alpha_type"]).upper():
+                raise ValueError("alpha_type does not match the synchronized simulation settings")
+            payload: dict[str, Any] = {"type": kind, "settings": canonical_settings}
             if kind == "REGULAR":
                 payload["regular"] = expression
             else:

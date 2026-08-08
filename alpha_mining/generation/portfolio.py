@@ -17,6 +17,7 @@ from alpha_mining.domain.expression_normalization import (
     behavior_signature,
     exact_hash,
     expression_identity,
+    extract_fields,
     normalized_expression,
     operator_topology,
     structure_signature,
@@ -47,6 +48,7 @@ class PortfolioLimits:
 @dataclass(frozen=True)
 class DiversityVector:
     dataset: str
+    fields: tuple[str, ...]
     field_skeleton: str
     operator_topology: str
     strategy_family: str
@@ -66,6 +68,7 @@ class DiversityVector:
         family = operator_topology(expression)
         return cls(
             dataset=dataset,
+            fields=tuple(sorted(extract_fields(expression))),
             field_skeleton=identity.field_skeleton,
             operator_topology=family,
             strategy_family=family,
@@ -90,6 +93,7 @@ class DiversityVector:
             return None
         return cls(
             dataset=str(getattr(item, "dataset", "") or ""),
+            fields=tuple(sorted(str(value) for value in getattr(item, "data_fields", ()) if str(value))) or tuple(sorted(extract_fields(expression))),
             field_skeleton=str(getattr(item, "field_skeleton", "") or "") or identity.field_skeleton,
             operator_topology=topology,
             strategy_family=str(getattr(item, "family", "") or "") or topology,
@@ -126,6 +130,8 @@ def select_candidates(
     pending_limit: int = 20,
     limits: PortfolioLimits | None = None,
     mode: str = "shadow",
+    eligible_dataset_count: int = 0,
+    eligible_field_count: int = 0,
 ) -> PortfolioSelection:
     """Rank and select candidates against active inventory and feedback.
 
@@ -177,6 +183,9 @@ def select_candidates(
             active_hashes,
             policy,
             pending_limit=max(1, int(pending_limit)),
+            cycle_limit=max(1, int(limit)),
+            eligible_dataset_count=max(0, int(eligible_dataset_count)),
+            eligible_field_count=max(0, int(eligible_field_count)),
         )
         would_accept = reason is None and len(selected_indices) < max(0, int(limit))
         if would_accept:
@@ -277,6 +286,9 @@ def _limit_reason(
     limits: PortfolioLimits,
     *,
     pending_limit: int,
+    cycle_limit: int,
+    eligible_dataset_count: int,
+    eligible_field_count: int,
 ) -> str | None:
     if vector.exact_hash in active_hashes["exact"] or vector.normalized_hash in active_hashes["normalized"]:
         return "PORTFOLIO_DUPLICATE"
@@ -293,13 +305,22 @@ def _limit_reason(
         return "PORTFOLIO_CYCLE_TOPOLOGY_LIMIT"
     if counts["cycle_parent"].get(vector.parent_template, 0) >= limits.cycle_parent_max:
         return "PORTFOLIO_CYCLE_PARENT_LIMIT"
+    if eligible_dataset_count >= 3:
+        dataset_capacity = max(1, math.ceil(cycle_limit / min(eligible_dataset_count, 3)))
+        if counts["cycle_dataset"].get(vector.dataset, 0) >= dataset_capacity:
+            return "PORTFOLIO_CYCLE_DATASET_COVERAGE_LIMIT"
+    if eligible_field_count >= 3:
+        field_capacity = max(1, math.ceil(cycle_limit / min(eligible_field_count, 3)))
+        if any(counts["cycle_field"].get(field, 0) >= field_capacity for field in vector.fields):
+            return "PORTFOLIO_CYCLE_FIELD_COVERAGE_LIMIT"
     return None
 
 
 def _counts(vectors: Iterable[DiversityVector]) -> dict[str, dict[str, int]]:
     result = {
-        "field_skeleton": {}, "operator_topology": {}, "strategy_family": {},
+        "dataset": {}, "field": {}, "field_skeleton": {}, "operator_topology": {}, "strategy_family": {},
         "cycle_field_skeleton": {}, "cycle_topology": {}, "cycle_parent": {},
+        "cycle_dataset": {}, "cycle_field": {},
     }
     for vector in vectors:
         _increment(result, vector, active=True)
@@ -307,19 +328,25 @@ def _counts(vectors: Iterable[DiversityVector]) -> dict[str, dict[str, int]]:
 
 
 def _increment(counts: dict[str, dict[str, int]], vector: DiversityVector, *, active: bool = False) -> None:
-    keys = ("field_skeleton", "operator_topology", "strategy_family")
+    keys = ("dataset", "field_skeleton", "operator_topology", "strategy_family")
     if not active:
-        keys += ("cycle_field_skeleton", "cycle_topology", "cycle_parent")
+        keys += ("cycle_field_skeleton", "cycle_topology", "cycle_parent", "cycle_dataset")
     for key in keys:
         value = {
+            "dataset": vector.dataset,
             "field_skeleton": vector.field_skeleton,
             "operator_topology": vector.operator_topology,
             "strategy_family": vector.strategy_family,
             "cycle_field_skeleton": vector.field_skeleton,
             "cycle_topology": vector.operator_topology,
             "cycle_parent": vector.parent_template,
+            "cycle_dataset": vector.dataset,
         }[key]
         counts[key][value] = counts[key].get(value, 0) + 1
+    for field in vector.fields:
+        counts["field"][field] = counts["field"].get(field, 0) + 1
+        if not active:
+            counts["cycle_field"][field] = counts["cycle_field"].get(field, 0) + 1
 
 
 def _identity_sets(vectors: Iterable[DiversityVector]) -> dict[str, set[str]]:
@@ -333,6 +360,8 @@ def _identity_sets(vectors: Iterable[DiversityVector]) -> dict[str, set[str]]:
 
 def _occupancy(vector: DiversityVector, counts: dict[str, dict[str, int]]) -> int:
     return sum((
+        counts["dataset"].get(vector.dataset, 0),
+        sum(counts["field"].get(field, 0) for field in vector.fields),
         counts["field_skeleton"].get(vector.field_skeleton, 0),
         counts["operator_topology"].get(vector.operator_topology, 0),
         counts["strategy_family"].get(vector.strategy_family, 0),

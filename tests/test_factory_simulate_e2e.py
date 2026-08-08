@@ -50,6 +50,14 @@ def _database(tmp_path: Path) -> Path:
         ),
         encoding="utf-8",
     )
+    (tmp_path / ".alpha_simulation_settings_cache.json").write_text(
+        json.dumps({
+            "schema_version": "simulation-settings-v1", "fetched_at": cached_at,
+            "context": {"region": "USA", "universe": "TOP3000", "delay": 1},
+            "defaults": {"alpha_type": "REGULAR", "region": "USA", "universe": "TOP3000", "delay": 1, "decay": 4, "neutralization": "MARKET", "truncation": 0.08, "language": "FASTEXPR"},
+            "allowed_values": {"alpha_type": ["REGULAR"], "region": ["USA"], "universe": ["TOP3000"], "delay": [1], "decay": [0, 4], "neutralization": ["MARKET", "SUBINDUSTRY"], "truncation": [0.08], "language": ["FASTEXPR"]},
+        }), encoding="utf-8",
+    )
     return database
 
 
@@ -94,7 +102,10 @@ class _FakeClient:
 
 
 def _gateway(database: Path, client: _FakeClient) -> PlatformGateway:
-    gateway = PlatformGateway(database=database, poll_interval=0.01, sleeper=lambda _seconds: None)
+    gateway = PlatformGateway(
+        database=database, poll_interval=0.01, sleeper=lambda _seconds: None,
+        settings_schema_path=database.parent / ".alpha_simulation_settings_cache.json",
+    )
     gateway.client = client
     return gateway
 
@@ -111,11 +122,12 @@ def test_successful_temporary_database_simulation_e2e(tmp_path: Path) -> None:
     assert client.calls == ["AUTH", "POST", "GET", "FETCH"]
     with sqlite3.connect(database) as con:
         request = con.execute(
-            "SELECT status,progress_location,alpha_id FROM simulation_requests"
+            "SELECT status,progress_location,alpha_id,payload_json FROM simulation_requests"
         ).fetchone()
         claim = con.execute("SELECT status FROM factory_candidate_claims").fetchone()[0]
         runs = con.execute("SELECT alpha_id FROM simulation_runs").fetchall()
-    assert request == ("COMPLETE", "/simulations/progress/1", "alpha-e2e")
+    assert request[:3] == ("COMPLETE", "/simulations/progress/1", "alpha-e2e")
+    assert json.loads(request[3])["settings"]["alpha_type"] == "REGULAR"
     assert claim == "SIMULATED"
     assert runs == [("alpha-e2e",)]
 

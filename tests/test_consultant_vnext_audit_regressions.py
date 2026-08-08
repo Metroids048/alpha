@@ -4,6 +4,7 @@ import asyncio
 import csv
 import inspect
 import json
+import time
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -321,11 +322,18 @@ def test_async_batch_deduplicates_identical_simulations(tmp_path: Path) -> None:
         deduplicate_simulation_payloads,
     )
 
+    schema = tmp_path / "settings.json"
+    schema.write_text(json.dumps({
+        "schema_version": "simulation-settings-v1", "fetched_at": time.time(),
+        "context": {"region": "USA", "universe": "TOP3000", "delay": 1},
+        "defaults": {"alpha_type": "REGULAR", "region": "USA", "universe": "TOP3000", "delay": 1, "decay": 4, "neutralization": "MARKET", "truncation": 0.08, "language": "FASTEXPR"},
+        "allowed_values": {"alpha_type": ["REGULAR"], "region": ["USA"], "universe": ["TOP3000"], "delay": [1], "decay": [4], "neutralization": ["MARKET"], "truncation": [0.08], "language": ["FASTEXPR"]},
+    }), encoding="utf-8")
     payload = {"type": "REGULAR", "settings": {"delay": 1}, "regular": "rank(close)"}
     assert deduplicate_simulation_payloads([payload, dict(payload)]) == [payload]
     database = tmp_path / "claims.sqlite"
-    assert claim_simulation_payloads(str(database), [payload]) == [payload]
-    assert claim_simulation_payloads(str(database), [payload]) == []
+    assert claim_simulation_payloads(str(database), [payload], settings_schema_path=str(schema)) == [payload]
+    assert claim_simulation_payloads(str(database), [payload], settings_schema_path=str(schema)) == []
 
 
 def test_platform_client_opens_circuit_on_429_and_reauthenticates_401_once(tmp_path: Path) -> None:

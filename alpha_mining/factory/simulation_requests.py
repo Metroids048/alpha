@@ -52,10 +52,12 @@ class SimulationRequestStore:
         *,
         lease_timeout_seconds: float = 900.0,
         now: Callable[[], str] = _utc_now,
+        settings_contract: Any | None = None,
     ) -> None:
         self.database = Path(database)
         self.lease_timeout_seconds = max(1.0, float(lease_timeout_seconds))
         self._now = now
+        self.settings_contract = settings_contract
 
     def claim(
         self,
@@ -65,10 +67,16 @@ class SimulationRequestStore:
         context: dict[str, Any] | None = None,
         allow_existing_identity: bool = False,
     ) -> ClaimResult:
+        if self.settings_contract is not None:
+            try:
+                settings = self.settings_contract.prepare(settings)
+            except ValueError:
+                return ClaimResult(False, "invalid_simulation_settings")
+        alpha_type = str(settings.get("alpha_type") or "REGULAR").upper()
         identity = expression_identity(expression)
         if not identity.parameter_skeleton or not identity.field_skeleton:
             return ClaimResult(False, "invalid_identity")
-        payload = {"type": "REGULAR", "regular": expression, "settings": settings}
+        payload = {"type": alpha_type, "regular": expression, "settings": settings}
         encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         request_hash = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
         now = self._now()

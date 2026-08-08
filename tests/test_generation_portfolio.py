@@ -17,10 +17,11 @@ def _candidate(
     parent: str = "parent-a",
     quality: float = 90.0,
     novelty: float = 0.8,
+    dataset: str = "fund",
 ) -> SimpleNamespace:
     return SimpleNamespace(
         expression=expression,
-        datasets=("fund",),
+        datasets=(dataset,),
         parent_seed=parent,
         local_quality_score=quality,
         novelty_score=novelty,
@@ -92,6 +93,43 @@ def test_enforce_selects_diverse_candidate_and_respects_active_limits() -> None:
     assert candidates[1] not in result.accepted
     assert result.rejection_counts
     assert all(item["decision"] in {"ACCEPT", "REJECT"} for item in result.decisions)
+
+
+def test_selection_prioritizes_the_least_occupied_dataset() -> None:
+    candidates = [
+        _candidate("rank(anl14_field)", dataset="analyst14", quality=99),
+        _candidate("rank(anl10_field)", dataset="analyst10", quality=80),
+    ]
+    active = SimpleNamespace(
+        request_hash="old", candidate_id="old", expression="rank(anl14_old)",
+        queue_status="PENDING_SIMULATION", family="rank", dataset="analyst14",
+        field_skeleton="", research_direction="old", exact_hash="",
+        structure_signature="", behavior_signature="", data_fields=("anl14_old",),
+    )
+
+    result = select_candidates(
+        candidates, inventory=(active,), feedback=FeedbackSummary((), (), (), (), (), {}),
+        limit=1, mode="enforce",
+    )
+
+    assert result.accepted == (candidates[1],)
+
+
+def test_selection_enforces_dynamic_cycle_source_coverage() -> None:
+    candidates = [
+        _candidate("rank(anl14_one)", dataset="analyst14"),
+        _candidate("ts_rank(anl14_two,63)", dataset="analyst14"),
+        _candidate("ts_mean(anl14_three,63)", dataset="analyst14"),
+    ]
+
+    result = select_candidates(
+        candidates, inventory=(), feedback=FeedbackSummary((), (), (), (), (), {}),
+        limit=3, mode="enforce", eligible_dataset_count=3, eligible_field_count=9,
+        limits=PortfolioLimits(cycle_field_skeleton_max=10, cycle_topology_max=10, cycle_parent_max=10),
+    )
+
+    assert len(result.accepted) == 1
+    assert result.rejection_counts["PORTFOLIO_CYCLE_DATASET_COVERAGE_LIMIT"] == 2
 
 
 def test_feedback_penalty_requires_two_matching_grounded_records() -> None:

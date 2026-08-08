@@ -37,6 +37,7 @@ from alpha_mining.generation.snapshots import (
 from alpha_mining.generation.v50_kernel import V50Kernel
 from alpha_mining.knowledge.worldquant_repository import WorldQuantKnowledgeRepository
 from alpha_mining.llm.deepseek import DeepSeekLLMError, DeepSeekStructuredLLM
+from alpha_mining.platform.simulation_contract import SimulationSettingsContract
 from alpha_mining.storage.csv_queue import CandidateCsvQueue
 from alpha_mining.storage.work_items import (
     CandidateWorkStore,
@@ -63,6 +64,7 @@ class ProductionConfig:
     portfolio_limits: PortfolioLimits = field(default_factory=PortfolioLimits)
     offline_catalog_max_age_hours: float = DEFAULT_OFFLINE_CATALOG_MAX_AGE_HOURS
     offline_quality_threshold: float = 75.0  # 离线模式正常阈值：确保入队候选具备基本质量
+    settings_schema_path: Path | None = None
 
     @property
     def queue_path(self) -> Path:
@@ -84,6 +86,10 @@ class ProductionConfig:
     @property
     def worldquant_root(self) -> Path:
         return self.knowledge_root or Path("World quant")
+
+    @property
+    def simulation_settings_schema_path(self) -> Path:
+        return self.settings_schema_path or (self.catalog_dir or self.root) / ".alpha_simulation_settings_cache.json"
 
 
 @dataclass(frozen=True)
@@ -151,8 +157,17 @@ def run_cycle(
         return CycleSummary(
             cycle_id, "CATALOG_UNAVAILABLE", detail=str(exc), queue_rows=existing_rows
         )
+    try:
+        settings_contract = SimulationSettingsContract.load(
+            config.simulation_settings_schema_path,
+        )
+    except ValueError as exc:
+        _log_cycle(cycle_id, "SIMULATION_SETTINGS_UNAVAILABLE", detail=str(exc))
+        return CycleSummary(
+            cycle_id, "SIMULATION_SETTINGS_UNAVAILABLE", detail=str(exc), queue_rows=existing_rows
+        )
     revalidated_rows, quarantined = revalidate_pending_rows(
-        list(existing_rows), snapshots
+        list(existing_rows), snapshots, settings_contract
     )
     if quarantined:
         revalidated_by_id = {str(row.get("candidate_id") or ""): row for row in revalidated_rows}
@@ -247,6 +262,7 @@ def run_cycle(
             portfolio_mode=config.portfolio_mode,
             portfolio_limits=config.portfolio_limits,
             portfolio_pending_limit=config.pending_limit,
+            settings_contract=settings_contract,
             allow_degraded=config.allow_degraded,
             offline_quality_threshold=config.offline_quality_threshold,
         )
@@ -431,7 +447,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     except KeyboardInterrupt:
         LOG.info("generation loop interrupted by operator after %s cycle(s)", rounds)
         return 0
-    if final_state == "CATALOG_UNAVAILABLE":
+    if final_state in {"CATALOG_UNAVAILABLE", "SIMULATION_SETTINGS_UNAVAILABLE"}:
         return 8
     if final_state == "LLM_UNAVAILABLE":
         return 7

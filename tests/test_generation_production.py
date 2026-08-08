@@ -64,6 +64,14 @@ def _write_catalog(root: Path) -> None:
         ),
         encoding="utf-8",
     )
+    (root / ".alpha_simulation_settings_cache.json").write_text(
+        json.dumps({
+            "schema_version": "simulation-settings-v1", "fetched_at": now,
+            "context": {"region": "USA", "universe": "TOP3000", "delay": 1},
+            "defaults": {"alpha_type": "REGULAR", "region": "USA", "universe": "TOP3000", "delay": 1, "decay": 4, "neutralization": "MARKET", "truncation": 0.08, "language": "FASTEXPR"},
+            "allowed_values": {"alpha_type": ["REGULAR"], "region": ["USA"], "universe": ["TOP3000"], "delay": [1], "decay": [0, 4, 8], "neutralization": ["MARKET", "INDUSTRY", "SUBINDUSTRY"], "truncation": [0.08], "language": ["FASTEXPR"]},
+        }), encoding="utf-8",
+    )
 
 
 class _Kernel:
@@ -144,6 +152,18 @@ def test_production_defaults_to_enforce_and_cli_allows_shadow(monkeypatch) -> No
     assert captured[-1].allow_degraded is True
 
 
+def test_cli_returns_nonzero_when_simulation_settings_schema_is_unavailable(monkeypatch) -> None:
+    from alpha_mining.generation import production
+
+    monkeypatch.setattr(
+        production,
+        "run_cycle",
+        lambda *_args, **_kwargs: production.CycleSummary("test-cycle", "SIMULATION_SETTINGS_UNAVAILABLE"),
+    )
+
+    assert production.main(["--once"]) == 8
+
+
 def test_rejection_digest_exposes_primary_reasons() -> None:
     from alpha_mining.generation.production import _rejection_digest
 
@@ -219,6 +239,14 @@ def test_production_cycle_uses_partial_offline_catalog_without_platform_io(tmp_p
             {"cached_at": now, "rows": [{"id": "fund_a", "_ds": "fund", "type": "MATRIX", "description": "quality"}]}
         ),
         encoding="utf-8",
+    )
+    (tmp_path / ".alpha_simulation_settings_cache.json").write_text(
+        json.dumps({
+            "schema_version": "simulation-settings-v1", "fetched_at": now,
+            "context": {"region": "USA", "universe": "TOP3000", "delay": 1},
+            "defaults": {"alpha_type": "REGULAR", "region": "USA", "universe": "TOP3000", "delay": 1, "decay": 4, "neutralization": "MARKET", "truncation": 0.08, "language": "FASTEXPR"},
+            "allowed_values": {"alpha_type": ["REGULAR"], "region": ["USA"], "universe": ["TOP3000"], "delay": [1], "decay": [4], "neutralization": ["MARKET"], "truncation": [0.08], "language": ["FASTEXPR"]},
+        }), encoding="utf-8",
     )
 
     class OfflineKernel:

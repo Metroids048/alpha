@@ -114,6 +114,12 @@ class FactoryOrchestrator:
         The caller owns quality classification; this boundary owns claiming,
         checkpoint-capable simulation, and transactional terminal state only.
         """
+        try:
+            settings_contract = getattr(self.simulation, "simulation_settings_contract", None)
+        except ValueError as exc:
+            return CandidateExecutionResult("", error_category="INVALID_SIMULATION_SETTINGS", error_message=self._sanitize_error(exc))
+        if settings_contract is not None:
+            self.requests.settings_contract = settings_contract
         context = {
             "candidate_id": str(getattr(proposal, "candidate_id", "")),
             "topic_id": str(getattr(proposal, "topic_id", "")),
@@ -579,7 +585,7 @@ class FactoryOrchestrator:
         kwargs: dict[str, Any] = {
             "expression": lease.expression,
             "settings": lease.settings,
-            "alpha_type": "REGULAR",
+            "alpha_type": str(lease.settings.get("alpha_type") or "REGULAR"),
         }
         if supports_checkpoint:
             kwargs.update(
@@ -697,6 +703,24 @@ class FactoryOrchestrator:
         descriptions_validated = 0
         self._generation_deferral_reason = ""
         self._generation_state = "READY"
+        try:
+            settings_contract = getattr(self.simulation, "simulation_settings_contract", None)
+        except ValueError as exc:
+            self._generation_state = "SIMULATION_SETTINGS_UNAVAILABLE"
+            self._generation_deferral_reason = self._sanitize_error(exc)
+            return FactoryCycleSummary(
+                generated=0,
+                simulated=0,
+                far_fail=0,
+                near_pass=0,
+                baseline_pass=0,
+                failed=0,
+                unknown=0,
+                deferred_reason=self._generation_deferral_reason,
+                generation_state=self._generation_state,
+            )
+        if settings_contract is not None:
+            self.requests.settings_contract = settings_contract
         threshold = self._live_sharpe_threshold()
         self._backfill_identities()
         limit = max(0, int(batch_size))

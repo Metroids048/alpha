@@ -30,6 +30,14 @@ def _write_catalog(root: Path) -> None:
             ],
         }), encoding="utf-8"
     )
+    (root / ".alpha_simulation_settings_cache.json").write_text(
+        json.dumps({
+            "schema_version": "simulation-settings-v1", "fetched_at": context["cached_at"],
+            "context": {"region": "USA", "universe": "TOP3000", "delay": 1},
+            "defaults": {"alpha_type": "REGULAR", "region": "USA", "universe": "TOP3000", "delay": 1, "decay": 4, "neutralization": "MARKET", "truncation": 0.08, "language": "FASTEXPR"},
+            "allowed_values": {"alpha_type": ["REGULAR"], "region": ["USA"], "universe": ["TOP3000"], "delay": [1], "decay": [0, 4, 8], "neutralization": ["MARKET", "INDUSTRY", "SUBINDUSTRY"], "truncation": [0.08], "language": ["FASTEXPR"]},
+        }), encoding="utf-8"
+    )
 
 
 class _Kernel:
@@ -226,6 +234,72 @@ def test_same_cycle_proxy_similarity_gate_keeps_only_one_highly_similar_candidat
     assert summary.enqueued == 1
     assert (summary.rejections or {}).get("CYCLE_SIMILARITY", 0) == 1
     assert float(summary.queue_rows[0]["local_quality_score"]) <= 85.0
+
+
+def test_cold_start_score_is_explicitly_local_and_unverified() -> None:
+    from types import SimpleNamespace
+
+    from alpha_mining.generation.high_quality import HighQualityGenerator
+    from alpha_mining.generation.snapshots import FeedbackSummary
+
+    snapshots = SimpleNamespace(
+        catalog=SimpleNamespace(fields={"fund_a": SimpleNamespace(coverage=1.0, date_coverage=1.0, user_count=0)}),
+        feedback=FeedbackSummary((), (), (), (), (), {}),
+        catalog_source="test",
+        catalog_age_hours=0.0,
+    )
+    _score, evidence = HighQualityGenerator(llm=None, kernel=None)._quality_score(
+        "rank(fund_a)", ("fund_a",), {"worldquant:test#1"}, set(), snapshots, 0.0,
+        mechanism_complete=True,
+    )
+
+    assert evidence["quality_stage"] == "LOCAL_UNVERIFIED"
+    assert evidence["platform_verified"] is False
+
+
+def test_plan_price_volume_claim_without_expression_evidence_is_rejected(tmp_path: Path) -> None:
+    from alpha_mining.generation.production import ProductionConfig, run_cycle
+
+    class NarrativeMismatchLLM(_TwoCandidateLLM):
+        def generate_json(self, *, system_prompt, user_prompt, json_schema):
+            result = super().generate_json(
+                system_prompt=system_prompt, user_prompt=user_prompt, json_schema=json_schema
+            )
+            if self.calls == 1:
+                result["research_direction"] = "price-volume dynamics"
+                result["hypothesis"] = "volume confirmation strengthens price momentum"
+            return result
+
+    _write_catalog(tmp_path)
+    summary = run_cycle(
+        ProductionConfig(root=tmp_path, database=tmp_path / "history.sqlite", candidates_per_cycle=2),
+        llm=NarrativeMismatchLLM(), kernel=_Kernel(),
+    )
+
+    assert summary.enqueued == 0
+    assert (summary.rejections or {}).get("NARRATIVE_EXPRESSION_CONTRADICTION", 0) >= 1
+
+
+def test_plan_returns_claim_without_expression_evidence_is_rejected(tmp_path: Path) -> None:
+    from alpha_mining.generation.production import ProductionConfig, run_cycle
+
+    class NarrativeMismatchLLM(_TwoCandidateLLM):
+        def generate_json(self, *, system_prompt, user_prompt, json_schema):
+            result = super().generate_json(
+                system_prompt=system_prompt, user_prompt=user_prompt, json_schema=json_schema
+            )
+            if self.calls == 1:
+                result["hypothesis"] = "returns momentum confirms the fundamental signal"
+            return result
+
+    _write_catalog(tmp_path)
+    summary = run_cycle(
+        ProductionConfig(root=tmp_path, database=tmp_path / "history.sqlite", candidates_per_cycle=2),
+        llm=NarrativeMismatchLLM(), kernel=_Kernel(),
+    )
+
+    assert summary.enqueued == 0
+    assert (summary.rejections or {}).get("NARRATIVE_EXPRESSION_CONTRADICTION", 0) >= 1
 
 
 def test_narrative_only_critic_rejection_fails_closed_by_default(tmp_path: Path) -> None:

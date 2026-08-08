@@ -48,13 +48,22 @@ def deduplicate_simulation_payloads(payloads: list[dict]) -> list[dict]:
     return unique
 
 
-def claim_simulation_payloads(database: str, payloads: list[dict]) -> list[dict]:
+def claim_simulation_payloads(
+    database: str,
+    payloads: list[dict],
+    *,
+    settings_schema_path: str = ".alpha_simulation_settings_cache.json",
+) -> list[dict]:
     """Use the authoritative store to reserve legacy async request identities."""
     from alpha_mining.factory.simulation_requests import SimulationRequestStore
+    from alpha_mining.platform.simulation_contract import SimulationSettingsContract
     from alpha_mining.storage.migrations import migrate
 
     migrate(database)
-    store = SimulationRequestStore(database)
+    store = SimulationRequestStore(
+        database,
+        settings_contract=SimulationSettingsContract.load(settings_schema_path),
+    )
     claimed: list[dict] = []
     for payload in deduplicate_simulation_payloads(payloads):
         simulation_payload = _sim_payload(payload)
