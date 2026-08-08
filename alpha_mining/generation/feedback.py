@@ -23,6 +23,28 @@ def _utc_now() -> str:
 
 _VALID_OUTCOMES = frozenset(("PASS", "READY_TO_SUBMIT", "WAITING_CHECKS", "NEAR_PASS", "FAR_FAIL", "FAILED", "UNKNOWN"))
 
+PLATFORM_VERIFIED = "PLATFORM_VERIFIED"
+PLATFORM_ERROR = "PLATFORM_ERROR"
+SYNTHETIC_PRIOR = "SYNTHETIC_PRIOR"
+UNVERIFIED = "UNVERIFIED"
+_VALID_PROVENANCE = frozenset((PLATFORM_VERIFIED, PLATFORM_ERROR, SYNTHETIC_PRIOR, UNVERIFIED))
+
+
+def derive_provenance(checks: list[Any] | None, error_category: str = "") -> str:
+    """Classify a row by the evidence it actually carries.
+
+    Only a row that carries platform-returned checks may claim
+    ``PLATFORM_VERIFIED``.  A row whose write was triggered by a transport,
+    auth, or circuit failure is a platform *error*, never a quality verdict.
+    Anything else is an unverified prior and must never steer generation.
+    """
+
+    if checks:
+        return PLATFORM_VERIFIED
+    if str(error_category or "").strip():
+        return PLATFORM_ERROR
+    return UNVERIFIED
+
 
 class CandidateFeedbackStore:
     """Persist simulation outcomes for feedback-driven candidate generation."""
@@ -56,12 +78,17 @@ class CandidateFeedbackStore:
                     checks_json TEXT NOT NULL DEFAULT '[]',
                     error_category TEXT NOT NULL DEFAULT '',
                     error_message TEXT NOT NULL DEFAULT '',
-                    observed_at TEXT NOT NULL
+                    observed_at TEXT NOT NULL,
+                    provenance TEXT NOT NULL DEFAULT 'UNVERIFIED'
                 )"""
             )
             columns = {str(row[1]) for row in con.execute("PRAGMA table_info(candidate_outcomes)")}
             if "expression" not in columns:
                 con.execute("ALTER TABLE candidate_outcomes ADD COLUMN expression TEXT NOT NULL DEFAULT ''")
+            if "provenance" not in columns:
+                con.execute(
+                    "ALTER TABLE candidate_outcomes ADD COLUMN provenance TEXT NOT NULL DEFAULT 'UNVERIFIED'"
+                )
             con.execute("CREATE INDEX IF NOT EXISTS idx_co_topic ON candidate_outcomes(topic_id)")
             con.execute("CREATE INDEX IF NOT EXISTS idx_co_family ON candidate_outcomes(strategy_family)")
             con.execute("CREATE INDEX IF NOT EXISTS idx_co_skeleton ON candidate_outcomes(field_skeleton)")
@@ -104,11 +131,17 @@ class CandidateFeedbackStore:
         context_refs: list[str] | tuple[str, ...] | None = None,
         knowledge_context_hash: str = "",
         degraded: bool = False,
+        provenance: str | None = None,
     ) -> None:
         if outcome not in _VALID_OUTCOMES:
             raise ValueError(f"Invalid outcome {outcome!r}; must be one of {sorted(_VALID_OUTCOMES)}")
         if not str(request_hash or "").strip():
             raise ValueError("request_hash is required")
+        resolved_provenance = str(provenance or derive_provenance(checks, error_category))
+        if resolved_provenance not in _VALID_PROVENANCE:
+            raise ValueError(
+                f"Invalid provenance {resolved_provenance!r}; must be one of {sorted(_VALID_PROVENANCE)}"
+            )
         now = _utc_now()
         values = (
             str(request_hash), str(candidate_id), str(expression), str(topic_id), str(hypothesis_id),
@@ -119,6 +152,7 @@ class CandidateFeedbackStore:
             json.dumps(list(knowledge_refs or [])), str(parent_candidate_id), str(repair_action),
             str(operator_topology), str(region), str(universe_name), str(delay), str(knowledge_usage_mode),
             json.dumps(list(context_refs or [])), str(knowledge_context_hash), int(bool(degraded)),
+            resolved_provenance,
         )
         with sqlite3.connect(self.database) as con:
             con.execute(
@@ -129,8 +163,8 @@ class CandidateFeedbackStore:
                     checks_json,error_category,error_message,observed_at,quality_status,
                     quality_reasons_json,self_correlation,prod_correlation,knowledge_refs_json,
                     parent_candidate_id,repair_action,operator_topology,region,universe_name,delay,
-                    knowledge_usage_mode,context_refs_json,knowledge_context_hash,degraded)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    knowledge_usage_mode,context_refs_json,knowledge_context_hash,degraded,provenance)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                    ON CONFLICT(request_hash) DO UPDATE SET
                      candidate_id=excluded.candidate_id,
                      expression=excluded.expression,
@@ -166,7 +200,8 @@ class CandidateFeedbackStore:
                      knowledge_usage_mode=excluded.knowledge_usage_mode,
                      context_refs_json=excluded.context_refs_json,
                      knowledge_context_hash=excluded.knowledge_context_hash,
-                     degraded=excluded.degraded
+                     degraded=excluded.degraded,
+                     provenance=excluded.provenance
                    WHERE candidate_outcomes.outcome='WAITING_CHECKS'
                      AND excluded.outcome<>'WAITING_CHECKS'""",
                 values,
@@ -243,6 +278,7 @@ def record_candidate_outcome(
         context_refs=tuple(getattr(proposal, "context_refs", ()) or ()),
         knowledge_context_hash=str(getattr(proposal, "knowledge_context_hash", "") or ""),
         degraded=bool(getattr(proposal, "degraded", False)),
+        provenance=derive_provenance(list(checks), error_category),
         parent_candidate_id=str(getattr(proposal, "parent_candidate_id", "") or ""),
         repair_action=str(getattr(proposal, "repair_origin", "") or ""),
         operator_topology=operator_topology(expression),

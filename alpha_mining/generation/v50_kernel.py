@@ -86,8 +86,24 @@ class V50Kernel:
             history_seen.add(expression)
             history_skeletons.add(expression_identity(expression).field_skeleton)
             novelty.add(expression)
-            tier = "self_corr_risk" if record.self_corr_risk else "near_pass" if record.outcome.upper() == "NEAR_PASS" else "passed" if record.outcome.upper() in {"PASS", "READY_TO_SUBMIT"} else "weak_fail"
-            pools.append_behavior_tokens(expression, tier) if tier == "self_corr_risk" else pools.append_tokens(expression, tier)
+            # Every record still counts for de-duplication, but only a
+            # platform-verified one may claim the passed / near_pass tier that
+            # v50 reads as evidence a shape already works.
+            outcome = record.outcome.upper()
+            if record.self_corr_risk:
+                tier = "self_corr_risk"
+            elif not record.platform_verified:
+                tier = "weak_fail"
+            elif outcome == "NEAR_PASS":
+                tier = "near_pass"
+            elif outcome in {"PASS", "READY_TO_SUBMIT"}:
+                tier = "passed"
+            else:
+                tier = "weak_fail"
+            if tier == "self_corr_risk":
+                pools.append_behavior_tokens(expression, tier)
+            else:
+                pools.append_tokens(expression, tier)
         factory = v50.ExpressionFactory(config, catalog, validator)
         candidates = factory.generate(
             history_seen,
@@ -98,11 +114,13 @@ class V50Kernel:
         )
         # Near-pass amplification is strictly additive and remains subject to
         # the downstream hard gates.  Its absence is a valid zero-output case.
-        # 阶段1: 同时amplify positive和near_pass，让bootstrap种子生效
+        # Only a platform-verified outcome may be amplified, and only with the
+        # Sharpe the platform actually returned.  Amplifying a synthetic prior
+        # would teach the generator that an unverified shape already works.
         amplify_records = [
-            {"expression": item.expression, "sharpe": 1.5 if item.outcome.upper() in {"PASS", "READY_TO_SUBMIT"} else 1.1}
-            for item in snapshots.feedback.records
-            if item.expression and item.outcome.upper() in {"PASS", "READY_TO_SUBMIT", "NEAR_PASS"}
+            {"expression": item.expression, "sharpe": float(item.sharpe)}
+            for item in snapshots.feedback.positive + snapshots.feedback.near_pass
+            if item.expression and item.sharpe is not None
         ]
         if amplify_records:
             amplifier = v50.NearPassAmplifier(config, catalog, validator)

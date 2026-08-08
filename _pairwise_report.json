@@ -1,0 +1,471 @@
+{
+  "csv_rows": 44,
+  "pending": 15,
+  "expressions": [
+    "rank(ts_delta(anl10_ebifq1_pred_surps_v2_2230,63)) * rank(ts_mean(anl10_ebify2_smart_ests_v0_2247,63))",
+    "rank(ts_delta(employee_compensation_satisfaction_score, 42) / ts_std_dev(employee_compensation_satisfaction_score, 126))",
+    "ts_zscore(ts_delta(employee_compensation_satisfaction_score, 63), 126) - ts_zscore(ts_delta(employee_compensation_satisfaction_score, 21), 63)",
+    "divide(ts_delta(anl10_ebifq1_pred_surps_v2_2230,21), ts_std_dev(anl10_ebify2_smart_ests_v0_2247,63)) * rank(ts_decay_linear(ts_delta(anl10_gpsff_2643,21),21))",
+    "ts_zscore(ts_delta(anl10_ebify2_smart_ests_v0_2247,21),126) * rank(ts_decay_linear(ts_delta(anl10_gpsff_2643,21),21)) - ts_std_dev(anl10_ebifq1_pred_surps_v2_2230,63)",
+    "ts_rank(ts_delta(anl10_ebify2_smart_ests_v0_2247,21),126) * ts_zscore(ts_delta(anl10_gpsff_2643,63),126) / ts_std_dev(anl10_ebifq1_pred_surps_v2_2230,21)",
+    "divide(ts_delta(anl14_stddev_div_fy3, 21), ts_std_dev(anl14_stddev_div_fy3, 126))",
+    "ts_rank(ts_delta(anl14_stddev_div_fy3, 63), 126) - ts_rank(ts_mean(anl14_stddev_div_fy3, 21), 126)",
+    "rank(ts_delta(anl14_stddev_div_fy3, 63)) * rank(ts_decay_linear(ts_delta(anl14_stddev_div_fy3, 21), 21))",
+    "rank(ts_delta(ts_std_dev(anl14_stddev_div_fy3, 126), 21)) * ts_zscore(ts_delta(anl14_stddev_div_fy3, 63), 126)",
+    "rank(ts_delta(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 63)) * ts_std_dev(ts_delta(anl14_numofests_roa_fp4, 21), 21)",
+    "ts_decay_linear(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 63) - ts_mean(ts_delta(anl14_numofests_roa_fp4, 21), 63)",
+    "ts_delta(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 126) / ts_std_dev(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 126)",
+    "rank(ts_delta(anl14_median_cfps_fp4, 126)) - ts_mean(divide(anl14_median_div_fy4, anl14_median_cfps_fp4), 63)",
+    "rank(ts_delta(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 63)) * ts_std_dev(anl14_numofests_roa_fp4, 63)"
+  ],
+  "total_pairs": 105,
+  "pairs_at_or_above_cycle_ceiling": 0,
+  "pairs_at_or_above_history_ceiling": 0,
+  "max_sim": 0.55,
+  "top_pairs": [
+    {
+      "sim": 0.55,
+      "a": "rank(ts_delta(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 63)) * ts_std_dev(ts_delta(anl14_numofests_roa_fp4, 21), 21)",
+      "b": "rank(ts_delta(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 63)) * ts_std_dev(anl14_numofests_roa_fp4, 63)",
+      "same_topology": false,
+      "same_normalized": false,
+      "fields_a": [
+        "anl14_median_cfps_fp4",
+        "anl14_median_div_fy4",
+        "anl14_numofests_roa_fp4"
+      ],
+      "fields_b": [
+        "anl14_median_cfps_fp4",
+        "anl14_median_div_fy4",
+        "anl14_numofests_roa_fp4"
+      ],
+      "ops_a": [
+        "divide",
+        "rank",
+        "ts_delta",
+        "ts_std_dev"
+      ],
+      "ops_b": [
+        "divide",
+        "rank",
+        "ts_delta",
+        "ts_std_dev"
+      ],
+      "above_cycle_ceiling": false,
+      "above_history_ceiling": false
+    },
+    {
+      "sim": 0.45,
+      "a": "divide(ts_delta(anl10_ebifq1_pred_surps_v2_2230,21), ts_std_dev(anl10_ebify2_smart_ests_v0_2247,63)) * rank(ts_decay_linear(ts_delta(anl10_gpsff_2643,21),21))",
+      "b": "ts_zscore(ts_delta(anl10_ebify2_smart_ests_v0_2247,21),126) * rank(ts_decay_linear(ts_delta(anl10_gpsff_2643,21),21)) - ts_std_dev(anl10_ebifq1_pred_surps_v2_2230,63)",
+      "same_topology": false,
+      "same_normalized": false,
+      "fields_a": [
+        "anl10_ebifq1_pred_surps_v2_2230",
+        "anl10_ebify2_smart_ests_v0_2247",
+        "anl10_gpsff_2643"
+      ],
+      "fields_b": [
+        "anl10_ebifq1_pred_surps_v2_2230",
+        "anl10_ebify2_smart_ests_v0_2247",
+        "anl10_gpsff_2643"
+      ],
+      "ops_a": [
+        "divide",
+        "rank",
+        "ts_decay_linear",
+        "ts_delta",
+        "ts_std_dev"
+      ],
+      "ops_b": [
+        "rank",
+        "ts_decay_linear",
+        "ts_delta",
+        "ts_std_dev",
+        "ts_zscore"
+      ],
+      "above_cycle_ceiling": false,
+      "above_history_ceiling": false
+    },
+    {
+      "sim": 0.4,
+      "a": "ts_zscore(ts_delta(anl10_ebify2_smart_ests_v0_2247,21),126) * rank(ts_decay_linear(ts_delta(anl10_gpsff_2643,21),21)) - ts_std_dev(anl10_ebifq1_pred_surps_v2_2230,63)",
+      "b": "ts_rank(ts_delta(anl10_ebify2_smart_ests_v0_2247,21),126) * ts_zscore(ts_delta(anl10_gpsff_2643,63),126) / ts_std_dev(anl10_ebifq1_pred_surps_v2_2230,21)",
+      "same_topology": false,
+      "same_normalized": false,
+      "fields_a": [
+        "anl10_ebifq1_pred_surps_v2_2230",
+        "anl10_ebify2_smart_ests_v0_2247",
+        "anl10_gpsff_2643"
+      ],
+      "fields_b": [
+        "anl10_ebifq1_pred_surps_v2_2230",
+        "anl10_ebify2_smart_ests_v0_2247",
+        "anl10_gpsff_2643"
+      ],
+      "ops_a": [
+        "rank",
+        "ts_decay_linear",
+        "ts_delta",
+        "ts_std_dev",
+        "ts_zscore"
+      ],
+      "ops_b": [
+        "ts_delta",
+        "ts_rank",
+        "ts_std_dev",
+        "ts_zscore"
+      ],
+      "above_cycle_ceiling": false,
+      "above_history_ceiling": false
+    },
+    {
+      "sim": 0.3917,
+      "a": "rank(ts_delta(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 63)) * ts_std_dev(ts_delta(anl14_numofests_roa_fp4, 21), 21)",
+      "b": "ts_delta(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 126) / ts_std_dev(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 126)",
+      "same_topology": false,
+      "same_normalized": false,
+      "fields_a": [
+        "anl14_median_cfps_fp4",
+        "anl14_median_div_fy4",
+        "anl14_numofests_roa_fp4"
+      ],
+      "fields_b": [
+        "anl14_median_cfps_fp4",
+        "anl14_median_div_fy4"
+      ],
+      "ops_a": [
+        "divide",
+        "rank",
+        "ts_delta",
+        "ts_std_dev"
+      ],
+      "ops_b": [
+        "divide",
+        "ts_delta",
+        "ts_std_dev"
+      ],
+      "above_cycle_ceiling": false,
+      "above_history_ceiling": false
+    },
+    {
+      "sim": 0.3917,
+      "a": "ts_delta(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 126) / ts_std_dev(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 126)",
+      "b": "rank(ts_delta(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 63)) * ts_std_dev(anl14_numofests_roa_fp4, 63)",
+      "same_topology": false,
+      "same_normalized": false,
+      "fields_a": [
+        "anl14_median_cfps_fp4",
+        "anl14_median_div_fy4"
+      ],
+      "fields_b": [
+        "anl14_median_cfps_fp4",
+        "anl14_median_div_fy4",
+        "anl14_numofests_roa_fp4"
+      ],
+      "ops_a": [
+        "divide",
+        "ts_delta",
+        "ts_std_dev"
+      ],
+      "ops_b": [
+        "divide",
+        "rank",
+        "ts_delta",
+        "ts_std_dev"
+      ],
+      "above_cycle_ceiling": false,
+      "above_history_ceiling": false
+    },
+    {
+      "sim": 0.37,
+      "a": "divide(ts_delta(anl14_stddev_div_fy3, 21), ts_std_dev(anl14_stddev_div_fy3, 126))",
+      "b": "rank(ts_delta(ts_std_dev(anl14_stddev_div_fy3, 126), 21)) * ts_zscore(ts_delta(anl14_stddev_div_fy3, 63), 126)",
+      "same_topology": false,
+      "same_normalized": false,
+      "fields_a": [
+        "anl14_stddev_div_fy3"
+      ],
+      "fields_b": [
+        "anl14_stddev_div_fy3"
+      ],
+      "ops_a": [
+        "divide",
+        "ts_delta",
+        "ts_std_dev"
+      ],
+      "ops_b": [
+        "rank",
+        "ts_delta",
+        "ts_std_dev",
+        "ts_zscore"
+      ],
+      "above_cycle_ceiling": false,
+      "above_history_ceiling": false
+    },
+    {
+      "sim": 0.37,
+      "a": "rank(ts_delta(anl14_stddev_div_fy3, 63)) * rank(ts_decay_linear(ts_delta(anl14_stddev_div_fy3, 21), 21))",
+      "b": "rank(ts_delta(ts_std_dev(anl14_stddev_div_fy3, 126), 21)) * ts_zscore(ts_delta(anl14_stddev_div_fy3, 63), 126)",
+      "same_topology": false,
+      "same_normalized": false,
+      "fields_a": [
+        "anl14_stddev_div_fy3"
+      ],
+      "fields_b": [
+        "anl14_stddev_div_fy3"
+      ],
+      "ops_a": [
+        "rank",
+        "ts_decay_linear",
+        "ts_delta"
+      ],
+      "ops_b": [
+        "rank",
+        "ts_delta",
+        "ts_std_dev",
+        "ts_zscore"
+      ],
+      "above_cycle_ceiling": false,
+      "above_history_ceiling": false
+    },
+    {
+      "sim": 0.37,
+      "a": "ts_delta(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 126) / ts_std_dev(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 126)",
+      "b": "rank(ts_delta(anl14_median_cfps_fp4, 126)) - ts_mean(divide(anl14_median_div_fy4, anl14_median_cfps_fp4), 63)",
+      "same_topology": false,
+      "same_normalized": false,
+      "fields_a": [
+        "anl14_median_cfps_fp4",
+        "anl14_median_div_fy4"
+      ],
+      "fields_b": [
+        "anl14_median_cfps_fp4",
+        "anl14_median_div_fy4"
+      ],
+      "ops_a": [
+        "divide",
+        "ts_delta",
+        "ts_std_dev"
+      ],
+      "ops_b": [
+        "divide",
+        "rank",
+        "ts_delta",
+        "ts_mean"
+      ],
+      "above_cycle_ceiling": false,
+      "above_history_ceiling": false
+    },
+    {
+      "sim": 0.35,
+      "a": "rank(ts_delta(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 63)) * ts_std_dev(ts_delta(anl14_numofests_roa_fp4, 21), 21)",
+      "b": "ts_decay_linear(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 63) - ts_mean(ts_delta(anl14_numofests_roa_fp4, 21), 63)",
+      "same_topology": false,
+      "same_normalized": false,
+      "fields_a": [
+        "anl14_median_cfps_fp4",
+        "anl14_median_div_fy4",
+        "anl14_numofests_roa_fp4"
+      ],
+      "fields_b": [
+        "anl14_median_cfps_fp4",
+        "anl14_median_div_fy4",
+        "anl14_numofests_roa_fp4"
+      ],
+      "ops_a": [
+        "divide",
+        "rank",
+        "ts_delta",
+        "ts_std_dev"
+      ],
+      "ops_b": [
+        "divide",
+        "ts_decay_linear",
+        "ts_delta",
+        "ts_mean"
+      ],
+      "above_cycle_ceiling": false,
+      "above_history_ceiling": false
+    },
+    {
+      "sim": 0.35,
+      "a": "ts_decay_linear(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 63) - ts_mean(ts_delta(anl14_numofests_roa_fp4, 21), 63)",
+      "b": "rank(ts_delta(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 63)) * ts_std_dev(anl14_numofests_roa_fp4, 63)",
+      "same_topology": false,
+      "same_normalized": false,
+      "fields_a": [
+        "anl14_median_cfps_fp4",
+        "anl14_median_div_fy4",
+        "anl14_numofests_roa_fp4"
+      ],
+      "fields_b": [
+        "anl14_median_cfps_fp4",
+        "anl14_median_div_fy4",
+        "anl14_numofests_roa_fp4"
+      ],
+      "ops_a": [
+        "divide",
+        "ts_decay_linear",
+        "ts_delta",
+        "ts_mean"
+      ],
+      "ops_b": [
+        "divide",
+        "rank",
+        "ts_delta",
+        "ts_std_dev"
+      ],
+      "above_cycle_ceiling": false,
+      "above_history_ceiling": false
+    },
+    {
+      "sim": 0.3467,
+      "a": "rank(ts_delta(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 63)) * ts_std_dev(ts_delta(anl14_numofests_roa_fp4, 21), 21)",
+      "b": "rank(ts_delta(anl14_median_cfps_fp4, 126)) - ts_mean(divide(anl14_median_div_fy4, anl14_median_cfps_fp4), 63)",
+      "same_topology": false,
+      "same_normalized": false,
+      "fields_a": [
+        "anl14_median_cfps_fp4",
+        "anl14_median_div_fy4",
+        "anl14_numofests_roa_fp4"
+      ],
+      "fields_b": [
+        "anl14_median_cfps_fp4",
+        "anl14_median_div_fy4"
+      ],
+      "ops_a": [
+        "divide",
+        "rank",
+        "ts_delta",
+        "ts_std_dev"
+      ],
+      "ops_b": [
+        "divide",
+        "rank",
+        "ts_delta",
+        "ts_mean"
+      ],
+      "above_cycle_ceiling": false,
+      "above_history_ceiling": false
+    },
+    {
+      "sim": 0.3467,
+      "a": "ts_decay_linear(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 63) - ts_mean(ts_delta(anl14_numofests_roa_fp4, 21), 63)",
+      "b": "rank(ts_delta(anl14_median_cfps_fp4, 126)) - ts_mean(divide(anl14_median_div_fy4, anl14_median_cfps_fp4), 63)",
+      "same_topology": false,
+      "same_normalized": false,
+      "fields_a": [
+        "anl14_median_cfps_fp4",
+        "anl14_median_div_fy4",
+        "anl14_numofests_roa_fp4"
+      ],
+      "fields_b": [
+        "anl14_median_cfps_fp4",
+        "anl14_median_div_fy4"
+      ],
+      "ops_a": [
+        "divide",
+        "ts_decay_linear",
+        "ts_delta",
+        "ts_mean"
+      ],
+      "ops_b": [
+        "divide",
+        "rank",
+        "ts_delta",
+        "ts_mean"
+      ],
+      "above_cycle_ceiling": false,
+      "above_history_ceiling": false
+    },
+    {
+      "sim": 0.3467,
+      "a": "rank(ts_delta(anl14_median_cfps_fp4, 126)) - ts_mean(divide(anl14_median_div_fy4, anl14_median_cfps_fp4), 63)",
+      "b": "rank(ts_delta(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 63)) * ts_std_dev(anl14_numofests_roa_fp4, 63)",
+      "same_topology": false,
+      "same_normalized": false,
+      "fields_a": [
+        "anl14_median_cfps_fp4",
+        "anl14_median_div_fy4"
+      ],
+      "fields_b": [
+        "anl14_median_cfps_fp4",
+        "anl14_median_div_fy4",
+        "anl14_numofests_roa_fp4"
+      ],
+      "ops_a": [
+        "divide",
+        "rank",
+        "ts_delta",
+        "ts_mean"
+      ],
+      "ops_b": [
+        "divide",
+        "rank",
+        "ts_delta",
+        "ts_std_dev"
+      ],
+      "above_cycle_ceiling": false,
+      "above_history_ceiling": false
+    },
+    {
+      "sim": 0.3357,
+      "a": "divide(ts_delta(anl10_ebifq1_pred_surps_v2_2230,21), ts_std_dev(anl10_ebify2_smart_ests_v0_2247,63)) * rank(ts_decay_linear(ts_delta(anl10_gpsff_2643,21),21))",
+      "b": "ts_rank(ts_delta(anl10_ebify2_smart_ests_v0_2247,21),126) * ts_zscore(ts_delta(anl10_gpsff_2643,63),126) / ts_std_dev(anl10_ebifq1_pred_surps_v2_2230,21)",
+      "same_topology": false,
+      "same_normalized": false,
+      "fields_a": [
+        "anl10_ebifq1_pred_surps_v2_2230",
+        "anl10_ebify2_smart_ests_v0_2247",
+        "anl10_gpsff_2643"
+      ],
+      "fields_b": [
+        "anl10_ebifq1_pred_surps_v2_2230",
+        "anl10_ebify2_smart_ests_v0_2247",
+        "anl10_gpsff_2643"
+      ],
+      "ops_a": [
+        "divide",
+        "rank",
+        "ts_decay_linear",
+        "ts_delta",
+        "ts_std_dev"
+      ],
+      "ops_b": [
+        "ts_delta",
+        "ts_rank",
+        "ts_std_dev",
+        "ts_zscore"
+      ],
+      "above_cycle_ceiling": false,
+      "above_history_ceiling": false
+    },
+    {
+      "sim": 0.325,
+      "a": "rank(ts_delta(employee_compensation_satisfaction_score, 42) / ts_std_dev(employee_compensation_satisfaction_score, 126))",
+      "b": "ts_zscore(ts_delta(employee_compensation_satisfaction_score, 63), 126) - ts_zscore(ts_delta(employee_compensation_satisfaction_score, 21), 63)",
+      "same_topology": false,
+      "same_normalized": false,
+      "fields_a": [
+        "employee_compensation_satisfaction_score"
+      ],
+      "fields_b": [
+        "employee_compensation_satisfaction_score"
+      ],
+      "ops_a": [
+        "rank",
+        "ts_delta",
+        "ts_std_dev"
+      ],
+      "ops_b": [
+        "ts_delta",
+        "ts_zscore"
+      ],
+      "above_cycle_ceiling": false,
+      "above_history_ceiling": false
+    }
+  ],
+  "distinct_topologies": 15,
+  "distinct_normalized": 15
+}

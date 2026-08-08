@@ -339,8 +339,15 @@ def test_claimed_field_not_present_in_expression_is_rejected(tmp_path: Path) -> 
         llm=_TwoCandidateLLM(mismatch=True), kernel=_Kernel(),
     )
 
-    assert summary.enqueued == 0
     assert (summary.rejections or {}).get("MECHANISM_FIELD_MISMATCH", 0) >= 1
+    # The mismatching row is the subject: its expression uses fund_a while its
+    # field_roles claim fund_b. The other row in the fixture claims exactly the
+    # field it uses, so it is legitimate and may enqueue - asserting enqueued == 0
+    # here only held while boilerplate-inflated proxy similarity pushed that valid
+    # row under the quality gate too.
+    assert all(
+        "fund_a" not in row["expression"] for row in summary.queue_rows
+    ), "the row whose claimed field is absent from its expression must not enqueue"
 
 
 def test_claimed_operator_not_present_in_expression_is_rejected(tmp_path: Path) -> None:

@@ -56,13 +56,13 @@ class ProductionConfig:
     catalog_dir: Path | None = None
     candidates_per_cycle: int = 3
     interval_seconds: float = 300.0
-    allow_degraded: bool = True  # 阶段2: 默认开启兜底模式确保入队
+    allow_degraded: bool = False  # 默认关闭降级：无合格候选时输出0，不自动兜底
     knowledge_root: Path | None = None
     pending_limit: int = 20
     portfolio_mode: str = "enforce"
     portfolio_limits: PortfolioLimits = field(default_factory=PortfolioLimits)
     offline_catalog_max_age_hours: float = DEFAULT_OFFLINE_CATALOG_MAX_AGE_HOURS
-    offline_quality_threshold: float = 60.0  # 临时降低到60分，让候选能入队获取平台真实反馈
+    offline_quality_threshold: float = 75.0  # 离线模式正常阈值：确保入队候选具备基本质量
 
     @property
     def queue_path(self) -> Path:
@@ -362,12 +362,22 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--catalog-dir", type=Path, default=None, help="完整本地 catalog 目录"
     )
-    parser.add_argument(
+    # Degraded mode is an explicit operator decision.  The default stays closed so
+    # a cycle with no qualifying candidate reports zero instead of enqueuing a
+    # weaker shape, and enabling it always leaves a visible flag in the command.
+    degraded = parser.add_mutually_exclusive_group()
+    degraded.add_argument(
+        "--allow-degraded",
+        action="store_true",
+        dest="allow_degraded",
+        default=None,
+        help="显式启用兜底模式（默认关闭；兜底候选仍需通过全部质量门）",
+    )
+    degraded.add_argument(
         "--no-degraded",
         action="store_false",
         dest="allow_degraded",
-        default=True,  # 阶段2: 默认开启兜底模式
-        help="禁用兜底模式（默认开启）",
+        help="禁用兜底模式（默认已关闭）",
     )
     parser.add_argument(
         "--pending-limit",
@@ -395,7 +405,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         catalog_dir=args.catalog_dir,
         candidates_per_cycle=args.candidates_per_cycle,
         interval_seconds=max(0.0, args.interval),
-        allow_degraded=bool(args.allow_degraded),
+        allow_degraded=args.allow_degraded if args.allow_degraded is not None else ProductionConfig.allow_degraded,
         pending_limit=max(1, int(args.pending_limit)),
         portfolio_mode=args.portfolio_mode,
         offline_catalog_max_age_hours=max(

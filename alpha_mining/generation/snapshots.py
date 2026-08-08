@@ -40,6 +40,19 @@ class FeedbackRecord:
     self_corr_risk: bool
     field_skeleton: str = ""
     grounded: bool = True
+    provenance: str = "UNVERIFIED"
+    sharpe: float | None = None
+    fitness: float | None = None
+
+    @property
+    def platform_verified(self) -> bool:
+        """True only when the platform itself returned checks for this row.
+
+        A synthetic prior or a transport/auth failure must never be treated as
+        a platform verdict, because generation is steered by these tiers.
+        """
+
+        return self.provenance == "PLATFORM_VERIFIED"
 
 
 @dataclass(frozen=True)
@@ -201,6 +214,7 @@ def load_feedback_summary(
                 wanted = [
                     "request_hash", "candidate_id", "expression", "outcome", "strategy_family", "dataset", "field_skeleton",
                     "checks_json", "quality_reasons_json", "error_category", "self_correlation", "prod_correlation",
+                    "provenance", "sharpe", "fitness",
                 ]
                 if "candidate_outcomes" in _tables(con):
                     query = "SELECT " + ",".join(name if name in columns else "''" for name in wanted) + " FROM candidate_outcomes"
@@ -208,6 +222,7 @@ def load_feedback_summary(
                         (
                             request_hash, candidate_id, stored_expression, outcome, family, dataset, field_skeleton,
                             checks_json, quality_reasons_json, error_category, self_corr, prod_corr,
+                            provenance, sharpe, fitness,
                         ) = row
                         request_hash = str(request_hash or "")
                         candidate_id = str(candidate_id or "")
@@ -228,6 +243,9 @@ def load_feedback_summary(
                                 "SELF_CORRELATION" in failures or str(self_corr or "").upper() in {"FAIL", "FAILED"},
                                 str(field_skeleton or source.get("field_skeleton") or ""),
                                 bool(expression),
+                                _provenance_value(provenance, checks_json, error_category),
+                                _float_or_none(sharpe),
+                                _float_or_none(fitness),
                             )
                         )
         except sqlite3.Error:
@@ -236,15 +254,21 @@ def load_feedback_summary(
         records.extend(_read_history_csv(path))
     unique = {item.ref_id: item for item in records}
     records = sorted(unique.values(), key=lambda item: item.ref_id)
+    # Only a platform-verified row may steer generation.  A synthetic prior or
+    # a transport/auth failure that never reached simulation carries no evidence
+    # about alpha quality, so it must not enter the positive or near-pass tier
+    # that the seed amplifier and the research prompt read.
     positive = tuple(
         item for item in records
         if item.grounded
+        and item.platform_verified
         and item.outcome.upper() in {"PASS", "READY_TO_SUBMIT"}
         and not item.failure_types
     )
     near_pass = tuple(
         item for item in records
         if item.grounded
+        and item.platform_verified
         and (item.outcome.upper() == "NEAR_PASS" or "NEAR_PASS" in item.failure_types)
     )
     failures = tuple(
@@ -343,10 +367,20 @@ def _read_history_csv(path: Path) -> list[FeedbackRecord]:
                     continue
                 request_hash = str(row.get("request_hash") or hashlib.sha256(expression.encode()).hexdigest())
                 failures = _failure_types(row.get("platform_check_json") or row.get("Failure Reasons"), row.get("blocked_reason"), row.get("self_correlation_status"), row.get("prod_correlation"), row.get("status"))
+                checks_evidence = str(row.get("platform_check_json") or "").strip()
+                sharpe = _float_or_none(row.get("sharpe"))
+                # A historical row is platform evidence only when it carries
+                # returned checks or a real metric, never merely a status word.
+                provenance = (
+                    "PLATFORM_VERIFIED"
+                    if (checks_evidence not in {"", "[]", "null"} or sharpe is not None)
+                    else "UNVERIFIED"
+                )
                 result.append(FeedbackRecord(
                     _stable_ref(path.name, f"{index}:{request_hash}"), request_hash, expression,
                     str(row.get("status") or ""), str(row.get("family") or ""), str(row.get("dataset") or ""),
                     tuple(failures), "SELF_CORRELATION" in failures, str(row.get("field_skeleton") or ""),
+                    True, provenance, sharpe, _float_or_none(row.get("fitness")),
                 ))
     except (OSError, csv.Error):
         return []
@@ -411,6 +445,37 @@ def _failure_types(*values: object) -> list[str]:
             continue
         _collect_failure_tokens(str(value or ""), failures, aliases, known)
     return [item for item in known if item in failures]
+
+
+def _float_or_none(value: object) -> float | None:
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
+def _provenance_value(stored: object, checks_json: object, error_category: object) -> str:
+    """Trust a stored label, else classify by the evidence actually present.
+
+    An older database predates the provenance column, so a blank value must be
+    re-derived rather than silently defaulting into a steering tier.
+    """
+
+    label = str(stored or "").strip().upper()
+    if label in {"PLATFORM_VERIFIED", "PLATFORM_ERROR", "SYNTHETIC_PRIOR", "UNVERIFIED"}:
+        return label
+    if str(checks_json or "").strip() not in {"", "[]", "null"}:
+        return "PLATFORM_VERIFIED"
+    if str(error_category or "").strip():
+        return "PLATFORM_ERROR"
+    return "UNVERIFIED"
 
 
 def _json_value(value: object) -> object:

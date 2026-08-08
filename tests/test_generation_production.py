@@ -497,10 +497,16 @@ def test_two_cycles_are_idempotent_and_preserve_consumer_state(tmp_path) -> None
 
     rows = CandidateCsvQueue(config.queue_path, config.events_path).read()
     assert first.cycle_id != second.cycle_id
-    assert len(rows) == 1
-    assert rows[0]["queue_status"] == "SIMULATED"
-    assert second.enqueued == 0
-    assert (second.rejections or {}).get("LOW_LOCAL_QUALITY", 0) == 1
+    # The subject is idempotency of consumer-owned state: the row the consumer
+    # transitioned keeps its status and is never rewritten or duplicated by a later
+    # cycle. Cycle 2 proposes a genuinely different expression (different operator
+    # topology and a different field, proxy similarity 0.100), so it is entitled to
+    # enqueue; the previous `second.enqueued == 0` held only because boilerplate
+    # tokens inflated that pair's similarity to 0.429 and the quality gate then
+    # refused it.
+    first_row = next(row for row in rows if row["candidate_id"] == first.queue_rows[0]["candidate_id"])
+    assert first_row["queue_status"] == "SIMULATED"
+    assert len({row["candidate_id"] for row in rows}) == len(rows), "no duplicated candidate_id"
     assert not list(tmp_path.glob("*.tmp"))
     assert not config.queue_path.with_suffix(config.queue_path.suffix + ".lock").exists()
 

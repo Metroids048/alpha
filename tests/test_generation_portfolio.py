@@ -177,16 +177,23 @@ def test_enforce_selection_attaches_auditable_evidence() -> None:
 
 
 def test_default_quality_threshold_allows_diverse_candidate_below_hard_similarity_gate() -> None:
-    from alpha_mining.generation.high_quality import HighQualityGenerator
+    """The offline bar admits a real composite while still rejecting a bare shape.
+
+    A first-cycle candidate cannot earn the grounded-feedback component, because no
+    platform feedback exists yet, so a genuine composite has to clear the bar on
+    field quality, mechanism consistency and novelty alone.  A bare single-field
+    single-operator shape must not clear it: the platform scored exactly that shape
+    at Sharpe 0.27 and -0.29 against a 1.58 gate, so admitting it would only spend
+    simulation budget on a candidate already known to fail.
+    """
+
+    from alpha_mining.generation.high_quality import HighQualityGenerator, _degenerate_shape
 
     snapshots = SimpleNamespace(
         catalog=SimpleNamespace(
             fields={
-                "fund_a": SimpleNamespace(
-                    coverage=1.0,
-                    date_coverage=1.0,
-                    user_count=0,
-                )
+                "fund_a": SimpleNamespace(coverage=1.0, date_coverage=1.0, user_count=0),
+                "fund_b": SimpleNamespace(coverage=1.0, date_coverage=1.0, user_count=0),
             },
             info={"source": "local_offline_field_snapshot"},
         ),
@@ -195,15 +202,42 @@ def test_default_quality_threshold_allows_diverse_candidate_below_hard_similarit
         catalog_age_hours=0.0,
     )
     generator = HighQualityGenerator(llm=None, kernel=None)
+    threshold = generator._quality_threshold(snapshots)
 
-    score, _evidence = generator._quality_score(
+    # Both shapes are scored at the same low similarity, well under the hard
+    # correlation and history ceilings, so structure is the only difference.
+    diverse_similarity = 0.05
+
+    composite, composite_evidence = generator._quality_score(
+        "group_neutralize(ts_zscore(ts_delta(fund_a,63)/fund_b,126),sector)",
+        ("fund_a", "fund_b"),
+        {"worldquant:test#1"},
+        set(),
+        snapshots,
+        max_similarity=diverse_similarity,
+        mechanism_complete=True,
+    )
+    assert composite >= threshold
+
+    bare, bare_evidence = generator._quality_score(
         "ts_rank(fund_a,126)",
         ("fund_a",),
         {"worldquant:test#1"},
         set(),
         snapshots,
-        max_similarity=0.30,
+        max_similarity=diverse_similarity,
         mechanism_complete=True,
     )
 
-    assert score >= generator._quality_threshold(snapshots)
+    # The score alone cannot separate these two: every summed component reads a
+    # boolean role table, a boolean reference list, or a similarity number, so a
+    # bare shape scores like a composite.  The separation is a gate, not a number.
+    composite_parts = composite_evidence["score_components"]
+    bare_parts = bare_evidence["score_components"]
+    assert composite_parts["novelty_low_similarity"] == bare_parts["novelty_low_similarity"]
+    assert composite_parts["structural_depth"] > bare_parts["structural_depth"]
+    assert _degenerate_shape("ts_rank(fund_a,126)", ("fund_a",)) is True
+    assert _degenerate_shape(
+        "group_neutralize(ts_zscore(ts_delta(fund_a,63)/fund_b,126),sector)",
+        ("fund_a", "fund_b"),
+    ) is False

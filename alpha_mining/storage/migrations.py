@@ -556,6 +556,19 @@ CREATE TABLE IF NOT EXISTS candidate_batch_intents (
 );
 """,
     ),
+    (
+        23,
+        """
+ALTER TABLE candidate_outcomes ADD COLUMN provenance TEXT NOT NULL DEFAULT 'UNVERIFIED';
+UPDATE candidate_outcomes SET provenance='PLATFORM_VERIFIED'
+ WHERE TRIM(COALESCE(checks_json,'')) NOT IN ('','[]','null');
+UPDATE candidate_outcomes SET provenance='PLATFORM_ERROR'
+ WHERE provenance<>'PLATFORM_VERIFIED' AND TRIM(COALESCE(error_category,''))<>'';
+UPDATE candidate_outcomes SET provenance='SYNTHETIC_PRIOR'
+ WHERE provenance NOT IN ('PLATFORM_VERIFIED','PLATFORM_ERROR');
+CREATE INDEX IF NOT EXISTS idx_co_provenance ON candidate_outcomes(provenance,outcome);
+""",
+    ),
 )
 
 

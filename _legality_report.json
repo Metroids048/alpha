@@ -1,0 +1,435 @@
+{
+  "pending": 15,
+  "all_legal": true,
+  "illegal_count": 0,
+  "cross_dataset_count": 0,
+  "short_window_count": 0,
+  "degenerate_count": 0,
+  "unknown_field_count": 0,
+  "unknown_operator_count": 0,
+  "with_validator_issues": 0,
+  "datasets_used": [
+    "analyst10",
+    "analyst11",
+    "analyst14"
+  ],
+  "min_window_overall": 21,
+  "quality_scores": [
+    "63.75",
+    "72.98",
+    "62.19",
+    "66.83",
+    "66.83",
+    "67.69",
+    "65.65",
+    "67.47",
+    "65.65",
+    "69.03",
+    "65.01",
+    "66.31",
+    "65.22",
+    "65.0",
+    "61.11"
+  ],
+  "rows": [
+    {
+      "expression": "rank(ts_delta(anl10_ebifq1_pred_surps_v2_2230,63)) * rank(ts_mean(anl10_ebify2_smart_ests_v0_2247,63))",
+      "quality": "63.75",
+      "status": "PENDING_SIMULATION",
+      "fields": [
+        "anl10_ebifq1_pred_surps_v2_2230",
+        "anl10_ebify2_smart_ests_v0_2247"
+      ],
+      "operators": [
+        "rank",
+        "ts_delta",
+        "ts_mean"
+      ],
+      "datasets": [
+        "analyst10"
+      ],
+      "unknown_fields": [],
+      "unknown_operators": [],
+      "ghost_operators": [],
+      "cross_dataset": false,
+      "min_window": 63,
+      "short_window": false,
+      "degenerate": false,
+      "validator_issues": [],
+      "legal": true
+    },
+    {
+      "expression": "rank(ts_delta(employee_compensation_satisfaction_score, 42) / ts_std_dev(employee_compensation_satisfaction_score, 126))",
+      "quality": "72.98",
+      "status": "PENDING_SIMULATION",
+      "fields": [
+        "employee_compensation_satisfaction_score"
+      ],
+      "operators": [
+        "rank",
+        "ts_delta",
+        "ts_std_dev"
+      ],
+      "datasets": [
+        "analyst11"
+      ],
+      "unknown_fields": [],
+      "unknown_operators": [],
+      "ghost_operators": [],
+      "cross_dataset": false,
+      "min_window": 42,
+      "short_window": false,
+      "degenerate": false,
+      "validator_issues": [],
+      "legal": true
+    },
+    {
+      "expression": "ts_zscore(ts_delta(employee_compensation_satisfaction_score, 63), 126) - ts_zscore(ts_delta(employee_compensation_satisfaction_score, 21), 63)",
+      "quality": "62.19",
+      "status": "PENDING_SIMULATION",
+      "fields": [
+        "employee_compensation_satisfaction_score"
+      ],
+      "operators": [
+        "ts_delta",
+        "ts_zscore"
+      ],
+      "datasets": [
+        "analyst11"
+      ],
+      "unknown_fields": [],
+      "unknown_operators": [],
+      "ghost_operators": [],
+      "cross_dataset": false,
+      "min_window": 21,
+      "short_window": false,
+      "degenerate": false,
+      "validator_issues": [],
+      "legal": true
+    },
+    {
+      "expression": "divide(ts_delta(anl10_ebifq1_pred_surps_v2_2230,21), ts_std_dev(anl10_ebify2_smart_ests_v0_2247,63)) * rank(ts_decay_linear(ts_delta(anl10_gpsff_2643,21),21))",
+      "quality": "66.83",
+      "status": "PENDING_SIMULATION",
+      "fields": [
+        "anl10_ebifq1_pred_surps_v2_2230",
+        "anl10_ebify2_smart_ests_v0_2247",
+        "anl10_gpsff_2643"
+      ],
+      "operators": [
+        "divide",
+        "rank",
+        "ts_decay_linear",
+        "ts_delta",
+        "ts_std_dev"
+      ],
+      "datasets": [
+        "analyst10"
+      ],
+      "unknown_fields": [],
+      "unknown_operators": [],
+      "ghost_operators": [],
+      "cross_dataset": false,
+      "min_window": 21,
+      "short_window": false,
+      "degenerate": false,
+      "validator_issues": [],
+      "legal": true
+    },
+    {
+      "expression": "ts_zscore(ts_delta(anl10_ebify2_smart_ests_v0_2247,21),126) * rank(ts_decay_linear(ts_delta(anl10_gpsff_2643,21),21)) - ts_std_dev(anl10_ebifq1_pred_surps_v2_2230,63)",
+      "quality": "66.83",
+      "status": "PENDING_SIMULATION",
+      "fields": [
+        "anl10_ebifq1_pred_surps_v2_2230",
+        "anl10_ebify2_smart_ests_v0_2247",
+        "anl10_gpsff_2643"
+      ],
+      "operators": [
+        "rank",
+        "ts_decay_linear",
+        "ts_delta",
+        "ts_std_dev",
+        "ts_zscore"
+      ],
+      "datasets": [
+        "analyst10"
+      ],
+      "unknown_fields": [],
+      "unknown_operators": [],
+      "ghost_operators": [],
+      "cross_dataset": false,
+      "min_window": 21,
+      "short_window": false,
+      "degenerate": false,
+      "validator_issues": [],
+      "legal": true
+    },
+    {
+      "expression": "ts_rank(ts_delta(anl10_ebify2_smart_ests_v0_2247,21),126) * ts_zscore(ts_delta(anl10_gpsff_2643,63),126) / ts_std_dev(anl10_ebifq1_pred_surps_v2_2230,21)",
+      "quality": "67.69",
+      "status": "PENDING_SIMULATION",
+      "fields": [
+        "anl10_ebifq1_pred_surps_v2_2230",
+        "anl10_ebify2_smart_ests_v0_2247",
+        "anl10_gpsff_2643"
+      ],
+      "operators": [
+        "ts_delta",
+        "ts_rank",
+        "ts_std_dev",
+        "ts_zscore"
+      ],
+      "datasets": [
+        "analyst10"
+      ],
+      "unknown_fields": [],
+      "unknown_operators": [],
+      "ghost_operators": [],
+      "cross_dataset": false,
+      "min_window": 21,
+      "short_window": false,
+      "degenerate": false,
+      "validator_issues": [],
+      "legal": true
+    },
+    {
+      "expression": "divide(ts_delta(anl14_stddev_div_fy3, 21), ts_std_dev(anl14_stddev_div_fy3, 126))",
+      "quality": "65.65",
+      "status": "PENDING_SIMULATION",
+      "fields": [
+        "anl14_stddev_div_fy3"
+      ],
+      "operators": [
+        "divide",
+        "ts_delta",
+        "ts_std_dev"
+      ],
+      "datasets": [
+        "analyst14"
+      ],
+      "unknown_fields": [],
+      "unknown_operators": [],
+      "ghost_operators": [],
+      "cross_dataset": false,
+      "min_window": 21,
+      "short_window": false,
+      "degenerate": false,
+      "validator_issues": [],
+      "legal": true
+    },
+    {
+      "expression": "ts_rank(ts_delta(anl14_stddev_div_fy3, 63), 126) - ts_rank(ts_mean(anl14_stddev_div_fy3, 21), 126)",
+      "quality": "67.47",
+      "status": "PENDING_SIMULATION",
+      "fields": [
+        "anl14_stddev_div_fy3"
+      ],
+      "operators": [
+        "ts_delta",
+        "ts_mean",
+        "ts_rank"
+      ],
+      "datasets": [
+        "analyst14"
+      ],
+      "unknown_fields": [],
+      "unknown_operators": [],
+      "ghost_operators": [],
+      "cross_dataset": false,
+      "min_window": 21,
+      "short_window": false,
+      "degenerate": false,
+      "validator_issues": [],
+      "legal": true
+    },
+    {
+      "expression": "rank(ts_delta(anl14_stddev_div_fy3, 63)) * rank(ts_decay_linear(ts_delta(anl14_stddev_div_fy3, 21), 21))",
+      "quality": "65.65",
+      "status": "PENDING_SIMULATION",
+      "fields": [
+        "anl14_stddev_div_fy3"
+      ],
+      "operators": [
+        "rank",
+        "ts_decay_linear",
+        "ts_delta"
+      ],
+      "datasets": [
+        "analyst14"
+      ],
+      "unknown_fields": [],
+      "unknown_operators": [],
+      "ghost_operators": [],
+      "cross_dataset": false,
+      "min_window": 21,
+      "short_window": false,
+      "degenerate": false,
+      "validator_issues": [],
+      "legal": true
+    },
+    {
+      "expression": "rank(ts_delta(ts_std_dev(anl14_stddev_div_fy3, 126), 21)) * ts_zscore(ts_delta(anl14_stddev_div_fy3, 63), 126)",
+      "quality": "69.03",
+      "status": "PENDING_SIMULATION",
+      "fields": [
+        "anl14_stddev_div_fy3"
+      ],
+      "operators": [
+        "rank",
+        "ts_delta",
+        "ts_std_dev",
+        "ts_zscore"
+      ],
+      "datasets": [
+        "analyst14"
+      ],
+      "unknown_fields": [],
+      "unknown_operators": [],
+      "ghost_operators": [],
+      "cross_dataset": false,
+      "min_window": 63,
+      "short_window": false,
+      "degenerate": false,
+      "validator_issues": [],
+      "legal": true
+    },
+    {
+      "expression": "rank(ts_delta(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 63)) * ts_std_dev(ts_delta(anl14_numofests_roa_fp4, 21), 21)",
+      "quality": "65.01",
+      "status": "PENDING_SIMULATION",
+      "fields": [
+        "anl14_median_cfps_fp4",
+        "anl14_median_div_fy4",
+        "anl14_numofests_roa_fp4"
+      ],
+      "operators": [
+        "divide",
+        "rank",
+        "ts_delta",
+        "ts_std_dev"
+      ],
+      "datasets": [
+        "analyst14"
+      ],
+      "unknown_fields": [],
+      "unknown_operators": [],
+      "ghost_operators": [],
+      "cross_dataset": false,
+      "min_window": 21,
+      "short_window": false,
+      "degenerate": false,
+      "validator_issues": [],
+      "legal": true
+    },
+    {
+      "expression": "ts_decay_linear(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 63) - ts_mean(ts_delta(anl14_numofests_roa_fp4, 21), 63)",
+      "quality": "66.31",
+      "status": "PENDING_SIMULATION",
+      "fields": [
+        "anl14_median_cfps_fp4",
+        "anl14_median_div_fy4",
+        "anl14_numofests_roa_fp4"
+      ],
+      "operators": [
+        "divide",
+        "ts_decay_linear",
+        "ts_delta",
+        "ts_mean"
+      ],
+      "datasets": [
+        "analyst14"
+      ],
+      "unknown_fields": [],
+      "unknown_operators": [],
+      "ghost_operators": [],
+      "cross_dataset": false,
+      "min_window": 21,
+      "short_window": false,
+      "degenerate": false,
+      "validator_issues": [],
+      "legal": true
+    },
+    {
+      "expression": "ts_delta(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 126) / ts_std_dev(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 126)",
+      "quality": "65.22",
+      "status": "PENDING_SIMULATION",
+      "fields": [
+        "anl14_median_cfps_fp4",
+        "anl14_median_div_fy4"
+      ],
+      "operators": [
+        "divide",
+        "ts_delta",
+        "ts_std_dev"
+      ],
+      "datasets": [
+        "analyst14"
+      ],
+      "unknown_fields": [],
+      "unknown_operators": [],
+      "ghost_operators": [],
+      "cross_dataset": false,
+      "min_window": null,
+      "short_window": false,
+      "degenerate": false,
+      "validator_issues": [],
+      "legal": true
+    },
+    {
+      "expression": "rank(ts_delta(anl14_median_cfps_fp4, 126)) - ts_mean(divide(anl14_median_div_fy4, anl14_median_cfps_fp4), 63)",
+      "quality": "65.0",
+      "status": "PENDING_SIMULATION",
+      "fields": [
+        "anl14_median_cfps_fp4",
+        "anl14_median_div_fy4"
+      ],
+      "operators": [
+        "divide",
+        "rank",
+        "ts_delta",
+        "ts_mean"
+      ],
+      "datasets": [
+        "analyst14"
+      ],
+      "unknown_fields": [],
+      "unknown_operators": [],
+      "ghost_operators": [],
+      "cross_dataset": false,
+      "min_window": 126,
+      "short_window": false,
+      "degenerate": false,
+      "validator_issues": [],
+      "legal": true
+    },
+    {
+      "expression": "rank(ts_delta(divide(anl14_median_cfps_fp4, anl14_median_div_fy4), 63)) * ts_std_dev(anl14_numofests_roa_fp4, 63)",
+      "quality": "61.11",
+      "status": "PENDING_SIMULATION",
+      "fields": [
+        "anl14_median_cfps_fp4",
+        "anl14_median_div_fy4",
+        "anl14_numofests_roa_fp4"
+      ],
+      "operators": [
+        "divide",
+        "rank",
+        "ts_delta",
+        "ts_std_dev"
+      ],
+      "datasets": [
+        "analyst14"
+      ],
+      "unknown_fields": [],
+      "unknown_operators": [],
+      "ghost_operators": [],
+      "cross_dataset": false,
+      "min_window": 63,
+      "short_window": false,
+      "degenerate": false,
+      "validator_issues": [],
+      "legal": true
+    }
+  ]
+}
