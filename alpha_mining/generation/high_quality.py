@@ -1495,6 +1495,19 @@ class HighQualityGenerator:
         }
         _allowed_operators = sorted(_string_set(plan.get("operators_to_use")))
         _has_group_operator = any(item.startswith("group_") for item in _allowed_operators)
+        # A grouping axis is not a catalog field, so it is never in allowed_fields:
+        # fields_to_use is drawn from a single dataset key. Recommending a
+        # peer-group shape while calling allowed_fields a COMPLETE whitelist left
+        # the model one buildable shape, group_neutralize(x, rank(allowed_field)),
+        # which the platform refuses as InvalidArgumentType { expected: Group,
+        # actual: Matrix }. _suppressible_scope_issue already tolerates these
+        # labels and the repair prompt already discloses them; this step, which
+        # writes the first expression, saw neither.
+        _group_labels = sorted(GROUPS)
+        _axis_example = (
+            "subindustry" if "subindustry" in GROUPS
+            else (_group_labels[0] if _group_labels else "")
+        )
         # The vec_* gate runs on the expression THIS step writes, so field_type has
         # to be disclosed here too -- field_dataset_map carries the dataset but not
         # the type, which is the same defect the window rule had.
@@ -1523,6 +1536,7 @@ class HighQualityGenerator:
             "vector_fields_requiring_reduction": _vector_fields,
             "near_variant_field_pairs": _near_variant_pairs,
             "allowed_operators": _allowed_operators,
+            **({"group_labels": _group_labels} if _has_group_operator else {}),
             "allowed_knowledge_refs": [item.ref_id for item in knowledge.snippets],
             "allowed_feedback_refs": [
                 item.ref_id for item in snapshots.feedback.records if item.grounded and item.expression
@@ -1603,6 +1617,26 @@ class HighQualityGenerator:
                     "so peer-group neutralization is unavailable and naming one is rejected. Express the "
                     "relationship with the operators you do have - a change against its own scale, or a "
                     "ratio or difference between two allowed fields."
+                ),
+                # Disclosed only where the shape is recommended and only when the
+                # whitelist can express it, matching the vec_* rule above. The
+                # repair prompt says "group_labels are grouping arguments, not
+                # fields"; the step that writes the first expression needs it too.
+                *(
+                    [
+                        "group_labels lists the ONLY legal values for the grouping argument of a "
+                        f"group_* operator -- that is the last argument, as in group_neutralize(x, {_axis_example}). "
+                        "They are peer-group axes, not fields, and they are legal even though they "
+                        "are deliberately absent from allowed_fields; using one is not a scope "
+                        "violation. Never put a field or an expression in that slot: "
+                        "group_neutralize(x, rank(some_allowed_field)) is refused by the platform "
+                        "type checker as InvalidArgumentType { expected: Group, actual: Matrix }, "
+                        "and the whole candidate dies as LOCAL_VALIDATION_FASTPLUS. The first "
+                        "argument is the signal and must still be built only from allowed_fields "
+                        "and allowed_operators."
+                    ]
+                    if _has_group_operator and _group_labels
+                    else []
                 ),
                 "When a combination cannot be proven legal, switch to a different pair of allowed fields "
                 "or a different allowed operator; never collapse to a bare one-field one-operator shape.",
