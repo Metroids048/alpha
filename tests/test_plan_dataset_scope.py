@@ -339,6 +339,68 @@ def test_seed_fields_stay_in_scope_even_outside_the_window() -> None:
     assert "f_296_39" in allowed
 
 
+def test_queue_datasets_column_is_decoded_into_inventory() -> None:
+    """The queue stores ``datasets`` as a JSON array, so it must be decoded.
+
+    ``InventoryRecord.dataset`` was taken verbatim from the CSV column, giving
+    ``'["analyst9"]'`` where every consumer compares against a bare dataset id.
+    Measured on the validation queue: 5 pending rows on ``analyst9`` and an
+    occupancy of 0 for it -- so both the visibility rotation and the
+    concentration gate were blind to work already queued.  The database path
+    already decodes the same column via ``_dataset_value``.
+    """
+    from alpha_mining.generation.snapshots import load_candidate_inventory
+
+    loaded = load_candidate_inventory(
+        [
+            {
+                "request_hash": "h1", "candidate_id": "c1", "expression": "rank(f_001_00)",
+                "queue_status": "PENDING_SIMULATION", "operator_family": "rank",
+                "datasets": '["analyst9"]', "data_fields": '["f_001_00"]',
+            },
+            # A bare value must survive untouched, and an empty one stay empty.
+            {
+                "request_hash": "h2", "candidate_id": "c2", "expression": "rank(f_002_00)",
+                "queue_status": "PENDING_SIMULATION", "operator_family": "rank",
+                "datasets": "analyst10", "data_fields": "[]",
+            },
+            {
+                "request_hash": "h3", "candidate_id": "c3", "expression": "rank(f_003_00)",
+                "queue_status": "PENDING_SIMULATION", "operator_family": "rank",
+                "datasets": "", "data_fields": "[]",
+            },
+        ]
+    )
+
+    # Records come back sorted by ref_id, so compare by candidate.
+    decoded = {item.candidate_id: item.dataset for item in loaded.records}
+    assert decoded == {"c1": "analyst9", "c2": "analyst10", "c3": ""}
+
+    catalog = _wide_snapshots(4, 2).catalog
+    snapshots = LocalSnapshots(
+        catalog=catalog, catalog_dir=Path("."), catalog_source="test", catalog_age_hours=0.0,
+        feedback=FeedbackSummary(
+            records=(), positive=(), near_pass=(), failures=(), self_corr_risk=(),
+            failure_counts={},
+        ),
+        inventory=CandidateInventory(
+            records=(
+                InventoryRecord(
+                    ref_id="r1", candidate_id="c1", request_hash="h1",
+                    expression="rank(f_001_00)", queue_status="PENDING_SIMULATION",
+                    family="rank", dataset="ds_001", data_fields=(),
+                ),
+            )
+        ),
+    )
+
+    allowed = HighQualityGenerator._research_field_ids(snapshots, [])
+    occupancy = HighQualityGenerator._dataset_occupancy(snapshots, allowed)
+
+    assert occupancy["ds_001"] == 1, occupancy
+    assert HighQualityGenerator._research_dataset_priority(snapshots, allowed)[-1] == "ds_001"
+
+
 def test_group_axis_is_not_a_cross_dataset_data_draw() -> None:
     """A grouping keyword is a partition axis, not a field drawn from a dataset.
 

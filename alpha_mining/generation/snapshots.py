@@ -302,7 +302,12 @@ def load_candidate_inventory(
                 expression=expression,
                 queue_status=str(row.get("queue_status") or ""),
                 family=str(row.get("operator_family") or ""),
-                dataset=str(row.get("datasets") or ""),
+                # The queue serializes this column as a JSON array, while every
+                # consumer compares against a bare dataset id.  Taken verbatim
+                # it yielded '["analyst9"]', so occupancy stayed 0 for datasets
+                # that already carried pending work.  Same decoding as the
+                # database path.
+                dataset=_dataset_value("", row.get("datasets")),
                 data_fields=_json_string_tuple(row.get("data_fields")),
                 research_direction=str(row.get("research_direction") or ""),
                 last_error_category=str(row.get("last_error_category") or ""),
