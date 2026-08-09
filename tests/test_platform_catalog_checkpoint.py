@@ -57,10 +57,15 @@ class _Client:
         dataset_ids: tuple[str, ...] = DATASET_IDS,
         fail_on_dataset: str | None = None,
         dataset_category: str = "model",
+        extra_dataset_fields: dict[str, object] | None = None,
     ) -> None:
         self.dataset_ids = dataset_ids
         self.fail_on_dataset = fail_on_dataset
         self.dataset_category = dataset_category
+        # Lets a test move a single dataset metadata field, which is how the
+        # live platform behaves: it re-scores pyramidMultiplier and bumps
+        # alphaCount/userCount continuously while a ~2h sync is in flight.
+        self.extra_dataset_fields = dict(extra_dataset_fields or {})
         self.dataset_requests: list[dict[str, object]] = []
         self.field_requests: list[dict[str, object]] = []
         self.operator_requests: list[dict[str, object]] = []
@@ -72,7 +77,17 @@ class _Client:
 
     def _dataset_rows(self) -> list[dict[str, object]]:
         return [
-            {"id": dataset_id, "name": dataset_id.upper(), "category": self.dataset_category}
+            {
+                "id": dataset_id,
+                "name": dataset_id.upper(),
+                "category": self.dataset_category,
+                "fieldCount": 2,
+                "pyramidMultiplier": 1.3,
+                "alphaCount": 38,
+                "userCount": 17,
+                "valueScore": 5.0,
+                **self.extra_dataset_fields,
+            }
             for dataset_id in self.dataset_ids
         ]
 
@@ -425,6 +440,41 @@ def test_same_dataset_ids_with_changed_metadata_is_stale(tmp_path) -> None:
         _sync(tmp_path, _Client(fail_on_dataset="analyst10"), resume=True)
 
     changed = _Client(dataset_category="analyst")
+    with pytest.raises(CatalogCheckpointStale):
+        _sync(tmp_path, changed, resume=True)
+
+    assert changed.field_requests == []
+
+
+def test_scoring_field_drift_does_not_invalidate_the_checkpoint(tmp_path) -> None:
+    """Measured live behaviour: the platform re-scores datasets mid-sync.
+
+    On 2026-08-09 it moved pyramidMultiplier 1.3 -> 1.2 on 6 of 297 datasets
+    while a resume was pending, with fieldCount unchanged on all 297.  Binding
+    the whole record made that discard 100 verified datasets / 39474 field rows
+    for a field the pipeline never reads (zero references repo-wide).  Only
+    fields that bear on data correctness may force a restart.
+    """
+    with pytest.raises(_Boom):
+        _sync(tmp_path, _Client(fail_on_dataset="analyst10"), resume=True)
+
+    rescored = _Client(extra_dataset_fields={"pyramidMultiplier": 1.2, "alphaCount": 41, "userCount": 19})
+    counts = _sync(tmp_path, rescored, resume=True)
+
+    assert counts == {"datasets": 3, "data_fields": 6, "operators": 2}
+    # pv1 was already banked, so only the two unfinished datasets are refetched.
+    refetched = {str(params["dataset.id"]) for params in rescored.field_requests}
+    assert refetched == {"analyst10", "fundamental6"}
+
+
+def test_field_count_drift_is_stale(tmp_path) -> None:
+    """fieldCount is bound: it means a stored envelope may now be incomplete."""
+    from alpha_mining.platform.catalog import CatalogCheckpointStale
+
+    with pytest.raises(_Boom):
+        _sync(tmp_path, _Client(fail_on_dataset="analyst10"), resume=True)
+
+    changed = _Client(extra_dataset_fields={"fieldCount": 3})
     with pytest.raises(CatalogCheckpointStale):
         _sync(tmp_path, changed, resume=True)
 

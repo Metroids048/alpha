@@ -62,10 +62,41 @@ def _stable_hash(value: Any) -> str:
 def _dataset_fingerprint(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Order-independent view of the datasets snapshot.
 
-    Sorted by id so platform page ordering cannot fake a STALE verdict, while
-    any change to dataset metadata (name, category, coverage, ...) still does.
+    Sorted by id so platform page ordering cannot fake a STALE verdict. This is
+    the full record: it is what ``datasets_hash`` commits to, so the manifest
+    stays self-describing and every envelope binds to an exact snapshot.
     """
     return sorted((dict(row) for row in rows), key=lambda row: str(row.get("id") or ""))
+
+
+# Resume is only refused when a field that bears on *data correctness* moved.
+#   id                  -- identity
+#   fieldCount          -- a stored envelope may now be incomplete
+#   region/universe/delay -- the row no longer answers our request context
+#   category/subcategory  -- consumed by MetadataCache (offline/metadata.py:329)
+# Everything else is descriptive, scored, or a live platform counter:
+# pyramidMultiplier, alphaCount, userCount, valueScore, dateUpdated, coverage,
+# dateCoverage, name, description, themes, researchPapers.  Measured on
+# 2026-08-09: the platform moved pyramidMultiplier 1.3 -> 1.2 on 6 of 297
+# datasets during a ~2h sync while fieldCount held on all 297.  Binding the
+# whole record made resume rarer than the failure it exists to survive.
+_SNAPSHOT_BOUND_KEYS = (
+    "id",
+    "fieldCount",
+    "region",
+    "universe",
+    "delay",
+    "category",
+    "subcategory",
+)
+
+
+def _bound_dataset_fingerprint(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The correctness-bearing projection compared across invocations."""
+    return sorted(
+        ({key: row[key] for key in _SNAPSHOT_BOUND_KEYS if key in row} for row in rows),
+        key=lambda row: str(row.get("id") or ""),
+    )
 
 
 def _write_json_atomic(target: Path, payload: Any) -> None:
@@ -180,12 +211,16 @@ class PlatformCatalogSynchronizer:
         """Bind the checkpoint to the live authoritative datasets snapshot.
 
         Comparing IDs alone would happily splice a stale checkpoint onto a
-        catalog whose dataset metadata moved, so the full record hash is
-        checked too.
+        catalog whose dataset structure moved, so the correctness-bearing
+        projection (``_SNAPSHOT_BOUND_KEYS``) is compared too. Descriptive and
+        continuously re-scored fields are deliberately excluded: the platform
+        mutates them faster than a full sync completes, so binding them would
+        make the checkpoint expire before the failure it exists to survive.
         """
         if manifest["dataset_ids_hash"] != _stable_hash(dataset_ids):
             raise CatalogCheckpointStale("platform dataset ID set changed since the checkpoint was written")
-        if manifest["datasets_hash"] != _stable_hash(_dataset_fingerprint(datasets)):
+        stored = _bound_dataset_fingerprint([dict(row) for row in manifest["datasets"]])
+        if _stable_hash(stored) != _stable_hash(_bound_dataset_fingerprint(datasets)):
             raise CatalogCheckpointStale("platform dataset metadata changed since the checkpoint was written")
 
     # -- dataset field envelopes -----------------------------------------
