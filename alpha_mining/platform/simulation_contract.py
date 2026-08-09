@@ -23,6 +23,10 @@ _REQUIRED_KEYS = (
     "truncation",
     "language",
 )
+# alpha_type is validated like the rest, but it is a property of the simulation
+# payload (its outer "type"), not of "settings".  The endpoint refuses it there:
+#   POST /simulations -> 400 {"settings":{"alphaType":["Unexpected property."]}}
+_PAYLOAD_ONLY_KEYS = frozenset({"alpha_type"})
 
 
 @dataclass(frozen=True)
@@ -72,15 +76,31 @@ class SimulationSettingsContract:
         return cls(dict(defaults), normalized_allowed, dict(context), source)
 
     def prepare(self, settings: dict[str, Any] | None) -> dict[str, Any]:
+        """Canonicalize what belongs in the request's ``settings`` object.
+
+        Keys the schema enumerates are canonicalized against it.  Keys it does
+        not enumerate are passed through untouched: the synced schema carries no
+        ``instrumentType``, while the endpoint requires one, so dropping unknown
+        keys would make every simulation a 400.
+        """
+
         source = settings if isinstance(settings, dict) else {}
         merged = {**self.defaults, **source}
-        prepared = dict(source)
+        prepared = {key: value for key, value in source.items() if key not in _PAYLOAD_ONLY_KEYS}
         for key in _REQUIRED_KEYS:
-            prepared[key] = self._canonical_value(key, merged[key])
+            value = self._canonical_value(key, merged[key])
+            if key not in _PAYLOAD_ONLY_KEYS:
+                prepared[key] = value
         for key in ("region", "universe", "delay"):
             if key in self.context and prepared[key] != self._canonical_value(key, self.context[key]):
                 raise ValueError(f"{key} does not match the synchronized schema context")
         return prepared
+
+    def alpha_type(self, settings: dict[str, Any] | None = None) -> Any:
+        """The payload's ``type``, canonicalized against the same schema."""
+
+        source = settings if isinstance(settings, dict) else {}
+        return self._canonical_value("alpha_type", {**self.defaults, **source}["alpha_type"])
 
     def _canonical_value(self, key: str, value: Any) -> Any:
         allowed = self.allowed_values[key]

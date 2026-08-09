@@ -127,7 +127,12 @@ def test_successful_temporary_database_simulation_e2e(tmp_path: Path) -> None:
         claim = con.execute("SELECT status FROM factory_candidate_claims").fetchone()[0]
         runs = con.execute("SELECT alpha_id FROM simulation_runs").fetchall()
     assert request[:3] == ("COMPLETE", "/simulations/progress/1", "alpha-e2e")
-    assert json.loads(request[3])["settings"]["alpha_type"] == "REGULAR"
+    # The stored payload is the wire payload: type at the top level, and no
+    # alpha_type inside settings -- the endpoint refuses it there with
+    # {"settings":{"alphaType":["Unexpected property."]}}.
+    stored = json.loads(request[3])
+    assert stored["type"] == "REGULAR"
+    assert "alpha_type" not in stored["settings"]
     assert claim == "SIMULATED"
     assert runs == [("alpha-e2e",)]
 

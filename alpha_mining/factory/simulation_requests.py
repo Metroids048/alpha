@@ -67,12 +67,16 @@ class SimulationRequestStore:
         context: dict[str, Any] | None = None,
         allow_existing_identity: bool = False,
     ) -> ClaimResult:
+        alpha_type = str(settings.get("alpha_type") or "REGULAR").upper()
         if self.settings_contract is not None:
             try:
+                # The outer type must be resolved before prepare() strips it:
+                # the platform refuses alpha_type inside "settings", so reading
+                # it back from the prepared object would silently default here.
+                alpha_type = str(self.settings_contract.alpha_type(settings)).upper()
                 settings = self.settings_contract.prepare(settings)
             except ValueError:
                 return ClaimResult(False, "invalid_simulation_settings")
-        alpha_type = str(settings.get("alpha_type") or "REGULAR").upper()
         identity = expression_identity(expression)
         if not identity.parameter_skeleton or not identity.field_skeleton:
             return ClaimResult(False, "invalid_identity")

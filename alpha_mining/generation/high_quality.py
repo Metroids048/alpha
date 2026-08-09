@@ -1065,7 +1065,14 @@ class HighQualityGenerator:
         try:
             settings = _settings(row.get("settings"), snapshots.catalog.info)
             if self.settings_contract is not None:
-                settings = self.settings_contract.prepare(settings)
+                # prepare() returns the wire object, which must not carry
+                # alpha_type -- the endpoint refuses it inside "settings".  The
+                # stored candidate settings are a business record and keep it,
+                # both for the queue row and for the gateway's outer "type".
+                settings = {
+                    "alpha_type": self.settings_contract.alpha_type(settings),
+                    **self.settings_contract.prepare(settings),
+                }
         except ValueError:
             return "INVALID_SIMULATION_SETTINGS"
         generator_source = str(

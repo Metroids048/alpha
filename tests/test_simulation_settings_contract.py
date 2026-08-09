@@ -106,6 +106,81 @@ def test_gateway_refuses_invalid_settings_before_simulation_post(tmp_path: Path)
     assert client.requests == []
 
 
+def test_prepared_settings_carry_no_alpha_type(tmp_path: Path) -> None:
+    """alpha_type is a payload field, not a settings field.
+
+    The live endpoint refuses it inside ``settings``:
+        POST /simulations -> HTTP 400
+        {"settings":{"alphaType":["Unexpected property."], ...}}
+    It still has to be validated against the synchronized schema, because the
+    gateway cross-checks the outer ``type`` against it -- so it is checked and
+    then dropped, not left unchecked.
+    """
+    from alpha_mining.platform.simulation_contract import SimulationSettingsContract
+
+    contract = SimulationSettingsContract.load(_write_schema(tmp_path / "settings.json"))
+
+    prepared = contract.prepare({"neutralization": "MARKET"})
+
+    assert "alpha_type" not in prepared
+    assert contract.alpha_type({"neutralization": "MARKET"}) == "REGULAR"
+    # An out-of-schema alpha_type must still be refused rather than ignored.
+    with pytest.raises(ValueError, match="alpha_type"):
+        contract.alpha_type({"alpha_type": "SUPER"})
+
+
+def test_prepared_settings_keep_platform_required_extras(tmp_path: Path) -> None:
+    """Keys the platform requires but the schema does not enumerate must survive.
+
+    The synced schema carries no ``instrumentType`` at all, yet the endpoint
+    refuses a payload without it ("This field is required."), so prepare() must
+    pass a caller-supplied value through untouched.
+    """
+    from alpha_mining.platform.simulation_contract import SimulationSettingsContract
+
+    contract = SimulationSettingsContract.load(_write_schema(tmp_path / "settings.json"))
+
+    prepared = contract.prepare({"instrumentType": "EQUITY", "neutralization": "MARKET"})
+
+    assert prepared["instrumentType"] == "EQUITY"
+
+
+def test_gateway_sends_settings_without_alpha_type_and_type_at_top_level(tmp_path: Path) -> None:
+    """The wire payload must match what the platform accepts."""
+    from alpha_mining.platform.gateway import PlatformGateway
+
+    captured: dict[str, object] = {}
+
+    class Client:
+        def authenticate(self) -> None:
+            return None
+
+        def request(self, method: str, url: str, **kwargs):
+            captured["method"] = method
+            captured["url"] = url
+            captured["json"] = kwargs.get("json")
+            raise RuntimeError("stop after capturing the payload")
+
+    gateway = PlatformGateway(
+        database=tmp_path / "gateway.sqlite",
+        settings_schema_path=_write_schema(tmp_path / "settings.json"),
+    )
+    gateway.client = Client()
+
+    with pytest.raises(RuntimeError, match="stop after capturing"):
+        gateway.simulate(
+            expression="rank(close)",
+            settings={"instrumentType": "EQUITY", "neutralization": "MARKET"},
+        )
+
+    payload = captured["json"]
+    assert payload["type"] == "REGULAR"
+    assert payload["regular"] == "rank(close)"
+    assert "alpha_type" not in payload["settings"]
+    assert "alphaType" not in payload["settings"]
+    assert payload["settings"]["instrumentType"] == "EQUITY"
+
+
 def test_gateway_refuses_outer_alpha_type_that_disagrees_with_settings(tmp_path: Path) -> None:
     from alpha_mining.platform.gateway import PlatformGateway
 

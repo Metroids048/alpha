@@ -122,8 +122,9 @@ class PlatformGateway:
         kind = str(alpha_type or "REGULAR").upper()
         body: dict[str, Any] = {}
         if not location:
-            canonical_settings = self.simulation_settings_contract.prepare(settings)
-            if kind != str(canonical_settings["alpha_type"]).upper():
+            contract = self.simulation_settings_contract
+            canonical_settings = contract.prepare(settings)
+            if kind != str(contract.alpha_type(settings)).upper():
                 raise ValueError("alpha_type does not match the synchronized simulation settings")
             payload: dict[str, Any] = {"type": kind, "settings": canonical_settings}
             if kind == "REGULAR":
