@@ -314,6 +314,28 @@ def test_existing_definitions_keep_their_canonical_arity() -> None:
     assert _arity_from_signature("ts_regression(y, x, d, lag = 0, rettype = 0)") == 3
 
 
+# The live payload does not spell the variadic marker consistently.  Verbatim
+# from the authoritative 82-operator response captured 2026-08-09:
+LIVE_MAX = "max(x, y, ..)"
+LIVE_MIN = "min(x, y ..)"
+
+
+def test_two_dot_variadic_marker_is_not_a_positional_parameter() -> None:
+    """``max(x, y, ..)`` is binary; counting ".." as a parameter made it 3.
+
+    Arity is compared with exact equality in LocalExpressionValidator, so an
+    over-count turns the legal ``max(x, y)`` into a false INVALID_ARITY.
+    """
+    from alpha_mining.platform.catalog import _arity_from_signature
+
+    assert _arity_from_signature(LIVE_MAX) == 2
+    # No separating comma before the marker -- "y .." is still one parameter.
+    assert _arity_from_signature(LIVE_MIN) == 2
+    # Three-dot and defaulted forms keep the arity they already had.
+    assert _arity_from_signature("multiply(x, y, ..., filter=false)") == 2
+    assert _arity_from_signature("add(x, y, filter = false)") == 2
+
+
 def test_unrepresentable_operator_is_excluded_without_failing_the_sync(tmp_path: Path) -> None:
     """A complete 297-dataset catalog must not die over one infix operator."""
     from alpha_mining.platform.catalog import PlatformCatalogSynchronizer

@@ -550,9 +550,14 @@ def _arity_from_signature(signature: str) -> int | None:
         token = part.strip()
         if not token:
             continue
-        # "..." marks a variadic tail and "name = default" an optional
-        # parameter; neither belongs in the minimum positional form.
-        if "..." in token or "=" in token:
+        # A trailing run of dots marks a variadic tail and "name = default" an
+        # optional parameter; neither belongs in the minimum positional form.
+        # The live payload is inconsistent about the marker: multiply writes
+        # "...", max writes "..", and min writes "y .." with no separating
+        # comma -- so strip the run and keep whatever real parameter precedes
+        # it, instead of requiring exactly three dots.
+        token = token.rstrip(".").rstrip()
+        if not token or "..." in token or "=" in token:
             continue
         if any(marker in token for marker in ("*", "[", "]")):
             return None
