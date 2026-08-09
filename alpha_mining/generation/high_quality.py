@@ -19,10 +19,11 @@ from alpha_mining.domain.expression_normalization import (
     operator_topology,
     structure_signature,
 )
+from alpha_mining.domain.expression_ast import AstNode, ExpressionSyntaxError, parse_expression
 from alpha_mining.domain.operator_registry import BASE_VARS, GROUPS
 from alpha_mining.generation.snapshots import LocalSnapshots
 from alpha_mining.generation.portfolio import PortfolioLimits, select_candidates
-from alpha_mining.generation.validation import LocalExpressionValidator
+from alpha_mining.generation.validation import LocalExpressionValidator, ValidationIssue
 from alpha_mining.knowledge.worldquant_repository import KnowledgeIntent, KnowledgeContext, WorldQuantKnowledgeRepository
 
 
@@ -93,6 +94,55 @@ _RESEARCH_FIELD_ENTRY_OVERHEAD = 34
 # Admitted regardless of budget: below three datasets the concentration gate
 # has nothing to choose between.
 _RESEARCH_MIN_DATASETS = 3
+
+
+def _group_axis_identifiers(expression: str) -> set[str]:
+    """Grouping keywords used as the *axis* argument of a ``group_*`` call.
+
+    ``sector``, ``industry``, ``subindustry``, ``market`` and ``country`` are
+    partition axes, but on the live catalog they are also real ``pv1`` fields.
+    Position is what separates the two readings, so it is read off the AST
+    rather than guessed from the name: only a ``GROUPS`` identifier sitting in
+    a non-first argument of a ``group_*`` call is an axis.  The same token used
+    as an ordinary operand stays a data draw and stays subject to the
+    single-dataset rule.
+    """
+
+    try:
+        root = parse_expression(expression)
+    except ExpressionSyntaxError:
+        return set()
+
+    axes: set[str] = set()
+
+    def walk(node: AstNode) -> None:
+        if node.kind == "call" and str(node.value or "").lower().startswith("group_"):
+            for child in node.children[1:]:
+                if child.kind == "ident" and str(child.value) in GROUPS:
+                    axes.add(str(child.value))
+        for child in node.children:
+            walk(child)
+
+    walk(root)
+    return axes
+
+
+def _suppressible_scope_issue(issue: ValidationIssue, group_axes: set[str]) -> bool:
+    """True when a scope issue is an artefact of a group axis, not a real fault.
+
+    The validator has no notion of an axis: it sees an identifier, looks it up,
+    and reports either UNKNOWN_FIELD or -- once the catalog does carry
+    ``sector`` as a ``pv1`` field -- FIELD_DATASET_MISMATCH.  Both are false
+    here.  Suppression is keyed on the identifier actually occupying an axis
+    position in this very expression, so a genuine second dataset, and a group
+    keyword used as an operand, both keep failing.
+    """
+
+    if issue.code == "UNKNOWN_FIELD":
+        return issue.message in GROUPS and issue.message in group_axes
+    if issue.code == "FIELD_DATASET_MISMATCH":
+        return str(issue.message).split(" ", 1)[0] in group_axes
+    return False
 _REPAIRABLE_DRAFT_REJECTIONS = frozenset({
     "EMPTY_EXPRESSION", "INVALID_LLM_CANDIDATE", "CROSS_DATASET", "PLAN_SCOPE_VIOLATION",
     "UNKNOWN_FIELD", "UNKNOWN_OPERATOR", "GHOST_OPERATOR", "HALLUCINATED_KNOWLEDGE_REF",
@@ -929,7 +979,12 @@ class HighQualityGenerator:
         if parent not in parents:
             return "UNKNOWN_PARENT_SEED"
         validator = LocalExpressionValidator(snapshots.catalog, allow_stale_catalog=True)
-        issues = [issue for issue in validator.validate(expression, expected_dataset_id=next(iter(datasets))) if not (issue.code == "UNKNOWN_FIELD" and issue.message in GROUPS)]
+        group_axes = _group_axis_identifiers(expression)
+        issues = [
+            issue
+            for issue in validator.validate(expression, expected_dataset_id=next(iter(datasets)))
+            if not _suppressible_scope_issue(issue, group_axes)
+        ]
         if issues:
             return "LOCAL_VALIDATION_" + issues[0].code
         history = [

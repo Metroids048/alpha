@@ -339,6 +339,49 @@ def test_seed_fields_stay_in_scope_even_outside_the_window() -> None:
     assert "f_296_39" in allowed
 
 
+def test_group_axis_is_not_a_cross_dataset_data_draw() -> None:
+    """A grouping keyword is a partition axis, not a field drawn from a dataset.
+
+    On the live catalog ``sector``, ``industry``, ``subindustry``, ``market`` and
+    ``country`` all exist as real fields of ``pv1``.  So ``group_rank(x, sector)``
+    with a plan on any other dataset was refused as FIELD_DATASET_MISMATCH --
+    while plan_requirements simultaneously instructs the model to include a
+    grouping operator.  That contradiction rejected every grouped candidate on
+    296 of the catalog's 297 datasets.
+    """
+    from alpha_mining.generation.high_quality import _group_axis_identifiers
+
+    expression = "group_rank(ts_delta(alpha_one, 21), sector)"
+
+    assert _group_axis_identifiers(expression) == {"sector"}
+    # A group keyword used as an ordinary operand is still a data draw.
+    assert _group_axis_identifiers("ts_delta(sector, 21)") == set()
+    # Only the axis position of a group_* call counts, not its value argument.
+    assert _group_axis_identifiers("group_rank(sector, industry)") == {"industry"}
+
+
+def test_group_axis_mismatch_is_suppressed_but_real_mismatch_is_not() -> None:
+    """The suppression must be positional, not a blanket pardon for the name."""
+    from alpha_mining.generation.high_quality import _suppressible_scope_issue
+    from alpha_mining.generation.validation import ValidationIssue
+
+    axes = {"sector"}
+    mismatch = ValidationIssue(
+        "FIELD_DATASET_MISMATCH", "sector belongs to pv1, expected analyst_base_ref"
+    )
+    unknown = ValidationIssue("UNKNOWN_FIELD", "sector")
+    other = ValidationIssue(
+        "FIELD_DATASET_MISMATCH", "beta_one belongs to ds_beta, expected ds_alpha"
+    )
+
+    assert _suppressible_scope_issue(mismatch, axes)
+    assert _suppressible_scope_issue(unknown, axes)
+    # A genuine second dataset must still be refused.
+    assert not _suppressible_scope_issue(other, axes)
+    # And a group keyword that is NOT in an axis position must not be pardoned.
+    assert not _suppressible_scope_issue(mismatch, set())
+
+
 def test_research_prompt_groups_fields_by_dataset() -> None:
     """The one-dataset rule must be visible in the payload's shape."""
 
