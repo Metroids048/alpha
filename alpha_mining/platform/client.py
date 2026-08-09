@@ -369,7 +369,12 @@ class ReadOnlyPlatformClient:
             raise PlatformReadError("alpha list response is not an object")
         return payload
 
-    def _catalog_page(self, resource: str, params: dict[str, object]) -> dict[str, Any]:
+    def _catalog_json(self, resource: str, params: dict[str, object]) -> Any:
+        """Fetch one catalog resource and decode it, without asserting a shape.
+
+        Shape enforcement belongs to the callers: /data-sets and /data-fields are
+        paged objects, while /operators is an unpaged array.
+        """
         self.authenticate()
         response = self.request("GET", f"{BASE_URL}/{resource}", params=dict(params), endpoint_class="catalog")
         if response.status_code != 200:
@@ -394,7 +399,11 @@ class ReadOnlyPlatformClient:
             raise PlatformReadError(
                 f"read-only {resource} catalog failed with HTTP {response.status_code}{suffix}"
             )
-        payload = response.json()
+        return response.json()
+
+    def _catalog_page(self, resource: str, params: dict[str, object]) -> dict[str, Any]:
+        """Strict paged-object read for /data-sets and /data-fields."""
+        payload = self._catalog_json(resource, params)
         if not isinstance(payload, dict):
             raise PlatformReadError(f"read-only {resource} catalog response is not an object")
         return payload
@@ -405,8 +414,26 @@ class ReadOnlyPlatformClient:
     def list_data_fields(self, params: dict[str, object]) -> dict[str, Any]:
         return self._catalog_page("data-fields", params)
 
-    def list_operators(self, params: dict[str, object]) -> dict[str, Any]:
-        return self._catalog_page("operators", params)
+    def list_operators(self, params: dict[str, object]) -> list[dict[str, Any]]:
+        """Read /operators, which the platform serves as an unpaged JSON array.
+
+        Verified against the live read-only endpoint on 2026-08-08: HTTP 200,
+        top-level ``list`` of 82 objects. A paged object is still accepted so an
+        older contract keeps working, but any other shape -- and any non-object
+        element -- fails closed rather than being silently dropped.
+        """
+        payload = self._catalog_json("operators", params)
+        if isinstance(payload, dict):
+            rows = payload.get("results")
+            if not isinstance(rows, list):
+                raise PlatformReadError("read-only operators catalog object has no results list")
+        elif isinstance(payload, list):
+            rows = payload
+        else:
+            raise PlatformReadError("read-only operators catalog response is neither an array nor an object")
+        if not all(isinstance(row, dict) for row in rows):
+            raise PlatformReadError("read-only operators catalog contains a non-object entry")
+        return list(rows)
 
     def count_alphas(self, params: dict[str, object]) -> int:
         self.authenticate()

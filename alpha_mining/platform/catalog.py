@@ -15,7 +15,8 @@ from alpha_mining.offline.metadata import MetadataCache
 class CatalogClient(Protocol):
     def list_datasets(self, params: dict[str, object]) -> dict[str, Any]: ...
     def list_data_fields(self, params: dict[str, object]) -> dict[str, Any]: ...
-    def list_operators(self, params: dict[str, object]) -> dict[str, Any]: ...
+    # /operators is unpaged: the client returns the records directly, not a page.
+    def list_operators(self, params: dict[str, object]) -> list[dict[str, Any]]: ...
 
 
 class ReadOnlyExpressionCatalog(LocalExpressionValidator):
@@ -56,6 +57,27 @@ class PlatformCatalogSynchronizer:
                 raise ValueError("catalog returned an empty incomplete page")
             offset += len(batch)
 
+    def _operator_rows(self, client: CatalogClient, params: dict[str, object]) -> list[dict[str, Any]]:
+        """Collect operator records from the unpaged /operators endpoint.
+
+        A legacy paged object is still tolerated so existing contracts keep
+        working; every other shape, and any non-object entry, fails closed.
+        """
+        payload = client.list_operators(dict(params))
+        if isinstance(payload, dict):
+            rows = payload.get("results")
+            if not isinstance(rows, list):
+                raise ValueError("operators catalog object has no results list")
+        elif isinstance(payload, list):
+            rows = payload
+        else:
+            raise ValueError("operators catalog response is neither an array nor an object")
+        if not rows:
+            raise ValueError("platform returned no operator metadata")
+        if not all(isinstance(row, dict) for row in rows):
+            raise ValueError("operators catalog contains a non-object entry")
+        return list(rows)
+
     def sync(self, client: CatalogClient, *, region: str, universe: str, delay: int) -> dict[str, int]:
         base = {"instrumentType": "EQUITY", "region": region, "universe": universe, "delay": int(delay)}
         datasets = self._all_pages(client.list_datasets, base)
@@ -71,7 +93,10 @@ class PlatformCatalogSynchronizer:
                     fields.append({**row, "_ds": dataset_id})
         if not fields:
             raise ValueError("platform returned no data fields")
-        operators = self._all_pages(client.list_operators, base)
+        # Operators are NOT paged: the platform returns one top-level array, so
+        # _all_pages (which requires count/results) must not be used here.
+        # Datasets and data-fields keep the strict paged contract above.
+        operators = self._operator_rows(client, base)
         operator_records = [_normalise_operator_record(item) for item in operators]
         if any(record is None for record in operator_records):
             raise ValueError("platform operator metadata has no verifiable arity")
