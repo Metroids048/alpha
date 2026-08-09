@@ -1396,7 +1396,16 @@ class HighQualityGenerator:
         # carries no grouping operator at all, so demanding one produced a plan
         # that failed its own scope check.
         _usable = set(catalog.operators) - _GHOST_OPERATORS
-        _change_ops = sorted(_usable & {"ts_delta", "ts_std_dev", "ts_corr", "ts_returns", "subtract"})
+        # ts_std_dev is deliberately absent: it is a non-negative dispersion
+        # magnitude, so it answers "how much did this move" and discards "which
+        # way".  Offering it here under "Include at least one" let the model
+        # satisfy its directional requirement with a volatility measure, and
+        # rank/ts_zscore on top preserve that ordering instead of repairing it.
+        # Measured on the platform at 164831f: ts_std_dev-cored signals returned
+        # sharpe 0.03 / 0.25 / -0.88 against a 1.58 limit, at live turnover
+        # 0.067-0.127 -- ordered by the wrong quantity, not dead.  ts_corr stays
+        # because it is signed.
+        _change_ops = sorted(_usable & {"ts_delta", "ts_corr", "ts_returns", "subtract"})
         _normalizer_ops = sorted(_usable & {"ts_zscore", "ts_rank", "rank", "ts_decay_linear", "divide"})
         _group_ops = sorted(item for item in _usable if item.startswith("group_"))
         # Group the visible fields by dataset instead of listing them flat.  The
@@ -2242,7 +2251,11 @@ def _structural_depth_component(expression: str, fields: tuple[str, ...]) -> flo
     value = 0.0
     if len({field for field in fields if field}) >= 2:
         value += 5.0
-    if unique & {"ts_delta", "ts_diff", "delta", "ts_returns", "ts_std_dev", "ts_corr"}:
+    # ts_std_dev is not a change: it is non-negative, so it cannot express the
+    # direction this credit is meant to reward.  Scoring it as one made a
+    # volatility-ranked candidate look like a directional relationship --
+    # e7b26c4dbdcc5ec4 scored 73.75 locally and returned sharpe 0.25.
+    if unique & {"ts_delta", "ts_diff", "delta", "ts_returns", "ts_corr"}:
         value += 3.0
     if unique & {"ts_zscore", "ts_rank", "rank", "ts_scale", "zscore", "quantile", "normalize"}:
         value += 3.0
