@@ -88,12 +88,17 @@ _LOCALLY_GROUNDABLE_PLAN_ISSUES = frozenset({
 # ~256k chars) with room left for the operator list, knowledge, seeds,
 # plan_requirements and the model's own reply.  See _research_field_ids.
 _RESEARCH_FIELD_CHAR_BUDGET = 150_000
-# JSON scaffolding per field entry: {"id": "", "description": ""} plus the
-# comma, i.e. what a field costs beyond its id and description text.
-_RESEARCH_FIELD_ENTRY_OVERHEAD = 34
+# JSON scaffolding per field entry: {"id": "", "description": "", "field_type":
+# ""} plus the comma, i.e. what a field costs beyond its id, description and
+# type text.
+_RESEARCH_FIELD_ENTRY_OVERHEAD = 58
 # Admitted regardless of budget: below three datasets the concentration gate
 # has nothing to choose between.
 _RESEARCH_MIN_DATASETS = 3
+# Reducers that collapse a per-instrument event stream to one value per day.
+# A VECTOR field is only legal as their immediate argument: every other
+# operator refuses it ("does not support event inputs").
+_VECTOR_REDUCER_PREFIX = "vec_"
 
 
 def _group_axis_identifiers(expression: str) -> set[str]:
@@ -143,6 +148,52 @@ def _suppressible_scope_issue(issue: ValidationIssue, group_axes: set[str]) -> b
     if issue.code == "FIELD_DATASET_MISMATCH":
         return str(issue.message).split(" ", 1)[0] in group_axes
     return False
+
+
+def _unreduced_vector_fields(expression: str, catalog: Any) -> tuple[str, ...]:
+    """VECTOR fields not sitting directly inside a ``vec_*`` reducer.
+
+    A VECTOR field is an event stream: several records per instrument per day,
+    not one value. Every operator except the ``vec_*`` reducers refuses it, which
+    the platform reports as "Operator <name> does not support event inputs". The
+    reducer is what collapses the stream, so the check is positional and
+    *immediate* -- a reducer higher up the tree does not help, because the
+    operator between them is the one that receives the raw stream.
+
+    Read off the AST rather than by name: ``field_type`` is the only thing that
+    distinguishes the two, and 16144 of the live catalog's fields are VECTOR, so
+    this cannot be a hardcoded identifier list.
+    """
+
+    try:
+        root = parse_expression(expression)
+    except ExpressionSyntaxError:
+        return ()
+
+    fields = getattr(catalog, "fields", {}) or {}
+
+    def is_vector(name: str) -> bool:
+        field = fields.get(name)
+        return str(getattr(field, "field_type", "") or "").upper() == "VECTOR"
+
+    unreduced: list[str] = []
+
+    def walk(node: AstNode, reduced: bool) -> None:
+        if node.kind == "ident":
+            name = str(node.value)
+            if not reduced and is_vector(name) and name not in unreduced:
+                unreduced.append(name)
+            return
+        is_reducer = node.kind == "call" and str(
+            node.value or ""
+        ).lower().startswith(_VECTOR_REDUCER_PREFIX)
+        for child in node.children:
+            walk(child, is_reducer)
+
+    walk(root, False)
+    return tuple(unreduced)
+
+
 _REPAIRABLE_DRAFT_REJECTIONS = frozenset({
     "EMPTY_EXPRESSION", "INVALID_LLM_CANDIDATE", "CROSS_DATASET", "PLAN_SCOPE_VIOLATION",
     "UNKNOWN_FIELD", "UNKNOWN_OPERATOR", "GHOST_OPERATOR", "HALLUCINATED_KNOWLEDGE_REF",
@@ -158,6 +209,10 @@ _REPAIRABLE_DRAFT_REJECTIONS = frozenset({
     # cycle this killed 5 of 5 candidates with no repair pass, so route it through
     # the one correction pass that already instructs an exact re-derivation.
     "MECHANISM_OPERATOR_MISMATCH", "MECHANISM_FIELD_MISMATCH", "MECHANISM_EVIDENCE_MISSING",
+    # A missing vec_* wrapper is mechanical, not a research failure: the
+    # hypothesis and topology are intact, one operand just needs reducing.  The
+    # payload now carries field_type, so the repair pass can see what to wrap.
+    "VECTOR_FIELD_NOT_REDUCED",
 })
 
 
@@ -958,6 +1013,12 @@ class HighQualityGenerator:
         datasets = {snapshots.catalog.fields[field].dataset_id for field in fields}
         if len(datasets) != 1:
             return "CROSS_DATASET"
+        # An event stream reaching any non-reducer is refused by the platform, not
+        # locally, so nothing upstream of here catches it.  Checked with the other
+        # field-semantics rules, before the plan whitelist, because it is a
+        # property of the field itself rather than of this plan.
+        if _unreduced_vector_fields(expression, snapshots.catalog):
+            return "VECTOR_FIELD_NOT_REDUCED"
         allowed_fields = _string_set(plan.get("fields_to_use"))
         allowed_operators = _string_set(plan.get("operators_to_use"))
         if not set(fields) <= allowed_fields or not functions <= allowed_operators:
@@ -1234,8 +1295,16 @@ class HighQualityGenerator:
         _fields_by_dataset: dict[str, list[dict[str, str]]] = {}
         for field in sorted(allowed_field_ids):
             entry = catalog.fields[field]
+            # field_type is disclosed because it is load-bearing, not decorative:
+            # a VECTOR field is an event stream that every operator except a
+            # vec_* reducer refuses.  Enforcing that rule while hiding the
+            # property would reject candidates for something unobservable.
             _fields_by_dataset.setdefault(str(entry.dataset_id), []).append(
-                {"id": entry.field_id, "description": entry.description[:160]}
+                {
+                    "id": entry.field_id,
+                    "description": entry.description[:160],
+                    "field_type": str(getattr(entry, "field_type", "") or "MATRIX").upper(),
+                }
             )
         payload = {
             "cycle_id": cycle_id,
@@ -1268,6 +1337,12 @@ class HighQualityGenerator:
                 "the least-loaded one is refused as PLAN_DATASET_CONCENTRATION.",
                 "Parent seeds are structural inspiration; never reuse a catalog.forbidden_identifiers token.",
                 "Avoid windows below 21, and use at least 42 for ts_corr.",
+                "A field whose field_type is VECTOR is an event stream, not one value per day. "
+                "Every operator except a vec_* reducer refuses it. So if any field in "
+                "fields_to_use has field_type VECTOR, operators_to_use MUST include a vec_* "
+                "reducer (vec_avg, vec_sum, vec_count, vec_max, vec_min, vec_range, vec_stddev), "
+                "and the expression must wrap that field directly in it -- vec_avg(field), never "
+                "ts_std_dev(field, 126). Fields with field_type MATRIX need no wrapper.",
                 "operators_to_use becomes the COMPLETE whitelist for the next step, which cannot "
                 "add to it, so include everything the hypothesis needs.",
                 *(
@@ -1305,10 +1380,24 @@ class HighQualityGenerator:
         }
         _allowed_operators = sorted(_string_set(plan.get("operators_to_use")))
         _has_group_operator = any(item.startswith("group_") for item in _allowed_operators)
+        # The vec_* gate runs on the expression THIS step writes, so field_type has
+        # to be disclosed here too -- field_dataset_map carries the dataset but not
+        # the type, which is the same defect the window rule had.
+        _vector_fields = [
+            field
+            for field in allowed_fields
+            if str(
+                getattr(snapshots.catalog.fields.get(field), "field_type", "") or ""
+            ).upper() == "VECTOR"
+        ]
+        _vector_reducers = sorted(
+            item for item in _allowed_operators if item.startswith(_VECTOR_REDUCER_PREFIX)
+        )
         payload = {
             "plan": plan,
             "allowed_fields": allowed_fields,
             "field_dataset_map": field_dataset_map,
+            "vector_fields_requiring_reduction": _vector_fields,
             "allowed_operators": _allowed_operators,
             "allowed_knowledge_refs": [item.ref_id for item in knowledge.snippets],
             "allowed_feedback_refs": [
@@ -1327,6 +1416,31 @@ class HighQualityGenerator:
                 "Every ts_* window must be at least 21, and at least 42 for ts_corr. A smaller "
                 "window is rejected as SHORT_WINDOW. This applies to every window in the "
                 "expression you write, including inner ones.",
+                # Stated where the expression is written, and only in the form the
+                # local whitelist can actually satisfy.
+                *(
+                    [
+                        "vector_fields_requiring_reduction lists allowed_fields that are event "
+                        "streams (several records per instrument per day). Every operator except "
+                        f"a vec_* reducer refuses them. Wrap each one directly in {_vector_reducers[0]}"
+                        f"(field) -- available reducers: {', '.join(_vector_reducers)}. The wrapper "
+                        "must be immediate: ts_std_dev(vec_avg(f), 126) is correct, "
+                        "ts_std_dev(f, 126) and vec_avg(ts_delta(f, 21)) are both rejected as "
+                        "VECTOR_FIELD_NOT_REDUCED."
+                    ]
+                    if _vector_fields and _vector_reducers
+                    else []
+                ),
+                *(
+                    [
+                        "vector_fields_requiring_reduction lists allowed_fields that are event "
+                        "streams, and allowed_operators contains NO vec_* reducer, so they cannot "
+                        "be used at all. Build the expression only from the remaining "
+                        "allowed_fields."
+                    ]
+                    if _vector_fields and not _vector_reducers
+                    else []
+                ),
                 # turnover_controls/correlation_diversifiers are matched against the
                 # tokens of the expression, so a generic phrase can never satisfy them.
                 "turnover_controls and correlation_diversifiers must each name at least one field ID "
