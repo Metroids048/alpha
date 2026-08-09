@@ -57,13 +57,18 @@ def _snapshots() -> LocalSnapshots:
         },
         fields={
             "mat_one": _field("mat_one", "ds_alpha"),
+            "mat_one_2": _field("mat_one_2", "ds_alpha"),
             "mat_two": _field("mat_two", "ds_alpha"),
             "evt_one": _field("evt_one", "ds_alpha", "VECTOR"),
             "evt_two": _field("evt_two", "ds_alpha", "VECTOR"),
             "grp_one": _field("grp_one", "ds_alpha", "GROUP"),
+            # Sibling of mat_one by name but in another dataset: a cross-dataset
+            # fault already, so the near-variant rule must not claim it.
+            "other_one_2": _field("other_one_2", "ds_beta"),
         },
         datasets={
             "ds_alpha": DatasetMetadata(dataset_id="ds_alpha", name="ds_alpha", category="a"),
+            "ds_beta": DatasetMetadata(dataset_id="ds_beta", name="ds_beta", category="b"),
         },
         info={"region": "USA", "universe": "TOP3000", "source": "test"},
     )
@@ -240,6 +245,84 @@ def test_candidate_prompt_forbids_vector_fields_when_no_reducer_is_whitelisted()
     rule = " ".join(payload["candidate_requirements"])
     assert "cannot be used at all" in rule
     assert "vec_avg" not in rule, "must not recommend an operator outside the whitelist"
+
+
+def test_ratio_of_a_field_over_its_own_numbered_variant_is_degenerate() -> None:
+    """A field divided by its own numbered sibling carries no signal.
+
+    Measured on the platform: ``dilution_adjustment_ratio /
+    dilution_adjustment_ratio_2`` simulated COMPLETE with sharpe 0.0,
+    turnover 0.0, returns 0.0 and CLUSTER_TEST=ERROR -- the ratio is
+    near-constant, so ts_delta of it is ~0 and no position survives
+    neutralization. 4502 live catalog fields are numbered variants of a sibling
+    in the same dataset, so this is a large, reachable trap.
+    """
+    from alpha_mining.generation.high_quality import _near_variant_ratio_fields
+
+    catalog = _snapshots().catalog
+
+    assert _near_variant_ratio_fields("mat_one / mat_one_2", catalog) == ("mat_one", "mat_one_2")
+    assert _near_variant_ratio_fields(
+        "group_neutralize(ts_zscore(ts_delta(mat_one/mat_one_2,126),126), grp_one)", catalog
+    ) == ("mat_one", "mat_one_2")
+    # A subtraction of the same pair is the same degenerate construction.
+    assert _near_variant_ratio_fields("mat_one - mat_one_2", catalog) == ("mat_one", "mat_one_2")
+
+
+def test_unrelated_field_pairs_and_distant_variants_are_not_flagged() -> None:
+    """The rule must catch the sibling ratio only, not any two-field ratio."""
+    from alpha_mining.generation.high_quality import _near_variant_ratio_fields
+
+    catalog = _snapshots().catalog
+
+    # Two genuinely different fields are the relationship the pipeline wants.
+    assert _near_variant_ratio_fields("mat_one / mat_two", catalog) == ()
+    # The pair must actually meet at the same operator, not merely co-occur.
+    assert _near_variant_ratio_fields(
+        "ts_delta(mat_one, 21) / ts_zscore(mat_two, 21) + mat_one_2", catalog
+    ) == ()
+    # A sibling pair in different datasets is already a cross-dataset fault.
+    assert _near_variant_ratio_fields("mat_one / other_one_2", catalog) == ()
+
+
+def test_draft_gate_refuses_a_near_variant_ratio() -> None:
+    generator = HighQualityGenerator(llm=object(), kernel=object())
+    snapshots = _snapshots()
+    seeds = [_Seed("rank(mat_one)")]
+    plan = {
+        "fields_to_use": ["mat_one", "mat_one_2"],
+        "operators_to_use": ["ts_delta", "divide", "group_neutralize"],
+        "knowledge_refs": ["ref-1"],
+    }
+    row = {
+        "expression": "group_neutralize(ts_delta(mat_one / mat_one_2, 126), grp_one)",
+        "knowledge_refs": ["ref-1"],
+        "feedback_patterns_used": [],
+        "parent_seed": "rank(mat_one)",
+    }
+
+    verdict = generator._validate_candidate(
+        row, plan, snapshots, seeds, _Knowledge(), set(), set(), [],
+    )
+
+    assert verdict == "NEAR_VARIANT_RATIO"
+
+
+def test_candidate_prompt_warns_about_sibling_ratios() -> None:
+    """Disclosure alongside enforcement, as the VECTOR rule already required."""
+
+    payload = json.loads(
+        HighQualityGenerator._candidate_prompt(
+            _snapshots(),
+            [_Seed("rank(mat_one)")],
+            _Knowledge(),
+            {"fields_to_use": ["mat_one", "mat_one_2"], "operators_to_use": ["divide"]},
+        )
+    )
+
+    rule = " ".join(payload["candidate_requirements"])
+    assert "NEAR_VARIANT_RATIO" in rule
+    assert payload["near_variant_field_pairs"] == [["mat_one", "mat_one_2"]]
 
 
 def test_plan_selecting_a_vector_field_must_whitelist_a_reducer() -> None:

@@ -103,6 +103,10 @@ _RESEARCH_MIN_DATASETS = 3
 # A VECTOR field is only legal as their immediate argument: every other
 # operator refuses it ("does not support event inputs").
 _VECTOR_REDUCER_PREFIX = "vec_"
+# ``dilution_adjustment_ratio_2`` is the same quantity as
+# ``dilution_adjustment_ratio``.  4502 live catalog fields are a numbered
+# variant of a sibling in their own dataset.  See _near_variant_ratio_fields.
+_NUMBERED_VARIANT = re.compile(r"^(?P<base>.+?)_(?:\d+|v\d+)$")
 
 
 def _group_axis_identifiers(expression: str) -> set[str]:
@@ -152,6 +156,67 @@ def _suppressible_scope_issue(issue: ValidationIssue, group_axes: set[str]) -> b
     if issue.code == "FIELD_DATASET_MISMATCH":
         return str(issue.message).split(" ", 1)[0] in group_axes
     return False
+
+
+def _variant_base(field_id: str) -> str:
+    """The stem of a numbered field variant, or "" when there is no suffix.
+
+    ``dilution_adjustment_ratio_2`` -> ``dilution_adjustment_ratio``.
+    """
+
+    match = _NUMBERED_VARIANT.match(str(field_id or ""))
+    return match.group("base") if match else ""
+
+
+def _near_variant_ratio_fields(expression: str, catalog: Any) -> tuple[str, ...]:
+    """A field met with its own numbered sibling at one arithmetic operator.
+
+    ``dilution_adjustment_ratio / dilution_adjustment_ratio_2`` is the same
+    quantity twice, so the ratio is near-constant and every downstream change,
+    z-score and neutralization collapses to nothing. Measured on the platform
+    that expression simulated COMPLETE with sharpe 0.0, turnover 0.0 and
+    CLUSTER_TEST=ERROR: a dead alpha that passed every local gate.
+
+    4502 live catalog fields are numbered variants of a sibling in the same
+    dataset, so a plan drawing "two fields" can land here by accident.
+
+    Deliberately narrow: the pair has to be the two operands of one ``/`` or
+    ``-``. Two unrelated fields in a ratio is the relationship the pipeline
+    wants, and a sibling pair merely co-occurring elsewhere in a larger
+    expression is not this defect.
+    """
+
+    try:
+        root = parse_expression(expression)
+    except ExpressionSyntaxError:
+        return ()
+
+    fields = getattr(catalog, "fields", {}) or {}
+
+    def dataset_of(name: str) -> str:
+        return str(getattr(fields.get(name), "dataset_id", "") or "")
+
+    def operand_field(node: AstNode) -> str:
+        return str(node.value) if node.kind == "ident" and str(node.value) in fields else ""
+
+    found: tuple[str, ...] = ()
+
+    def walk(node: AstNode) -> None:
+        nonlocal found
+        if found:
+            return
+        if node.kind == "binary" and str(node.value) in {"/", "-"} and len(node.children) == 2:
+            left = operand_field(node.children[0])
+            right = operand_field(node.children[1])
+            if left and right and dataset_of(left) == dataset_of(right):
+                if _variant_base(right) == left or _variant_base(left) == right:
+                    found = (left, right)
+                    return
+        for child in node.children:
+            walk(child)
+
+    walk(root)
+    return found
 
 
 def _unreduced_vector_fields(expression: str, catalog: Any) -> tuple[str, ...]:
@@ -217,6 +282,8 @@ _REPAIRABLE_DRAFT_REJECTIONS = frozenset({
     # hypothesis and topology are intact, one operand just needs reducing.  The
     # payload now carries field_type, so the repair pass can see what to wrap.
     "VECTOR_FIELD_NOT_REDUCED",
+    # Same character: the topology is fine, one operand is the wrong field.
+    "NEAR_VARIANT_RATIO",
 })
 
 
@@ -1062,6 +1129,11 @@ class HighQualityGenerator:
         # property of the field itself rather than of this plan.
         if _unreduced_vector_fields(expression, snapshots.catalog):
             return "VECTOR_FIELD_NOT_REDUCED"
+        # A field over its own numbered sibling is a dead alpha the platform
+        # confirms as sharpe 0.0 / turnover 0.0, so it must not consume a
+        # simulation slot.
+        if _near_variant_ratio_fields(expression, snapshots.catalog):
+            return "NEAR_VARIANT_RATIO"
         allowed_fields = _string_set(plan.get("fields_to_use"))
         allowed_operators = _string_set(plan.get("operators_to_use"))
         if not set(fields) <= allowed_fields or not functions <= allowed_operators:
@@ -1436,11 +1508,20 @@ class HighQualityGenerator:
         _vector_reducers = sorted(
             item for item in _allowed_operators if item.startswith(_VECTOR_REDUCER_PREFIX)
         )
+        # Naming the actual pairs beats restating the rule: the model can only
+        # avoid the trap it can see, and "two fields" looks like a relationship.
+        _near_variant_pairs = sorted(
+            [base, field]
+            for field in allowed_fields
+            if (base := _variant_base(field)) in allowed_fields
+            and field_dataset_map.get(base) == field_dataset_map.get(field)
+        )
         payload = {
             "plan": plan,
             "allowed_fields": allowed_fields,
             "field_dataset_map": field_dataset_map,
             "vector_fields_requiring_reduction": _vector_fields,
+            "near_variant_field_pairs": _near_variant_pairs,
             "allowed_operators": _allowed_operators,
             "allowed_knowledge_refs": [item.ref_id for item in knowledge.snippets],
             "allowed_feedback_refs": [
@@ -1482,6 +1563,18 @@ class HighQualityGenerator:
                         "allowed_fields."
                     ]
                     if _vector_fields and not _vector_reducers
+                    else []
+                ),
+                *(
+                    [
+                        "near_variant_field_pairs lists pairs that are the SAME quantity under two "
+                        "names (a field and its numbered variant). Dividing or subtracting one "
+                        "directly by the other is near-constant, so the alpha is dead - the "
+                        "platform returned sharpe 0.0 and turnover 0.0 for exactly that shape. It "
+                        "is rejected as NEAR_VARIANT_RATIO. Relate two genuinely different "
+                        "quantities instead; using one member of a pair on its own is fine."
+                    ]
+                    if _near_variant_pairs
                     else []
                 ),
                 # turnover_controls/correlation_diversifiers are matched against the
