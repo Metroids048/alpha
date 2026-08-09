@@ -219,3 +219,145 @@ def test_sync_fails_closed_on_malformed_operators_element(tmp_path: Path) -> Non
         )
 
     assert not (tmp_path / ".alpha_operators_cache.json").exists()
+
+
+# ---------------------------------------------------------------------------
+# LOCAL_CANONICAL_ARITY
+#
+# OperatorMetadata carries a single ``arity: int`` and LocalExpressionValidator
+# tests ``len(node.children) == operator.arity`` exactly, so the model cannot
+# express optional, keyword or variadic argument ranges.  Canonical arity is
+# therefore defined as the smallest certain purely-positional call form.
+#
+# Measured live 2026-08-09 (USA/TOP3000/delay=1): /operators returns 82 records
+# with no ``arity`` key at all, and 11 definitions defeat a strict
+# ``name(args)`` match.  Under the old parser every one of them returned None
+# and sync aborted at "platform operator metadata has no verifiable arity" --
+# discarding a complete 297-dataset catalog over operator documentation prose.
+# ---------------------------------------------------------------------------
+
+# Verbatim live definitions.
+LIVE_ADD = "add(x, y, filter = false), x + y"
+LIVE_MULTIPLY = "multiply(x ,y, ... , filter=false), x * y"
+LIVE_BUCKET = (
+    'bucket(rank(x), range=“0, 1, 0.1”, skipBoth=False, NaNGroup=False)\r\n'
+    'or\r\nbucket(rank(x), buckets = “2,5,6,7,10”, skipBoth=False, NaNGroup=False)'
+)
+LIVE_LESS_EQUAL = "input1 <= input2"
+
+
+def test_canonical_arity_ignores_defaulted_parameter_and_trailing_prose() -> None:
+    """add(x, y, filter = false), x + y -> 2, never 3.
+
+    Counting ``filter = false`` would make the legal ``add(x, y)`` fail the
+    exact-equality INVALID_ARITY check, i.e. a false positive rejection.
+    """
+    from alpha_mining.platform.catalog import _arity_from_signature
+
+    assert _arity_from_signature(LIVE_ADD) == 2
+
+
+def test_canonical_arity_of_variadic_definition_is_the_binary_form() -> None:
+    """multiply(x ,y, ... , filter=false) -> 2.
+
+    The platform may accept N-ary multiply; locally only the binary form is
+    admitted. Rejecting a 3-arg multiply is a safe false negative.
+    """
+    from alpha_mining.platform.catalog import _arity_from_signature
+
+    assert _arity_from_signature(LIVE_MULTIPLY) == 2
+
+
+def test_canonical_arity_survives_nested_calls_and_quoted_commas() -> None:
+    """bucket(rank(x), range=“0, 1, 0.1”, ...) has one positional argument.
+
+    Raw comma counting would report seven: three inside the quoted range, one
+    inside rank(x), and the top-level separators.
+    """
+    from alpha_mining.platform.catalog import _arity_from_signature
+
+    assert _arity_from_signature(LIVE_BUCKET) == 1
+
+
+def test_infix_only_definition_is_not_guessed() -> None:
+    """input1 <= input2 has no verifiable function-call shape."""
+    from alpha_mining.platform.catalog import _arity_from_signature, _normalise_operator_record
+
+    assert _arity_from_signature(LIVE_LESS_EQUAL) is None
+    assert _normalise_operator_record({"name": "less_equal", "definition": LIVE_LESS_EQUAL}) is None
+
+
+@pytest.mark.parametrize(
+    "definition",
+    ["", "   ", "no parens and no operator", "(x, y)", "f(x, y"],
+)
+def test_unverifiable_definitions_still_fail_closed(definition) -> None:
+    from alpha_mining.platform.catalog import _arity_from_signature
+
+    assert _arity_from_signature(definition) is None
+
+
+def test_existing_definitions_keep_their_canonical_arity() -> None:
+    """Live definitions that already parsed must not shift meaning."""
+    from alpha_mining.platform.catalog import _arity_from_signature
+
+    assert _arity_from_signature("rank(x)") == 1
+    assert _arity_from_signature("ts_delta(x, d)") == 2
+    assert _arity_from_signature("signed_power(x, y)") == 2
+    assert _arity_from_signature("group_neutralize(x, group)") == 2
+    assert _arity_from_signature("ts_zscore(x, d)") == 2
+    # Defaulted tails drop out: these are the smallest certain positional forms.
+    assert _arity_from_signature("rank(x, rate=2)") == 1
+    assert _arity_from_signature("ts_rank(x, d, constant = 0)") == 2
+    assert _arity_from_signature("winsorize(x, std=4)") == 1
+    assert _arity_from_signature("scale(x, scale=1, longscale=1, shortscale=1)") == 1
+    assert _arity_from_signature("ts_regression(y, x, d, lag = 0, rettype = 0)") == 3
+
+
+def test_unrepresentable_operator_is_excluded_without_failing_the_sync(tmp_path: Path) -> None:
+    """A complete 297-dataset catalog must not die over one infix operator."""
+    from alpha_mining.platform.catalog import PlatformCatalogSynchronizer
+
+    class LiveShapedOperators(_MixedProtocolClient):
+        def list_operators(self, params):  # noqa: ARG002
+            return [
+                {"name": "add", "definition": LIVE_ADD},
+                {"name": "multiply", "definition": LIVE_MULTIPLY},
+                {"name": "less_equal", "definition": LIVE_LESS_EQUAL},
+                {"name": "rank", "definition": "rank(x)"},
+            ]
+
+    result = PlatformCatalogSynchronizer(tmp_path, page_size=1).sync(
+        LiveShapedOperators(), region="USA", universe="TOP3000", delay=1
+    )
+
+    assert result["operators"] == 3
+    operators = json.loads((tmp_path / ".alpha_operators_cache.json").read_text(encoding="utf-8"))
+    # Excluded from the usable set, so the validator treats it as UNKNOWN_OPERATOR.
+    assert operators["operators"] == ["add", "multiply", "rank"]
+    assert "less_equal" not in operators["operators"]
+    by_name = {record["name"]: record for record in operators["records"]}
+    assert sorted(by_name) == ["add", "multiply", "rank"]
+    assert by_name["add"]["arity"] == 2
+    assert by_name["multiply"]["arity"] == 2
+    # Transparency: the exclusion is recorded, not silently swallowed.
+    assert operators["excluded_unrepresentable"] == ["less_equal"]
+
+
+def test_sync_fails_closed_when_no_operator_is_representable(tmp_path: Path) -> None:
+    """Excluding unrepresentable operators must never yield an empty set."""
+    from alpha_mining.platform.catalog import PlatformCatalogSynchronizer
+
+    class AllInfix(_MixedProtocolClient):
+        def list_operators(self, params):  # noqa: ARG002
+            return [
+                {"name": "less_equal", "definition": "input1 <= input2"},
+                {"name": "greater", "definition": "input1 > input2"},
+            ]
+
+    with pytest.raises(ValueError):
+        PlatformCatalogSynchronizer(tmp_path, page_size=1).sync(
+            AllInfix(), region="USA", universe="TOP3000", delay=1
+        )
+
+    assert not (tmp_path / ".alpha_operators_cache.json").exists()

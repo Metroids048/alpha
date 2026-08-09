@@ -385,14 +385,28 @@ class PlatformCatalogSynchronizer:
         # _all_pages (which requires count/results) must not be used here.
         # Datasets and data-fields keep the strict paged contract above.
         operators = self._operator_rows(client, base)
-        operator_records = [_normalise_operator_record(item) for item in operators]
-        if any(record is None for record in operator_records):
-            raise ValueError("platform operator metadata has no verifiable arity")
-        normalised_operators = [record for record in operator_records if record is not None]
+        # An operator whose call shape cannot be expressed as one fixed int
+        # arity is UNREPRESENTABLE_BY_LOCAL_FIXED_ARITY: it is excluded from the
+        # usable set, never guessed. Measured live 2026-08-09, that is the 10
+        # infix comparison definitions -- aborting the whole sync over them
+        # would discard a complete 297-dataset catalog. Exclusion stays
+        # fail-closed: absent from the cache, the operator is rejected as
+        # UNKNOWN_OPERATOR by the local validator.
+        normalised_operators: list[dict[str, Any]] = []
+        excluded_unrepresentable: list[str] = []
+        for item in operators:
+            record = _normalise_operator_record(item)
+            if record is None:
+                name = str(item.get("name") or item.get("id") or "").strip().lower()
+                if name:
+                    excluded_unrepresentable.append(name)
+                continue
+            normalised_operators.append(record)
+        excluded_unrepresentable = sorted(dict.fromkeys(excluded_unrepresentable))
         names = [record["name"] for record in normalised_operators]
         names = list(dict.fromkeys(item for item in names if item))
         if not names:
-            raise ValueError("platform returned no operator metadata")
+            raise ValueError("platform operator metadata has no verifiable arity")
         # Freshness reflects the oldest page in the snapshot. A checkpoint that
         # spans several rate-limit windows must not present itself as "fetched
         # just now" the instant it finalizes.
@@ -401,7 +415,15 @@ class PlatformCatalogSynchronizer:
         payloads = {
             ".alpha_datasets_cache.json": {**cache_context, "dataset_ids": dataset_ids, "records": datasets},
             ".alpha_datafields_cache.json": {**cache_context, "rows": fields},
-            ".alpha_operators_cache.json": {**cache_context, "operators": names, "records": normalised_operators},
+            ".alpha_operators_cache.json": {
+                **cache_context,
+                "operators": names,
+                "records": normalised_operators,
+                # Additive and informational only: MetadataCache reads
+                # operators/records. Recorded so an exclusion is auditable
+                # instead of silent.
+                "excluded_unrepresentable": excluded_unrepresentable,
+            },
         }
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         for filename, payload in payloads.items():
@@ -435,13 +457,104 @@ def _normalise_operator_record(row: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
-def _arity_from_signature(signature: str) -> int | None:
-    match = re.fullmatch(r"[^()]+\(([^()]*)\)", signature.strip())
-    if not match:
+# Quote pairs seen in live definitions, including the curly pair bucket() uses.
+_QUOTE_OPENERS = "\"'“‘"
+_QUOTE_CLOSERS = {'"': '"', "'": "'", "“": "”", "‘": "’"}
+
+
+def _split_top_level_arguments(arguments: str) -> list[str] | None:
+    """Split on commas outside both nested parens and quoted strings.
+
+    ``bucket(rank(x), range=“0, 1, 0.1”, skipBoth=False, ...)`` -- raw comma
+    counting reports seven arguments where there are four.
+    """
+    parts: list[str] = []
+    current: list[str] = []
+    depth = 0
+    closer: str | None = None
+    for character in arguments:
+        if closer is not None:
+            current.append(character)
+            if character == closer:
+                closer = None
+            continue
+        if character in _QUOTE_OPENERS:
+            closer = _QUOTE_CLOSERS[character]
+            current.append(character)
+            continue
+        if character == "(":
+            depth += 1
+        elif character == ")":
+            depth -= 1
+            if depth < 0:
+                return None
+        if character == "," and depth == 0:
+            parts.append("".join(current))
+            current = []
+            continue
+        current.append(character)
+    if depth != 0 or closer is not None:
         return None
-    arguments = match.group(1).strip()
+    parts.append("".join(current))
+    return parts
+
+
+def _arity_from_signature(signature: str) -> int | None:
+    """LOCAL_CANONICAL_ARITY: the smallest certain purely-positional call form.
+
+    ``OperatorMetadata`` holds one ``arity: int`` and the validator tests
+    ``len(children) == arity`` exactly, so no single value can express optional,
+    keyword or variadic ranges. Canonical arity therefore counts only required
+    positional parameters, and anything whose call shape cannot be proven
+    returns None (the caller excludes it rather than guessing).
+
+    Measured live 2026-08-09: /operators ships no ``arity`` key, and 11 of 82
+    definitions append prose (``add(x, y, filter = false), x + y``), are infix
+    only (``input1 <= input2``), or list newline-separated alternatives with
+    commas nested inside quotes.
+    """
+    text = signature.strip()
+    if not text:
+        return None
+    # Multi-line definitions restate the same operator; the first is canonical.
+    text = text.replace("\r\n", "\n").split("\n", 1)[0].strip()
+    opening = text.find("(")
+    # No call syntax at all (e.g. "input1 <= input2") is unrepresentable here.
+    if opening <= 0 or not text[:opening].strip():
+        return None
+
+    # Walk to the matching close paren, so prose after it is ignored instead of
+    # failing the whole record.
+    depth = 0
+    closing = -1
+    for index in range(opening, len(text)):
+        if text[index] == "(":
+            depth += 1
+        elif text[index] == ")":
+            depth -= 1
+            if depth == 0:
+                closing = index
+                break
+    if closing < 0:
+        return None
+
+    arguments = text[opening + 1 : closing].strip()
     if not arguments:
         return 0
-    if any(token in arguments for token in ("...", "*", "[", "]")):
+    parts = _split_top_level_arguments(arguments)
+    if parts is None:
         return None
-    return len([part for part in arguments.split(",") if part.strip()])
+
+    arity = 0
+    for part in parts:
+        token = part.strip()
+        if not token:
+            continue
+        # "..." marks a variadic tail and "name = default" an optional
+        # parameter; neither belongs in the minimum positional form.
+        if "..." in token or "=" in token:
+            continue
+        if any(marker in token for marker in ("*", "[", "]")):
+            return None
+        arity += 1
+    return arity
