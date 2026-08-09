@@ -146,6 +146,199 @@ def test_plan_rejects_the_most_occupied_dataset_when_three_are_available() -> No
     assert "PLAN_DATASET_CONCENTRATION" in issues
 
 
+def _many_dataset_snapshots(count: int) -> tuple[LocalSnapshots, set[str]]:
+    """A catalog with ``count`` datasets and zero pending candidates."""
+    fields = {
+        f"field_{index:03d}": _field(f"field_{index:03d}", f"ds_{index:03d}")
+        for index in range(count)
+    }
+    datasets = {
+        f"ds_{index:03d}": DatasetMetadata(
+            dataset_id=f"ds_{index:03d}", name=f"ds_{index:03d}", category="c",
+        )
+        for index in range(count)
+    }
+    catalog = MetadataCache(
+        cache_dir=Path("."),
+        operators={
+            name: OperatorMetadata(name=name, signature=f"{name}(x)", arity=1, description=name)
+            for name in ("rank", "ts_delta", "ts_zscore", "divide")
+        },
+        fields=fields, datasets=datasets,
+        info={"region": "USA", "universe": "TOP3000", "source": "test"},
+    )
+    return (
+        LocalSnapshots(
+            catalog=catalog, catalog_dir=Path("."), catalog_source="test", catalog_age_hours=0.0,
+            feedback=FeedbackSummary(
+                records=(), positive=(), near_pass=(), failures=(), self_corr_risk=(),
+                failure_counts={},
+            ),
+            inventory=CandidateInventory(records=()),
+        ),
+        set(fields),
+    )
+
+
+def test_unoccupied_dataset_is_not_a_concentration_fault() -> None:
+    """The gate exists to refuse *crowding*, not to mandate one arbitrary dataset.
+
+    Priority is ``sorted(key=(occupancy, dataset))``.  On a fresh queue every
+    dataset sits at occupancy 0, so ``priority[0]`` degrades to "the
+    alphabetically first dataset" -- ``acquisition_model`` out of the real 297.
+    Demanding exactly that one rejects 296 equally uncrowded datasets and,
+    because PLAN_DATASET_CONCENTRATION is not locally groundable, aborts the
+    whole cycle with zero candidates.
+    """
+    snapshots, allowed = _many_dataset_snapshots(297)
+
+    # Not the alphabetically first dataset, but equally unoccupied.
+    issues = HighQualityGenerator._plan_issues(
+        _plan(fields_to_use=["field_150"]), snapshots, allowed, _REFS
+    )
+
+    assert "PLAN_DATASET_CONCENTRATION" not in issues
+    assert issues == ()
+
+
+def test_concentration_still_refuses_a_dataset_above_the_minimum() -> None:
+    """One pending candidate must still push its dataset out of contention."""
+    snapshots, allowed = _many_dataset_snapshots(297)
+    occupied = InventoryRecord(
+        ref_id="pending", candidate_id="pending", request_hash="pending",
+        expression="rank(field_150)", queue_status="PENDING_SIMULATION", family="rank",
+        dataset="ds_150", data_fields=("field_150",),
+    )
+    scoped = LocalSnapshots(
+        catalog=snapshots.catalog, catalog_dir=Path("."), catalog_source="test",
+        catalog_age_hours=0.0, feedback=snapshots.feedback,
+        inventory=CandidateInventory(records=(occupied,)),
+    )
+
+    crowded = HighQualityGenerator._plan_issues(
+        _plan(fields_to_use=["field_150"]), scoped, allowed, _REFS
+    )
+    assert "PLAN_DATASET_CONCENTRATION" in crowded
+
+    # Any other dataset is still at the minimum and remains acceptable.
+    free = HighQualityGenerator._plan_issues(
+        _plan(fields_to_use=["field_151"]), scoped, allowed, _REFS
+    )
+    assert "PLAN_DATASET_CONCENTRATION" not in free
+
+
+def _wide_snapshots(datasets: int, fields_each: int) -> LocalSnapshots:
+    fields = {
+        f"f_{d:03d}_{i:02d}": _field(f"f_{d:03d}_{i:02d}", f"ds_{d:03d}")
+        for d in range(datasets)
+        for i in range(fields_each)
+    }
+    catalog = MetadataCache(
+        cache_dir=Path("."),
+        operators={
+            name: OperatorMetadata(name=name, signature=f"{name}(x)", arity=1, description=name)
+            for name in ("rank", "ts_delta", "ts_zscore", "divide", "group_neutralize")
+        },
+        fields=fields,
+        datasets={
+            f"ds_{d:03d}": DatasetMetadata(
+                dataset_id=f"ds_{d:03d}", name=f"ds_{d:03d}", category="c",
+            )
+            for d in range(datasets)
+        },
+        info={"region": "USA", "universe": "TOP3000", "source": "test"},
+    )
+    return LocalSnapshots(
+        catalog=catalog, catalog_dir=Path("."), catalog_source="test", catalog_age_hours=0.0,
+        feedback=FeedbackSummary(
+            records=(), positive=(), near_pass=(), failures=(), self_corr_risk=(),
+            failure_counts={},
+        ),
+        inventory=CandidateInventory(records=()),
+    )
+
+
+def test_research_prompt_stays_inside_the_model_context() -> None:
+    """The prompt must be bounded by a global budget, not only per dataset.
+
+    Measured against the real 297-dataset / 89768-field catalog on 2026-08-09:
+    a 40-field per-dataset quota with no global cap produced 8680 visible
+    fields and a 1,211,624-char prompt -- about 303k tokens against a 64k
+    context.  ``catalog.fields_by_dataset`` alone was 99.2% of it, and because
+    ``knowledge``, ``v50_seeds`` and ``plan_requirements`` serialize after it,
+    the endpoint silently truncated exactly the blocks whose absence shows up
+    as HALLUCINATED_KNOWLEDGE_REF and PLAN_CROSS_DATASET.
+    """
+    snapshots = _wide_snapshots(297, 40)
+
+    prompt = HighQualityGenerator._research_prompt(snapshots, [], _Knowledge(), "cycle-1")
+    payload = json.loads(prompt)
+
+    # 64k-token context, ~4 chars/token, leaving room for the schema and reply.
+    assert len(prompt) < 200_000, f"prompt is {len(prompt)} chars"
+    # The instruction blocks must survive serialization, not be cut off.
+    assert payload["plan_requirements"]
+    assert payload["knowledge"]
+    assert payload["v50_seeds"] == []
+
+
+def test_visible_datasets_are_capped_but_each_keeps_a_full_quota() -> None:
+    """A shallow view of every dataset cannot express an alpha; rotate instead."""
+    snapshots = _wide_snapshots(297, 40)
+
+    allowed = HighQualityGenerator._research_field_ids(snapshots, [])
+    by_dataset: dict[str, int] = {}
+    for field in allowed:
+        by_dataset[snapshots.catalog.fields[field].dataset_id] = (
+            by_dataset.get(snapshots.catalog.fields[field].dataset_id, 0) + 1
+        )
+
+    assert len(by_dataset) < 297, "the whole catalog cannot fit in one prompt"
+    assert len(by_dataset) >= 3, "the concentration gate needs at least three datasets"
+    # Every advertised dataset must be deep enough to build an expression from.
+    assert min(by_dataset.values()) >= 20, by_dataset
+
+
+def test_dataset_visibility_rotates_as_candidates_accumulate() -> None:
+    """Occupancy must move the window, so the catalog is reachable over cycles."""
+    snapshots = _wide_snapshots(297, 40)
+    first = HighQualityGenerator._research_field_ids(snapshots, [])
+    first_datasets = {snapshots.catalog.fields[f].dataset_id for f in first}
+
+    # Fill every dataset in the first window.
+    pending = tuple(
+        InventoryRecord(
+            ref_id=f"p{index}", candidate_id=f"p{index}", request_hash=f"p{index}",
+            expression=f"rank({dataset}_x)", queue_status="PENDING_SIMULATION", family="rank",
+            dataset=dataset, data_fields=(),
+        )
+        for index, dataset in enumerate(sorted(first_datasets))
+    )
+    occupied = LocalSnapshots(
+        catalog=snapshots.catalog, catalog_dir=Path("."), catalog_source="test",
+        catalog_age_hours=0.0, feedback=snapshots.feedback,
+        inventory=CandidateInventory(records=pending),
+    )
+
+    second = HighQualityGenerator._research_field_ids(occupied, [])
+    second_datasets = {occupied.catalog.fields[f].dataset_id for f in second}
+
+    assert second_datasets != first_datasets
+    assert not (second_datasets & first_datasets), "a filled dataset must yield its slot"
+
+
+def test_seed_fields_stay_in_scope_even_outside_the_window() -> None:
+    """A plan must still be able to reference its own parent seeds."""
+    snapshots = _wide_snapshots(297, 40)
+
+    class _Seed:
+        expression = "rank(f_296_39)"
+
+    allowed = HighQualityGenerator._research_field_ids(snapshots, [_Seed()])
+
+    assert "f_296_39" in allowed
+
+
 def test_research_prompt_groups_fields_by_dataset() -> None:
     """The one-dataset rule must be visible in the payload's shape."""
 

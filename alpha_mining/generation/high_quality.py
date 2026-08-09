@@ -82,6 +82,17 @@ _LOCALLY_GROUNDABLE_PLAN_ISSUES = frozenset({
     "PLAN_UNKNOWN_FIELD", "PLAN_UNKNOWN_OPERATOR", "PLAN_GHOST_OPERATOR",
     "PLAN_CROSS_DATASET", "HALLUCINATED_KNOWLEDGE_REF",
 })
+# Ceiling for the serialized ``fields_by_dataset`` block, in characters.  The
+# whole research prompt has to fit a 64k-token context (~4 chars/token, so
+# ~256k chars) with room left for the operator list, knowledge, seeds,
+# plan_requirements and the model's own reply.  See _research_field_ids.
+_RESEARCH_FIELD_CHAR_BUDGET = 150_000
+# JSON scaffolding per field entry: {"id": "", "description": ""} plus the
+# comma, i.e. what a field costs beyond its id and description text.
+_RESEARCH_FIELD_ENTRY_OVERHEAD = 34
+# Admitted regardless of budget: below three datasets the concentration gate
+# has nothing to choose between.
+_RESEARCH_MIN_DATASETS = 3
 _REPAIRABLE_DRAFT_REJECTIONS = frozenset({
     "EMPTY_EXPRESSION", "INVALID_LLM_CANDIDATE", "CROSS_DATASET", "PLAN_SCOPE_VIOLATION",
     "UNKNOWN_FIELD", "UNKNOWN_OPERATOR", "GHOST_OPERATOR", "HALLUCINATED_KNOWLEDGE_REF",
@@ -619,17 +630,36 @@ class HighQualityGenerator:
 
     @staticmethod
     def _research_field_ids(
-        snapshots: LocalSnapshots, seeds: list[Any], *, per_dataset: int = 40,
+        snapshots: LocalSnapshots,
+        seeds: list[Any],
+        *,
+        per_dataset: int = 40,
+        char_budget: int = _RESEARCH_FIELD_CHAR_BUDGET,
     ) -> set[str]:
-        """Expose the best fields of every dataset instead of a dictionary-order slice.
+        """Expose a bounded, rotating window of deep per-dataset views.
+
+        Two failure modes have to be avoided at once.
 
         A plain ``catalog_fields[:2000]`` is not a wider view, it is a biased one:
         measured on the live catalog it surfaced 1828 analyst10 fields (91.4% of
         what the model could see) and left analyst15 (2556 fields) and analyst14
-        (856 fields) completely unreachable, i.e. 59.9% of the catalog. Combined
-        with the single-dataset plan rule that pins research to one corner of the
-        data. Ranking within each dataset and taking a quota keeps every dataset
-        reachable while cutting prompt noise.
+        (856 fields) completely unreachable, i.e. 59.9% of the catalog. So the
+        quota is taken *per dataset*, ranked within the dataset.
+
+        But a quota alone is unbounded in the number of datasets. On the live
+        297-dataset catalog, 40 fields each is 8680 fields and a 1.21M-char
+        prompt -- roughly 303k tokens against DeepSeek's 64k context, with
+        ``fields_by_dataset`` at 99.2% of the payload. Everything serialized
+        after it (``knowledge``, ``v50_seeds``, ``plan_requirements``) was cut
+        off by the endpoint, which is what surfaced as HALLUCINATED_KNOWLEDGE_REF.
+        So the datasets are also capped by a character budget.
+
+        Capping *datasets* rather than shrinking the per-dataset quota is the
+        deliberate choice: a 3-field view of 297 datasets fits the budget too,
+        but no alpha can be built from it. Depth is kept and breadth is spread
+        across cycles -- the window is ordered by active pending occupancy, so
+        each cycle's work pushes its datasets down the order and surfaces the
+        next ones.
         """
 
         by_dataset: dict[str, list[str]] = {}
@@ -642,10 +672,30 @@ class HighQualityGenerator:
             quality = _field_quality_component((field_id,), snapshots)
             return (-(quality + described), field_id)
 
+        pending: dict[str, int] = {dataset: 0 for dataset in by_dataset}
+        for item in snapshots.inventory.records:
+            if item.queue_status == "PENDING_SIMULATION" and item.dataset in pending:
+                pending[str(item.dataset)] += 1
+        order = sorted(by_dataset, key=lambda dataset: (pending[dataset], dataset))
+
         visible: set[str] = set()
-        for candidates in by_dataset.values():
-            visible.update(sorted(candidates, key=rank)[:max(1, per_dataset)])
-        # Seed fields must stay in scope or the plan cannot reference its own parents.
+        spent = 0
+        for position, dataset in enumerate(order):
+            chosen = sorted(by_dataset[dataset], key=rank)[: max(1, per_dataset)]
+            cost = sum(
+                _RESEARCH_FIELD_ENTRY_OVERHEAD
+                + len(field_id)
+                + len(str(getattr(snapshots.catalog.fields[field_id], "description", "") or "")[:160])
+                for field_id in chosen
+            )
+            # The concentration gate needs a real choice, so the first few
+            # datasets are admitted even if the budget is already spent.
+            if spent + cost > char_budget and position >= _RESEARCH_MIN_DATASETS:
+                break
+            visible.update(chosen)
+            spent += cost
+        # Seed fields must stay in scope or the plan cannot reference its own
+        # parents -- their dataset may well sit outside the current window.
         visible.update(
             field
             for seed in seeds
@@ -655,11 +705,11 @@ class HighQualityGenerator:
         return visible
 
     @staticmethod
-    def _research_dataset_priority(
+    def _dataset_occupancy(
         snapshots: LocalSnapshots,
         allowed_fields: set[str],
-    ) -> tuple[str, ...]:
-        """Order viable datasets by active pending occupancy, then deterministically."""
+    ) -> dict[str, int]:
+        """Active pending candidate count per viable dataset."""
 
         viable = {
             str(snapshots.catalog.fields[field].dataset_id)
@@ -670,7 +720,17 @@ class HighQualityGenerator:
         for item in snapshots.inventory.records:
             if item.queue_status == "PENDING_SIMULATION" and item.dataset in occupancy:
                 occupancy[item.dataset] += 1
-        return tuple(sorted(viable, key=lambda dataset: (occupancy[dataset], dataset)))
+        return occupancy
+
+    @staticmethod
+    def _research_dataset_priority(
+        snapshots: LocalSnapshots,
+        allowed_fields: set[str],
+    ) -> tuple[str, ...]:
+        """Order viable datasets by active pending occupancy, then deterministically."""
+
+        occupancy = HighQualityGenerator._dataset_occupancy(snapshots, allowed_fields)
+        return tuple(sorted(occupancy, key=lambda dataset: (occupancy[dataset], dataset)))
 
     @staticmethod
     def _plan_issues(
@@ -708,9 +768,19 @@ class HighQualityGenerator:
         # inflated the count that diagnosis reads.
         if len(datasets) > 1:
             issues.append("PLAN_CROSS_DATASET")
-        priority = HighQualityGenerator._research_dataset_priority(snapshots, allowed_fields)
-        if len(priority) >= 3 and datasets and next(iter(datasets)) != priority[0]:
-            issues.append("PLAN_DATASET_CONCENTRATION")
+        # The gate refuses *crowding*: a dataset that already carries more pending
+        # candidates than the least-loaded one.  Comparing against priority[0]
+        # instead made it mandate one specific dataset, and since priority is
+        # sorted (occupancy, name), a fresh queue puts every dataset at occupancy
+        # 0 and priority[0] degrades to "alphabetically first" -- 1 acceptable
+        # dataset out of the real catalog's 297, for no research reason.  Being
+        # outside _LOCALLY_GROUNDABLE_PLAN_ISSUES, that aborted whole cycles.
+        occupancy = HighQualityGenerator._dataset_occupancy(snapshots, allowed_fields)
+        if len(occupancy) >= 3 and datasets and occupancy:
+            floor = min(occupancy.values())
+            chosen = next(iter(datasets))
+            if occupancy.get(str(chosen), floor) > floor:
+                issues.append("PLAN_DATASET_CONCENTRATION")
         if not refs or not refs <= allowed_refs:
             issues.append("HALLUCINATED_KNOWLEDGE_REF")
         return tuple(dict.fromkeys(issues))
@@ -1131,9 +1201,9 @@ class HighQualityGenerator:
                 "catalog.fields_by_dataset is keyed by dataset. First pick exactly ONE of those keys, "
                 "then draw every field in fields_to_use from that one key's list. A fields_to_use array "
                 "spanning two keys is refused as PLAN_CROSS_DATASET, and the whole plan is discarded.",
-                "When catalog.dataset_priority lists at least three datasets, choose its first dataset. "
-                "It is derived from active pending occupancy, so choosing another dataset is refused as "
-                "PLAN_DATASET_CONCENTRATION unless the catalog itself cannot support the plan.",
+                "catalog.dataset_priority is ordered by active pending occupancy, least-loaded "
+                "first. Prefer its first entry. A dataset carrying more pending candidates than "
+                "the least-loaded one is refused as PLAN_DATASET_CONCENTRATION.",
                 "Parent seeds are structural inspiration; never reuse a catalog.forbidden_identifiers token.",
                 "Avoid windows below 21, and use at least 42 for ts_corr.",
                 "operators_to_use becomes the COMPLETE whitelist for the next step, which cannot "
