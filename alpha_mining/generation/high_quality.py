@@ -82,6 +82,10 @@ _PLAN_OPERATOR_ALIASES = {
 _LOCALLY_GROUNDABLE_PLAN_ISSUES = frozenset({
     "PLAN_UNKNOWN_FIELD", "PLAN_UNKNOWN_OPERATOR", "PLAN_GHOST_OPERATOR",
     "PLAN_CROSS_DATASET", "HALLUCINATED_KNOWLEDGE_REF",
+    # Adding a reducer the catalog already offers to a whitelist invents nothing.
+    # Outside this set the whole cycle would be discarded with zero candidates,
+    # which is exactly what PLAN_DATASET_CONCENTRATION used to do.
+    "PLAN_VECTOR_WITHOUT_REDUCER",
 })
 # Ceiling for the serialized ``fields_by_dataset`` block, in characters.  The
 # whole research prompt has to fit a 64k-token context (~4 chars/token, so
@@ -316,6 +320,9 @@ class HighQualityGenerator:
                         "use only exact field, operator and knowledge reference IDs from exact_plan_scope",
                         "treat parent seeds as structural inspiration only; do not copy their unavailable identifiers",
                         "avoid windows below 21, and use at least 42 for ts_corr",
+                        "if any field you keep has field_type VECTOR, operators_to_use MUST also "
+                        "contain a vec_* reducer, otherwise the expression step cannot use that "
+                        "field at all and the plan is refused as PLAN_VECTOR_WITHOUT_REDUCER",
                     ],
                 }, ensure_ascii=False, sort_keys=True),
                 json_schema=_plan_schema(),
@@ -886,6 +893,21 @@ class HighQualityGenerator:
             chosen = next(iter(datasets))
             if occupancy.get(str(chosen), floor) > floor:
                 issues.append("PLAN_DATASET_CONCENTRATION")
+        # operators_to_use is a closed whitelist for the expression step, so a plan
+        # that draws an event stream without a reducer cannot be expressed legally
+        # by any candidate -- every one dies as VECTOR_FIELD_NOT_REDUCED.  Measured
+        # on the live catalog the least-loaded dataset acquisition_model is 15/15
+        # VECTOR, so this is the ordinary case there, not an edge case.
+        if fields and not any(
+            str(item).startswith(_VECTOR_REDUCER_PREFIX) for item in operators
+        ):
+            if any(
+                str(
+                    getattr(snapshots.catalog.fields.get(field), "field_type", "") or ""
+                ).upper() == "VECTOR"
+                for field in fields
+            ):
+                issues.append("PLAN_VECTOR_WITHOUT_REDUCER")
         if not refs or not refs <= allowed_refs:
             issues.append("HALLUCINATED_KNOWLEDGE_REF")
         return tuple(dict.fromkeys(issues))
@@ -978,6 +1000,27 @@ class HighQualityGenerator:
                 operator for operator in ("ts_rank", "rank")
                 if operator in snapshots.catalog.operators
             ]
+        # If the grounded fields include an event stream, the whitelist must be able
+        # to reduce it, or the expression step it feeds cannot produce anything
+        # legal.  Taken from the catalog, so this adds no operator the platform does
+        # not have.
+        if any(
+            str(
+                getattr(snapshots.catalog.fields.get(str(field)), "field_type", "") or ""
+            ).upper() == "VECTOR"
+            for field in grounded.get("fields_to_use", [])
+        ) and not any(item.startswith(_VECTOR_REDUCER_PREFIX) for item in operators):
+            reducer = next(
+                (
+                    name
+                    for name in sorted(snapshots.catalog.operators)
+                    if name.startswith(_VECTOR_REDUCER_PREFIX)
+                    and name not in _GHOST_OPERATORS
+                ),
+                "",
+            )
+            if reducer:
+                operators.append(reducer)
         grounded["operators_to_use"] = list(dict.fromkeys(operators))
 
         refs = [
@@ -1694,20 +1737,29 @@ def _string_set(value: object) -> set[str]:
 
 def _fields_by_dataset_scope(
     snapshots: LocalSnapshots, field_ids: set[str],
-) -> dict[str, list[str]]:
+) -> dict[str, list[dict[str, str]]]:
     """Group allowed field IDs by dataset so "one dataset" is a visible choice.
 
     Used by the plan repair prompt, which fires exactly when a flat field list
     let a cross-dataset mix through, so restating that scope flatly would repeat
     the condition that caused the rejection.
+
+    Carries ``field_type`` for the same reason the research payload does: the
+    repair pass is asked to pair a VECTOR field with a reducer, which it cannot
+    do while the type is invisible.
     """
 
-    grouped: dict[str, list[str]] = {}
+    grouped: dict[str, list[dict[str, str]]] = {}
     for field_id in sorted(field_ids):
         field = snapshots.catalog.fields.get(field_id)
         if field is None:
             continue
-        grouped.setdefault(str(field.dataset_id), []).append(field_id)
+        grouped.setdefault(str(field.dataset_id), []).append(
+            {
+                "id": field_id,
+                "field_type": str(getattr(field, "field_type", "") or "MATRIX").upper(),
+            }
+        )
     return grouped
 
 

@@ -240,3 +240,83 @@ def test_candidate_prompt_forbids_vector_fields_when_no_reducer_is_whitelisted()
     rule = " ".join(payload["candidate_requirements"])
     assert "cannot be used at all" in rule
     assert "vec_avg" not in rule, "must not recommend an operator outside the whitelist"
+
+
+def test_plan_selecting_a_vector_field_must_whitelist_a_reducer() -> None:
+    """operators_to_use is closed, so a VECTOR field without a reducer is a dead plan.
+
+    Measured on the live catalog: the least-loaded dataset ``acquisition_model``
+    is 15 VECTOR fields out of 15. A plan there that omits a ``vec_*`` reducer
+    leaves the expression step structurally unable to write anything legal, and
+    every candidate died as VECTOR_FIELD_NOT_REDUCED.
+    """
+
+    issues = HighQualityGenerator._plan_issues(
+        {
+            "research_direction": "d", "hypothesis": "h", "economic_mechanism": "m",
+            "anti_correlation_plan": "a", "expected_turnover_behavior": "t",
+            "fields_to_use": ["evt_one", "evt_two"],
+            "operators_to_use": ["ts_std_dev"],
+            "knowledge_refs": ["ref-1"],
+        },
+        _snapshots(),
+        {"evt_one", "evt_two", "mat_one"},
+        {"ref-1"},
+    )
+
+    assert "PLAN_VECTOR_WITHOUT_REDUCER" in issues
+
+
+def test_plan_with_a_reducer_or_only_matrix_fields_is_clean() -> None:
+    def _issues(fields: list[str], operators: list[str]) -> tuple[str, ...]:
+        return HighQualityGenerator._plan_issues(
+            {
+                "research_direction": "d", "hypothesis": "h", "economic_mechanism": "m",
+                "anti_correlation_plan": "a", "expected_turnover_behavior": "t",
+                "fields_to_use": fields,
+                "operators_to_use": operators,
+                "knowledge_refs": ["ref-1"],
+            },
+            _snapshots(),
+            {"evt_one", "evt_two", "mat_one", "mat_two"},
+            {"ref-1"},
+        )
+
+    assert "PLAN_VECTOR_WITHOUT_REDUCER" not in _issues(
+        ["evt_one"], ["ts_std_dev", "vec_avg"]
+    )
+    assert "PLAN_VECTOR_WITHOUT_REDUCER" not in _issues(
+        ["mat_one", "mat_two"], ["ts_std_dev"]
+    )
+
+
+def test_vector_reducer_gap_is_locally_groundable() -> None:
+    """Adding a catalog reducer to a whitelist invents nothing, so it must not abort.
+
+    PLAN_DATASET_CONCENTRATION already proved the cost of the alternative: an
+    issue outside this set discards the whole cycle with zero candidates.
+    """
+    from alpha_mining.generation.high_quality import _LOCALLY_GROUNDABLE_PLAN_ISSUES
+
+    assert "PLAN_VECTOR_WITHOUT_REDUCER" in _LOCALLY_GROUNDABLE_PLAN_ISSUES
+
+
+def test_local_grounding_adds_a_reducer_for_a_vector_plan() -> None:
+    """The deterministic repair must close the gap without an LLM round trip."""
+
+    grounded = HighQualityGenerator._locally_ground_plan(
+        {
+            "research_direction": "d", "hypothesis": "h", "economic_mechanism": "m",
+            "anti_correlation_plan": "a", "expected_turnover_behavior": "t",
+            "fields_to_use": ["evt_one"],
+            "operators_to_use": ["ts_std_dev"],
+            "knowledge_refs": ["ref-1"],
+        },
+        _snapshots(),
+        [_Seed("rank(mat_one)")],
+        {"evt_one", "mat_one"},
+        {"ref-1"},
+    )
+
+    operators = [str(item) for item in grounded["operators_to_use"]]
+    assert any(item.startswith("vec_") for item in operators), operators
