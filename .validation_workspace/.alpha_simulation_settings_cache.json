@@ -1,0 +1,118 @@
+{
+  "allowed_values": {
+    "alpha_type": [
+      "REGULAR"
+    ],
+    "decay": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      12,
+      13,
+      15,
+      50,
+      55,
+      65,
+      70,
+      78,
+      80,
+      90,
+      95
+    ],
+    "delay": [
+      1
+    ],
+    "language": [
+      "FASTEXPR"
+    ],
+    "nanHandling": [
+      "ON",
+      "OFF"
+    ],
+    "neutralization": [
+      "SUBINDUSTRY",
+      "MARKET",
+      "INDUSTRY",
+      "SECTOR",
+      "NONE"
+    ],
+    "pasteurization": [
+      "ON",
+      "OFF"
+    ],
+    "region": [
+      "USA"
+    ],
+    "truncation": [
+      0.007,
+      0.01,
+      0.02,
+      0.025,
+      0.03,
+      0.035,
+      0.04,
+      0.045,
+      0.05,
+      0.055,
+      0.06,
+      0.07,
+      0.08,
+      0.09,
+      0.1
+    ],
+    "unitHandling": [
+      "VERIFY"
+    ],
+    "universe": [
+      "TOP3000"
+    ],
+    "visualization": [
+      false,
+      true
+    ]
+  },
+  "context": {
+    "delay": 1,
+    "region": "USA",
+    "universe": "TOP3000"
+  },
+  "defaults": {
+    "alpha_type": "REGULAR",
+    "decay": 4,
+    "delay": 1,
+    "language": "FASTEXPR",
+    "nanHandling": "ON",
+    "neutralization": "MARKET",
+    "pasteurization": "ON",
+    "region": "USA",
+    "truncation": 0.05,
+    "unitHandling": "VERIFY",
+    "universe": "TOP3000",
+    "visualization": false
+  },
+  "fetched_at": 1786265347.1716785,
+  "provenance": {
+    "alpha_type": "PLATFORM_REQUIRED_FIELD:simulation_400_required",
+    "decay": "PLATFORM_ACCEPTED_ALPHA:research_memory_quality.sqlite:legacy_alphas",
+    "delay": "PLATFORM_CATALOG:.alpha_datasets_cache.json",
+    "evidence_rows": 16180,
+    "evidence_rows_region_scoped": true,
+    "language": "PLATFORM_REQUIRED_FIELD:simulation_400_required",
+    "nanHandling": "PLATFORM_REQUIRED_FIELD:simulation_400_required",
+    "neutralization": "PLATFORM_ACCEPTED_ALPHA:research_memory_quality.sqlite:legacy_alphas",
+    "pasteurization": "PLATFORM_REQUIRED_FIELD:simulation_400_required",
+    "region": "PLATFORM_CATALOG:.alpha_datasets_cache.json",
+    "truncation": "PLATFORM_ACCEPTED_ALPHA:research_memory_quality.sqlite:legacy_alphas (rounded to 3dp)",
+    "unitHandling": "PLATFORM_REQUIRED_FIELD:simulation_400_required",
+    "universe": "PLATFORM_CATALOG:.alpha_datasets_cache.json",
+    "visualization": "PLATFORM_REQUIRED_FIELD:simulation_400_required"
+  },
+  "schema_version": "simulation-settings-v1"
+}

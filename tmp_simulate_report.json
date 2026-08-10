@@ -1,0 +1,286 @@
+[
+  {
+    "candidate_id": "6f969e8c41e2d1d3",
+    "expression": "group_neutralize(ts_zscore(ts_decay_linear(rank(ts_delta(stddev_second_biasfree_price_target_estimate, 84)), 21), 126), sector)",
+    "settings": {
+      "region": "USA",
+      "universe": "TOP3000",
+      "delay": 1,
+      "decay": 4,
+      "neutralization": "MARKET",
+      "truncation": 0.05,
+      "language": "FASTEXPR",
+      "pasteurization": "ON",
+      "unitHandling": "VERIFY",
+      "nanHandling": "ON",
+      "visualization": false,
+      "instrumentType": "EQUITY"
+    },
+    "started_at": "2026-08-09T14:49:36.688322+00:00",
+    "alpha_id": "JjGp65nA",
+    "status": "COMPLETE",
+    "metrics": {
+      "sharpe": 0.16,
+      "fitness": 0.03,
+      "turnover": 0.0609,
+      "returns": 0.0049,
+      "drawdown": 0.0857,
+      "margin": 0.000162
+    },
+    "checks": [
+      {
+        "name": "LOW_SHARPE",
+        "result": "FAIL",
+        "limit": 1.58,
+        "value": 0.16
+      },
+      {
+        "name": "CLUSTER_TEST",
+        "result": "WARNING",
+        "limit": 1.58,
+        "value": -0.1
+      },
+      {
+        "name": "LOW_FITNESS",
+        "result": "FAIL",
+        "limit": 1.0,
+        "value": 0.03
+      },
+      {
+        "name": "LOW_TURNOVER",
+        "result": "PASS",
+        "limit": 0.01,
+        "value": 0.0609
+      },
+      {
+        "name": "HIGH_TURNOVER",
+        "result": "PASS",
+        "limit": 0.7,
+        "value": 0.0609
+      },
+      {
+        "name": "CONCENTRATED_WEIGHT",
+        "result": "PASS"
+      },
+      {
+        "name": "LOW_SUB_UNIVERSE_SHARPE",
+        "result": "FAIL",
+        "limit": 0.07,
+        "value": -0.22
+      },
+      {
+        "name": "SELF_CORRELATION",
+        "result": "PENDING"
+      },
+      {
+        "name": "DATA_DIVERSITY",
+        "result": "PENDING"
+      },
+      {
+        "name": "PROD_CORRELATION",
+        "result": "PENDING"
+      },
+      {
+        "name": "REGULAR_SUBMISSION",
+        "result": "PENDING"
+      },
+      {
+        "name": "LOW_2Y_SHARPE",
+        "result": "FAIL",
+        "value": 0.38,
+        "limit": 1.58
+      },
+      {
+        "name": "MATCHES_COMPETITION",
+        "result": "WARNING",
+        "competitions": [
+          {
+            "id": "GAC2026",
+            "name": "Global Alpha Competition 2026"
+          }
+        ]
+      },
+      {
+        "result": "PASS",
+        "name": "MATCHES_PYRAMID",
+        "effective": 1,
+        "multiplier": 1.2,
+        "pyramids": [
+          {
+            "name": "USA/D1/ANALYST",
+            "multiplier": 1.2
+          }
+        ]
+      },
+      {
+        "result": "WARNING",
+        "name": "MATCHES_THEMES",
+        "themes": [
+          {
+            "id": "myzqOo4",
+            "multiplier": 2.0,
+            "name": "GLB High Turnover Theme"
+          },
+          {
+            "id": "8BLLk1B",
+            "multiplier": 1.0,
+            "name": "GLB/D1 Power Pool Aug`26"
+          }
+        ]
+      },
+      {
+        "name": "OSMOSIS_ALLOCATION",
+        "result": "WARNING"
+      }
+    ],
+    "platform_message": "",
+    "platform_status_fields": {
+      "status": "UNSUBMITTED",
+      "type": "REGULAR",
+      "id": "JjGp65nA"
+    },
+    "elapsed_seconds": 78.6
+  },
+  {
+    "candidate_id": "dab7a3c591646ca4",
+    "expression": "group_neutralize(ts_decay_linear(rank(ts_delta(mean_connection_significance_score,21)/ts_std_dev(mean_connection_significance_score,126)),10),sector)",
+    "settings": {
+      "region": "USA",
+      "universe": "TOP3000",
+      "delay": 1,
+      "decay": 4,
+      "neutralization": "MARKET",
+      "truncation": 0.08,
+      "language": "FASTEXPR",
+      "pasteurization": "ON",
+      "unitHandling": "VERIFY",
+      "nanHandling": "ON",
+      "visualization": false,
+      "instrumentType": "EQUITY"
+    },
+    "started_at": "2026-08-09T14:50:55.292036+00:00",
+    "alpha_id": "ak1d5dlv",
+    "status": "COMPLETE",
+    "metrics": {
+      "sharpe": 0.26,
+      "fitness": 0.03,
+      "turnover": 0.0409,
+      "returns": 0.0015,
+      "drawdown": 0.0131,
+      "margin": 7.5e-05
+    },
+    "checks": [
+      {
+        "name": "LOW_SHARPE",
+        "result": "FAIL",
+        "limit": 1.58,
+        "value": 0.26
+      },
+      {
+        "name": "CLUSTER_TEST",
+        "result": "WARNING",
+        "limit": 1.58,
+        "value": 0.24
+      },
+      {
+        "name": "LOW_FITNESS",
+        "result": "FAIL",
+        "limit": 1.0,
+        "value": 0.03
+      },
+      {
+        "name": "LOW_TURNOVER",
+        "result": "PASS",
+        "limit": 0.01,
+        "value": 0.0409
+      },
+      {
+        "name": "HIGH_TURNOVER",
+        "result": "PASS",
+        "limit": 0.7,
+        "value": 0.0409
+      },
+      {
+        "name": "CONCENTRATED_WEIGHT",
+        "result": "FAIL"
+      },
+      {
+        "name": "LOW_SUB_UNIVERSE_SHARPE",
+        "result": "FAIL",
+        "limit": 0.11,
+        "value": -0.24
+      },
+      {
+        "name": "SELF_CORRELATION",
+        "result": "PENDING"
+      },
+      {
+        "name": "DATA_DIVERSITY",
+        "result": "PENDING"
+      },
+      {
+        "name": "PROD_CORRELATION",
+        "result": "PENDING"
+      },
+      {
+        "name": "REGULAR_SUBMISSION",
+        "result": "PENDING"
+      },
+      {
+        "name": "LOW_2Y_SHARPE",
+        "result": "FAIL",
+        "value": -0.47,
+        "limit": 1.58
+      },
+      {
+        "name": "MATCHES_COMPETITION",
+        "result": "WARNING",
+        "competitions": [
+          {
+            "id": "GAC2026",
+            "name": "Global Alpha Competition 2026"
+          }
+        ]
+      },
+      {
+        "result": "PASS",
+        "name": "MATCHES_PYRAMID",
+        "effective": 1,
+        "multiplier": 1.3,
+        "pyramids": [
+          {
+            "name": "USA/D1/MODEL",
+            "multiplier": 1.3
+          }
+        ]
+      },
+      {
+        "result": "WARNING",
+        "name": "MATCHES_THEMES",
+        "themes": [
+          {
+            "id": "myzqOo4",
+            "multiplier": 2.0,
+            "name": "GLB High Turnover Theme"
+          },
+          {
+            "id": "8BLLk1B",
+            "multiplier": 1.0,
+            "name": "GLB/D1 Power Pool Aug`26"
+          }
+        ]
+      },
+      {
+        "name": "OSMOSIS_ALLOCATION",
+        "result": "WARNING"
+      }
+    ],
+    "platform_message": "",
+    "platform_status_fields": {
+      "status": "UNSUBMITTED",
+      "type": "REGULAR",
+      "id": "ak1d5dlv"
+    },
+    "elapsed_seconds": 75.0
+  }
+]

@@ -1,0 +1,30 @@
+fix: refuse a ratio of a field over its own numbered variant
+
+The first post-fix candidate to reach the platform simulated COMPLETE with
+sharpe 0.0, fitness None, turnover 0.0, returns 0.0 and CLUSTER_TEST=ERROR --
+a dead alpha that had passed every local gate:
+
+  group_neutralize(ts_zscore(ts_delta(
+      dilution_adjustment_ratio/dilution_adjustment_ratio_2, 126), 126)
+    * rank(ts_decay_linear(last_close_price, 21)), sector)
+
+dilution_adjustment_ratio_2 is the same quantity as dilution_adjustment_ratio
+under a second name, so the ratio is near-constant, ts_delta of it is ~0, and
+nothing survives neutralization. Both fields report coverage 0.9947 and
+date_coverage 0.9507, so no quality signal separated them either.
+
+This is a large reachable trap, not a one-off: 4502 fields in the live catalog
+are a numbered variant of a sibling in their own dataset. A plan asked for "two
+fields to relate" can satisfy that literally and produce nothing.
+
+- _near_variant_ratio_fields flags the pair only when it forms the two operands
+  of one / or -, in the same dataset. Two unrelated fields in a ratio is the
+  relationship the pipeline wants, and a sibling pair merely co-occurring in a
+  larger expression is not this defect.
+- The draft gate returns NEAR_VARIANT_RATIO, repairable: the topology is fine,
+  one operand is the wrong field.
+- The candidate prompt lists near_variant_field_pairs by name. Restating the
+  rule alone would not help -- the trap is invisible while both names look like
+  two different fields.
+
+Tests: 937 passed, 2 skipped.

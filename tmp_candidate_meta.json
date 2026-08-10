@@ -1,0 +1,107 @@
+{
+  "097dbf7800febfbe": {
+    "datasets": [
+      "analyst9"
+    ],
+    "fields": [
+      "anl9_companyidmap",
+      "anl9_sconsensusanalysis_dataitemvalue",
+      "anl9_sconsensusv2span_others_dataitemvalue"
+    ],
+    "operators": [
+      "group_neutralize",
+      "ts_std_dev",
+      "ts_zscore"
+    ]
+  },
+  "3e7d5f6dcb883fb3": {
+    "datasets": [
+      "analyst9"
+    ],
+    "fields": [
+      "anl9_consensusv2span_incomeebt_dataitemvalue",
+      "anl9_consensusv2span_incomeebt_effectivetime"
+    ],
+    "operators": [
+      "group_neutralize",
+      "ts_corr",
+      "ts_delta",
+      "ts_std_dev"
+    ]
+  },
+  "ca6ed82cd3eb7890": {
+    "datasets": [
+      "analyst9"
+    ],
+    "fields": [
+      "anl9_companyidmap",
+      "anl9_sconsensusanalysis_dataitemvalue",
+      "anl9_sconsensusv2span_others_dataitemvalue"
+    ],
+    "operators": [
+      "group_neutralize",
+      "ts_decay_linear",
+      "ts_std_dev"
+    ]
+  },
+  "756c27be593fd0ad": {
+    "datasets": [
+      "analyst9"
+    ],
+    "fields": [
+      "anl9_sconsensusanalysis_dataitemvalue"
+    ],
+    "operators": [
+      "group_neutralize",
+      "rank",
+      "ts_decay_linear",
+      "ts_std_dev"
+    ]
+  },
+  "097472c386485f9b": {
+    "datasets": [
+      "analyst9"
+    ],
+    "fields": [
+      "anl9_consensusv2span_incomeebt_dataitemvalue",
+      "anl9_consensusv2span_incomeebt_effectivetime",
+      "anl9_consensusv2span_incomeebt_totime"
+    ],
+    "operators": [
+      "group_neutralize",
+      "rank",
+      "ts_decay_linear",
+      "ts_delta",
+      "ts_std_dev"
+    ]
+  },
+  "60cfb0306e64418e": {
+    "datasets": [
+      "analyst7"
+    ],
+    "fields": [
+      "est_12m_ent_std_28d",
+      "est_12m_ent_std_4wks_ago"
+    ],
+    "operators": [
+      "divide",
+      "group_neutralize",
+      "ts_decay_linear"
+    ]
+  },
+  "83b46491ebff12bf": {
+    "datasets": [
+      "analyst12"
+    ],
+    "fields": [
+      "anl12_bbgnews_score",
+      "anl12_benzinga_score"
+    ],
+    "operators": [
+      "group_neutralize",
+      "rank",
+      "ts_corr",
+      "ts_decay_linear"
+    ]
+  }
+}
