@@ -1997,9 +1997,25 @@ def field_quality_score(field_name: str) -> float:
 # ---------------------------- preflight ----------------------------
 
 class PreflightValidator:
+    # Bare identifiers that are literals / keyword arguments rather than data
+    # fields, so they never need a catalog entry.
+    _LITERAL_IDENTIFIERS = frozenset({"true", "false", "nan", "inf", "rettype", "range"})
+
     def __init__(self, catalog: FieldCatalog | None = None, *, min_ts_corr_window: int = 10):
         self.catalog = catalog
         self.min_ts_corr_window = max(1, int(min_ts_corr_window))
+        # ExpressionFactory validates thousands of raw candidates per round
+        # against one immutable catalog (~89k fields in production).  Normalize
+        # the allow-list once here instead of rebuilding it per expression.
+        self._static_allowed_identifiers = self._build_static_allowed(catalog)
+
+    @staticmethod
+    def _build_static_allowed(catalog: "FieldCatalog | None") -> frozenset[str]:
+        allowed: set[str] = set(FUNCTIONS) | set(GROUPS)
+        if catalog is not None:
+            allowed.update(str(x).lower() for x in catalog.ids)
+            allowed.update(str(x).lower() for x in catalog.base_vars)
+        return frozenset(allowed)
 
     def validate(self, expr: str) -> tuple[bool, str]:
         s = _sig(expr)
@@ -2097,16 +2113,17 @@ class PreflightValidator:
     def _unknown_identifiers(self, low: str) -> list[str]:
         if self.catalog is None:
             return []
-        allowed = {x.lower() for x in self.catalog.ids} | {x.lower() for x in self.catalog.base_vars}
-        allowed |= FUNCTIONS | GROUPS | self._assigned_names(low)
+        # Membership only: never union the cached catalog with the per-expression
+        # assignment set, because copying an ~89k-entry set per candidate is
+        # exactly the cost being removed here.
+        static_allowed = self._static_allowed_identifiers
+        assigned = self._assigned_names(low)
         all_ids = set(re.findall(r"\b[a-z_][a-z0-9_]*\b", low))
         out = []
         for ident in sorted(all_ids):
-            if ident in allowed:
+            if ident in static_allowed or ident in assigned:
                 continue
-            if ident in {"true", "false", "nan", "inf", "rettype", "range"}:
-                continue
-            if len(ident) <= 2 and ident in self._assigned_names(low):
+            if ident in self._LITERAL_IDENTIFIERS:
                 continue
             out.append(ident)
         return out
