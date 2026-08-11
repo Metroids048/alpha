@@ -31,13 +31,47 @@ class BrowserTransportError(PlatformReadError):
     """The browser context could not perform a platform request safely."""
 
 
+class _CaseInsensitiveHeaders(Mapping[str, str]):
+    """HTTP headers are case-insensitive (RFC 9110 §5.1).
+
+    The in-page fetch shim reports them lower-cased, while callers use the
+    canonical spelling (``Location``) that requests' CaseInsensitiveDict accepts.
+    Without this, a browser-transport simulation POST looks like it returned no
+    progress location at all.  Iteration preserves the original casing so
+    ``dict(headers)`` still shows what the browser actually sent.
+    """
+
+    __slots__ = ("_store",)
+
+    def __init__(self, items: Mapping[str, str] | None = None) -> None:
+        self._store: dict[str, tuple[str, str]] = {}
+        for key, value in dict(items or {}).items():
+            self._store[str(key).lower()] = (str(key), str(value))
+
+    def __getitem__(self, key: str) -> str:
+        return self._store[str(key).lower()][1]
+
+    def __iter__(self):
+        return iter(original for original, _ in self._store.values())
+
+    def __len__(self) -> int:
+        return len(self._store)
+
+    def __repr__(self) -> str:
+        return repr({original: value for original, value in self._store.values()})
+
+
 @dataclass(frozen=True)
 class BrowserResponse:
     """A deliberately small response surface which cannot expose credentials."""
 
     status_code: int
     text: str
-    headers: Mapping[str, str] = field(default_factory=dict)
+    headers: Mapping[str, str] = field(default_factory=_CaseInsensitiveHeaders)
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.headers, _CaseInsensitiveHeaders):
+            object.__setattr__(self, "headers", _CaseInsensitiveHeaders(self.headers))
 
     @property
     def content(self) -> bytes:
