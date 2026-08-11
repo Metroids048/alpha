@@ -23,6 +23,14 @@ from alpha_mining.simulate.settings_optimizer import SettingsOptimizer, TuneStag
 from alpha_mining.storage.work_items import CandidateWorkItem, CandidateWorkStore, WorkflowStatus
 
 
+#: Private ``_simulate`` control results.  These are not workflow states and
+#: never reach the database; ``AUTH_PAUSED`` only tells ``prepare_once`` that the
+#: platform session, not the candidate, ended the round.
+_SIMULATED = "SIMULATED"
+_NOT_SIMULATED = "NOT_SIMULATED"
+_AUTH_PAUSED = "AUTH_PAUSED"
+
+
 class WorkflowGateway(Protocol):
     def simulate(self, **kwargs: Any) -> Any: ...
     def refresh_alpha_checks(self, alpha_id: str) -> dict[str, Any]: ...
@@ -90,7 +98,13 @@ class CandidateWorkflowService:
         if remaining and self._simulation_budget_available():
             for item in self.store.list_items(states=[WorkflowStatus.PENDING_SIMULATION.value], limit=remaining):
                 processed += 1
-                simulated += int(self._simulate(item))
+                attempt = self._simulate(item)
+                if attempt == _SIMULATED:
+                    simulated += 1
+                elif attempt == _AUTH_PAUSED:
+                    # Stop the whole round on the first paused session so one
+                    # expired login cannot burn the rest of the batch.
+                    break
         for item in self.store.list_items(limit=10000):
             states[item.state] = states.get(item.state, 0) + 1
         return PreparationSummary(processed, simulated, states)
@@ -179,13 +193,26 @@ class CandidateWorkflowService:
                 self.store.transition(candidate_id, WorkflowStatus.DESCRIPTION_VALIDATED.value, event_type="SUBMISSION_FAILED", description_status="VERIFIED", submission_status="FAILED", error=submitted.error)
         return BatchPreparation(batch_id, payload_hash, ids, True)
 
-    def _simulate(self, item: CandidateWorkItem) -> bool:
+    def _simulate(self, item: CandidateWorkItem) -> str:
         self.store.transition(item.candidate_id, WorkflowStatus.SIMULATING.value, event_type="SIMULATION_STARTED")
         self._emit(item, WorkflowStatus.SIMULATING.value, "simulation request leased")
         proposal = self._proposal(item)
         settings = self._settings(item)
         execution = self.orchestrator.execute_candidate(proposal, settings)
         if execution.result is None:
+            if execution.error_category == _AUTH_PAUSED:
+                # An expired platform session is an environment state, never a
+                # quality verdict: keep the candidate simulable and write no
+                # outcome so generation feedback stays uncontaminated.  The
+                # request row and its checkpoint stay resumable in
+                # SimulationRequestStore.
+                self.store.transition(
+                    item.candidate_id, WorkflowStatus.PENDING_SIMULATION.value,
+                    event_type="SIMULATION_AUTH_PAUSED",
+                    error_category=_AUTH_PAUSED, error=execution.error_message,
+                )
+                self._emit(item, WorkflowStatus.PENDING_SIMULATION.value, execution.error_message)
+                return _AUTH_PAUSED
             uncertain = execution.error_category == "SIMULATION_UNCERTAIN"
             state = WorkflowStatus.SIMULATION_UNCERTAIN.value if uncertain else WorkflowStatus.FAR_FAIL.value
             record_candidate_outcome(
@@ -195,7 +222,7 @@ class CandidateWorkflowService:
             )
             self.store.transition(item.candidate_id, state, event_type="SIMULATION_UNCERTAIN" if uncertain else "SIMULATION_FAILED", error_category=execution.error_category, error=execution.error_message)
             self._emit(item, state, execution.error_message)
-            return False
+            return _NOT_SIMULATED
         result = execution.result
         decision = evaluate_quality(alpha_id=result.alpha_id, status=result.status, metrics=result.metrics, checks=result.checks, prod_corr_exception_confirmed=bool((result.raw or {}).get("prodCorrExceptionConfirmed")))
         state = decision.status.value
@@ -208,7 +235,7 @@ class CandidateWorkflowService:
         if decision.status is QualityStatus.READY_TO_SUBMIT and refreshed is not None:
             self._prepare_description(refreshed, result.raw)
         self._emit(item, state, "; ".join(decision.reasons), simulated=1)
-        return True
+        return _SIMULATED
 
     def _refresh_checks(self, item: CandidateWorkItem) -> None:
         if not item.alpha_id:

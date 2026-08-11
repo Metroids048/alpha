@@ -171,6 +171,90 @@ class ErrorGateway(FakeGateway):
         raise RuntimeError("transport failed")
 
 
+class AuthPausedGateway(FakeGateway):
+    """Reject simulation the way an expired platform session does."""
+
+    def __init__(self, *, pauses: int = 1) -> None:
+        super().__init__()
+        self.pauses = int(pauses)
+
+    def simulate(self, **kwargs):
+        if self.posts < self.pauses:
+            from alpha_mining.factory.contracts import SimulationAuthenticationPaused
+
+            self.posts += 1
+            raise SimulationAuthenticationPaused("simulation POST returned HTTP 401")
+        return super().simulate(**kwargs)
+
+
+def _second_candidate() -> dict[str, object]:
+    return {
+        **_candidate_with_provenance(),
+        "candidate_id": "candidate-2",
+        "request_hash": "request-2",
+        "expression": "rank(fixture_close_second)",
+        "exact_hash": "exact-2",
+        "field_skeleton": "rank(fixture_close_second)",
+    }
+
+
+def _outcome_count(database: Path) -> int:
+    with sqlite3.connect(database) as con:
+        return int(con.execute("SELECT COUNT(*) FROM candidate_outcomes").fetchone()[0])
+
+
+def test_auth_paused_keeps_candidate_pending_without_quality_outcome(tmp_path: Path) -> None:
+    from alpha_mining.factory.operator_service import CandidateWorkflowService
+    from alpha_mining.storage.work_items import WorkflowStatus
+
+    database = tmp_path / "auth_paused.sqlite"
+    gateway = AuthPausedGateway(pauses=99)
+    service = CandidateWorkflowService(database, gateway)
+    service.store.upsert_candidate(_candidate_with_provenance())
+    service.store.upsert_candidate(_second_candidate())
+
+    summary = service.prepare_once()
+
+    first = service.store.get_item("candidate-1")
+    second = service.store.get_item("candidate-2")
+    assert first is not None and second is not None
+    assert first.state == WorkflowStatus.PENDING_SIMULATION.value
+    assert first.last_error_category == "AUTH_PAUSED"
+    assert second.state == WorkflowStatus.PENDING_SIMULATION.value
+    assert summary.simulated == 0
+    assert gateway.posts == 1
+    assert _outcome_count(database) == 0
+
+
+def test_auth_paused_candidate_resumes_into_one_authoritative_outcome(tmp_path: Path) -> None:
+    from alpha_mining.factory.operator_service import CandidateWorkflowService
+    from alpha_mining.storage.work_items import WorkflowStatus
+
+    database = tmp_path / "auth_resume.sqlite"
+    gateway = AuthPausedGateway(pauses=1)
+    service = CandidateWorkflowService(database, gateway)
+    service.store.upsert_candidate(_candidate_with_provenance())
+
+    paused = service.prepare_once()
+
+    assert paused.simulated == 0
+    assert _outcome_count(database) == 0
+    item = service.store.get_item("candidate-1")
+    assert item is not None and item.state == WorkflowStatus.PENDING_SIMULATION.value
+
+    resumed = service.prepare_once()
+
+    assert resumed.simulated == 1
+    assert gateway.posts == 2
+    item = service.store.get_item("candidate-1")
+    assert item is not None
+    assert item.state == WorkflowStatus.READY_TO_SUBMIT.value
+    assert _outcome_count(database) == 1
+    row = _outcome(database)
+    assert row[1:3] == ("READY_TO_SUBMIT", "READY_TO_SUBMIT")
+    assert row[10:] == ("", "")
+
+
 def test_active_simulation_persists_authoritative_outcome_and_provenance(tmp_path: Path) -> None:
     from alpha_mining.factory.operator_service import CandidateWorkflowService
     from alpha_mining.generation.snapshots import load_feedback_summary

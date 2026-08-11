@@ -234,3 +234,251 @@ def test_auth_pause_defers_checkpointed_request_for_resume(tmp_path: Path) -> No
     resumed = requests.acquire(1, request_hash=claim.request_hash)
     assert len(resumed) == 1
     assert resumed[0].progress_location == "/simulations/progress-1"
+
+
+def _submit_entry():
+    """Load the real operator submission entry point by path."""
+
+    import importlib.util
+    import sys
+
+    root = Path(__file__).resolve().parent.parent
+    spec = importlib.util.spec_from_file_location("submit_alpha_entry", root / "提交Alpha.py")
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["submit_alpha_entry"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+class _FakeBrowserTransport:
+    """Record the validation transport lifecycle without launching Chrome."""
+
+    instances: list["_FakeBrowserTransport"] = []
+    auth_status = 200
+    auth_raises: BaseException | None = None
+
+    def __init__(self, **kwargs: object) -> None:
+        self.kwargs = dict(kwargs)
+        self.opened = 0
+        self.waits: list[object] = []
+        self.closed = 0
+        self.requests: list[tuple[str, str]] = []
+        type(self).instances.append(self)
+
+    def open(self) -> None:
+        self.opened += 1
+
+    def wait_for_authentication(self, *, timeout_seconds: float = 900.0, **_kwargs: object) -> int:
+        self.waits.append(timeout_seconds)
+        if type(self).auth_raises is not None:
+            raise type(self).auth_raises
+        return int(type(self).auth_status)
+
+    def close(self) -> None:
+        self.closed += 1
+
+    def request(self, method: str, url: str, **_kwargs: object) -> BrowserResponse:
+        self.requests.append((method, url))
+        return BrowserResponse(200, "{}")
+
+
+@pytest.fixture()
+def fake_browser(monkeypatch):
+    _FakeBrowserTransport.instances = []
+    _FakeBrowserTransport.auth_status = 200
+    _FakeBrowserTransport.auth_raises = None
+    monkeypatch.setattr(
+        "alpha_mining.platform.browser_transport.BrowserBackedWorldQuantTransport",
+        _FakeBrowserTransport,
+    )
+    return _FakeBrowserTransport
+
+
+def test_submit_entry_validation_service_uses_one_persistent_browser_transport(fake_browser, tmp_path: Path) -> None:
+    from alpha_mining.platform.gateway import PlatformGateway
+
+    entry = _submit_entry()
+
+    service, transport = entry._build_validation_service(
+        tmp_path / "research.sqlite",
+        transport_mode="browser",
+        browser_profile_dir=tmp_path / "profile",
+        lock_path=tmp_path / "worldquant.lock",
+        auth_timeout=123.0,
+    )
+
+    assert len(fake_browser.instances) == 1
+    assert transport is fake_browser.instances[0]
+    assert transport.opened == 1
+    assert transport.waits == [123.0]
+    assert transport.closed == 0
+    assert isinstance(service.gateway, PlatformGateway)
+    assert service.gateway.transport is transport
+    assert service.orchestrator.simulation is service.gateway
+    assert Path(transport.kwargs["profile_dir"]) == tmp_path / "profile"
+
+
+def test_submit_entry_validation_service_fails_closed_when_browser_is_unauthenticated(fake_browser, tmp_path: Path) -> None:
+    entry = _submit_entry()
+    fake_browser.auth_status = 401
+
+    with pytest.raises(entry.ValidationAuthPaused, match="AUTH_PAUSED"):
+        entry._build_validation_service(
+            tmp_path / "research.sqlite",
+            transport_mode="browser",
+            browser_profile_dir=tmp_path / "profile",
+            lock_path=tmp_path / "worldquant.lock",
+            auth_timeout=5.0,
+        )
+
+    assert len(fake_browser.instances) == 1
+    transport = fake_browser.instances[0]
+    assert transport.closed == 1
+    assert transport.requests == []
+
+
+def test_submit_entry_direct_transport_never_constructs_a_browser(fake_browser, tmp_path: Path) -> None:
+    entry = _submit_entry()
+
+    service, transport = entry._build_validation_service(
+        tmp_path / "research.sqlite",
+        transport_mode="direct",
+        browser_profile_dir=tmp_path / "profile",
+        lock_path=tmp_path / "worldquant.lock",
+        auth_timeout=5.0,
+    )
+
+    assert fake_browser.instances == []
+    assert transport is None
+    assert getattr(service.gateway, "transport", None) is None
+
+
+def test_submit_entry_defaults_to_browser_validation_transport() -> None:
+    entry = _submit_entry()
+    parser_defaults = entry._parser().parse_args([])
+
+    assert parser_defaults.validation_transport == "browser"
+    assert parser_defaults.browser_profile_dir == str(Path(".validation_workspace") / "wq_browser_profile")
+    assert parser_defaults.browser_auth_timeout == 900.0
+    assert parser_defaults.lock_path == "worldquant_api.lock"
+    assert entry._parser().parse_args(["--validation-transport", "direct"]).validation_transport == "direct"
+
+
+def test_submit_entry_real_submission_never_uses_the_browser_transport(fake_browser, tmp_path: Path) -> None:
+    import inspect
+
+    entry = _submit_entry()
+    submit_branch = inspect.getsource(entry._run_real_submission)
+    dispatch = inspect.getsource(entry.main).split("if args.允许提交:", 1)[1].split("\n", 2)[1]
+
+    assert "_run_real_submission" in dispatch
+    assert "_build_validation_service" not in submit_branch
+    assert "transport" not in submit_branch
+    assert "confirmation=args.确认短语" in submit_branch
+    assert "execute=True" in submit_branch
+    assert fake_browser.instances == []
+
+
+def _validation_argv(tmp_path: Path, database: Path | None = None) -> tuple[list[str], Path]:
+    """Standard validation-branch argv pointing entirely at an isolated workspace."""
+
+    queue = tmp_path / "queue.csv"
+    queue.write_text("candidate_id,request_hash,expression,queue_status\n", encoding="utf-8")
+    return [
+        "--database", str(database if database is not None else tmp_path / "research.sqlite"),
+        "--input", str(queue),
+        "--once",
+        "--browser-profile-dir", str(tmp_path / "profile"),
+        "--lock-path", str(tmp_path / "worldquant.lock"),
+    ], queue
+
+
+def test_submit_entry_closes_the_browser_exactly_once_on_a_normal_round(fake_browser, tmp_path: Path) -> None:
+    entry = _submit_entry()
+    argv, _queue = _validation_argv(tmp_path)
+
+    assert entry.main(argv) == 0
+
+    assert len(fake_browser.instances) == 1
+    transport = fake_browser.instances[0]
+    assert (transport.opened, transport.closed) == (1, 1)
+
+
+def test_submit_entry_closes_the_browser_when_queue_projection_is_locked(fake_browser, tmp_path: Path) -> None:
+    """A stale .lock beside the CSV is what a killed run leaves behind."""
+
+    from alpha_mining.storage.csv_queue import QueueLockedError
+
+    entry = _submit_entry()
+    argv, queue = _validation_argv(tmp_path)
+    lock = queue.with_suffix(queue.suffix + ".lock")
+    lock.write_text('{"pid": 999999}', encoding="utf-8")
+
+    with pytest.raises(QueueLockedError):
+        entry.main(argv)
+
+    assert len(fake_browser.instances) == 1
+    transport = fake_browser.instances[0]
+    assert transport.opened == 1
+    assert transport.closed == 1, "an authenticated browser must not survive a locked queue"
+
+
+def _build(entry, tmp_path: Path, database: Path | None = None):
+    return entry._build_validation_service(
+        database if database is not None else tmp_path / "research.sqlite",
+        transport_mode="browser",
+        browser_profile_dir=tmp_path / "profile",
+        lock_path=tmp_path / "worldquant.lock",
+        auth_timeout=5.0,
+    )
+
+
+@pytest.mark.parametrize("abort", [KeyboardInterrupt, SystemExit])
+def test_submit_entry_closes_the_browser_when_the_operator_aborts_authentication(fake_browser, tmp_path: Path, abort) -> None:
+    """Ctrl+C during the long face-scan wait is the most likely abort of all."""
+
+    entry = _submit_entry()
+    fake_browser.auth_raises = abort("operator aborted the login wait")
+
+    with pytest.raises(abort):
+        _build(entry, tmp_path)
+
+    assert len(fake_browser.instances) == 1
+    transport = fake_browser.instances[0]
+    assert (transport.opened, transport.closed) == (1, 1)
+
+
+def test_submit_entry_closes_the_browser_when_the_gateway_cannot_open_its_database(fake_browser, tmp_path: Path) -> None:
+    """PlatformGateway construction does real sqlite work and can fail."""
+
+    import sqlite3
+
+    entry = _submit_entry()
+    unusable = tmp_path / "database_as_directory"
+    unusable.mkdir()
+
+    with pytest.raises(sqlite3.OperationalError):
+        _build(entry, tmp_path, database=unusable)
+
+    assert len(fake_browser.instances) == 1
+    transport = fake_browser.instances[0]
+    assert (transport.opened, transport.closed) == (1, 1)
+
+
+def test_submit_entry_closes_the_browser_when_the_workflow_service_cannot_be_built(fake_browser, monkeypatch, tmp_path: Path) -> None:
+    import sqlite3
+
+    entry = _submit_entry()
+
+    def _explode(*_args: object, **_kwargs: object):
+        raise sqlite3.OperationalError("database is locked")
+
+    monkeypatch.setattr("alpha_mining.factory.operator_service.CandidateWorkflowService", _explode)
+
+    with pytest.raises(sqlite3.OperationalError):
+        _build(entry, tmp_path)
+
+    assert len(fake_browser.instances) == 1
+    transport = fake_browser.instances[0]
+    assert (transport.opened, transport.closed) == (1, 1)
