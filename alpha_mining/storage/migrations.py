@@ -569,6 +569,91 @@ UPDATE candidate_outcomes SET provenance='SYNTHETIC_PRIOR'
 CREATE INDEX IF NOT EXISTS idx_co_provenance ON candidate_outcomes(provenance,outcome);
 """,
     ),
+    (
+        24,
+        """
+CREATE TABLE IF NOT EXISTS recovery_runs (
+ run_id TEXT PRIMARY KEY,
+ started_at TEXT NOT NULL,
+ updated_at TEXT NOT NULL,
+ status TEXT NOT NULL,
+ target_qualified INTEGER NOT NULL DEFAULT 3,
+ history_fingerprint TEXT NOT NULL DEFAULT '',
+ policy_json TEXT NOT NULL DEFAULT '{}',
+ blocker_json TEXT NOT NULL DEFAULT '{}',
+ total_real_simulations INTEGER NOT NULL DEFAULT 0,
+ notes TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS recovery_historical_index (
+ history_id TEXT PRIMARY KEY,
+ source_name TEXT NOT NULL,
+ source_ref TEXT NOT NULL DEFAULT '',
+ alpha_id TEXT NOT NULL DEFAULT '',
+ expression TEXT NOT NULL DEFAULT '',
+ exact_hash TEXT NOT NULL DEFAULT '',
+ parameter_skeleton TEXT NOT NULL DEFAULT '',
+ field_skeleton TEXT NOT NULL DEFAULT '',
+ dataset TEXT NOT NULL DEFAULT '',
+ field_family TEXT NOT NULL DEFAULT '',
+ operator_topology TEXT NOT NULL DEFAULT '',
+ features_json TEXT NOT NULL DEFAULT '{}',
+ settings_json TEXT NOT NULL DEFAULT '{}',
+ metrics_json TEXT NOT NULL DEFAULT '{}',
+ checks_json TEXT NOT NULL DEFAULT '[]',
+ evidence_class TEXT NOT NULL DEFAULT 'LOCAL_ONLY',
+ self_correlation_status TEXT NOT NULL DEFAULT '',
+ self_correlation_value REAL,
+ observed_at TEXT NOT NULL DEFAULT '',
+ source_fingerprint TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_recovery_history_evidence ON recovery_historical_index(evidence_class,dataset,field_family);
+CREATE INDEX IF NOT EXISTS idx_recovery_history_hash ON recovery_historical_index(exact_hash,parameter_skeleton);
+CREATE TABLE IF NOT EXISTS recovery_candidates (
+ candidate_id TEXT PRIMARY KEY,
+ run_id TEXT NOT NULL,
+ expression TEXT NOT NULL,
+ exact_hash TEXT NOT NULL,
+ parameter_skeleton TEXT NOT NULL,
+ field_skeleton TEXT NOT NULL,
+ search_arm TEXT NOT NULL,
+ parent_candidate_id TEXT NOT NULL DEFAULT '',
+ parent_history_id TEXT NOT NULL DEFAULT '',
+ lineage_json TEXT NOT NULL DEFAULT '{}',
+ dataset TEXT NOT NULL DEFAULT '',
+ field_family TEXT NOT NULL DEFAULT '',
+ operator_topology TEXT NOT NULL DEFAULT '',
+ settings_json TEXT NOT NULL DEFAULT '{}',
+ state TEXT NOT NULL,
+ alpha_id TEXT NOT NULL DEFAULT '',
+ metrics_json TEXT NOT NULL DEFAULT '{}',
+ checks_json TEXT NOT NULL DEFAULT '[]',
+ self_correlation_status TEXT NOT NULL DEFAULT '',
+ self_correlation_value REAL,
+ request_hash TEXT NOT NULL DEFAULT '',
+ error_category TEXT NOT NULL DEFAULT '',
+ error_message TEXT NOT NULL DEFAULT '',
+ created_at TEXT NOT NULL,
+ updated_at TEXT NOT NULL,
+ UNIQUE(run_id,exact_hash),
+ FOREIGN KEY(run_id) REFERENCES recovery_runs(run_id)
+);
+CREATE INDEX IF NOT EXISTS idx_recovery_candidates_run_state ON recovery_candidates(run_id,state,updated_at);
+CREATE INDEX IF NOT EXISTS idx_recovery_candidates_arm ON recovery_candidates(run_id,search_arm,state);
+CREATE TABLE IF NOT EXISTS recovery_arm_windows (
+ window_id TEXT PRIMARY KEY,
+ run_id TEXT NOT NULL,
+ batch_number INTEGER NOT NULL,
+ search_arm TEXT NOT NULL,
+ allocation INTEGER NOT NULL,
+ statistics_json TEXT NOT NULL DEFAULT '{}',
+ improved INTEGER NOT NULL DEFAULT 0,
+ created_at TEXT NOT NULL,
+ UNIQUE(run_id,batch_number,search_arm),
+ FOREIGN KEY(run_id) REFERENCES recovery_runs(run_id)
+);
+CREATE INDEX IF NOT EXISTS idx_recovery_arm_windows_run ON recovery_arm_windows(run_id,batch_number,search_arm);
+""",
+    ),
 )
 
 

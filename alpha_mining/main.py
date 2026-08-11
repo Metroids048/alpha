@@ -88,6 +88,154 @@ def _cmd_pipeline(args: argparse.Namespace) -> int:
     return 2
 
 
+def _recovery_runner(args: argparse.Namespace):
+    """Construct the isolated recovery mode without touching submit workflow."""
+
+    from alpha_mining.recovery import RecoveryRunner
+
+    return RecoveryRunner(
+        database=args.database,
+        root=args.root,
+        catalog_dir=args.catalog_dir,
+        auth_state_file=args.auth_state_file,
+        lock_path=args.lock_path,
+        transport=getattr(args, "_selected_transport", getattr(args, "transport", "auto")),
+        browser_profile_dir=getattr(args, "browser_profile_dir", str(ROOT / ".validation_workspace" / "wq_browser_profile")),
+    )
+
+
+def _cmd_recovery_analyze(args: argparse.Namespace) -> int:
+    print(json.dumps(_recovery_runner(args).analyze(), ensure_ascii=False, indent=2))
+    return 0
+
+
+def _cmd_recovery_run(args: argparse.Namespace) -> int:
+    probe = _recovery_auth_probe(args)
+    if probe["PROGRAM_PROBE"] != 200:
+        print(json.dumps(probe, ensure_ascii=False, indent=2))
+        return 1
+    report = _recovery_runner(args).run(resume=bool(args.resume))
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0
+
+
+def _cmd_recovery_simulation_poc(args: argparse.Namespace) -> int:
+    probe = _recovery_auth_probe(args)
+    if probe["PROGRAM_PROBE"] != 200 or probe.get("SELECTED_TRANSPORT") != "browser":
+        print(json.dumps(probe, ensure_ascii=False, indent=2))
+        return 1
+    from alpha_mining.platform.browser_transport import BrowserBackedWorldQuantTransport
+
+    transport = BrowserBackedWorldQuantTransport(
+        profile_dir=args.browser_profile_dir,
+        database=args.database,
+        lock_path=args.lock_path,
+        min_interval=2.0,
+    )
+    try:
+        readonly = transport.readonly_probes(alpha_id=args.alpha_id)
+    finally:
+        transport.close()
+    if readonly["BROWSER_TRANSPORT"] != "READY":
+        print(json.dumps({**probe, **readonly}, ensure_ascii=False, indent=2))
+        return 1
+    report = _recovery_runner(args).run_simulation_poc()
+    print(json.dumps({**readonly, **report}, ensure_ascii=False, indent=2))
+    return 0 if report["BROWSER_VALIDATION_POC_PASS"] else 1
+
+
+def _cmd_recovery_status(args: argparse.Namespace) -> int:
+    print(json.dumps(_recovery_runner(args).status(), ensure_ascii=False, indent=2))
+    return 0
+
+
+def _recovery_auth_probe(args: argparse.Namespace) -> dict[str, object]:
+    """Use recovery's exact state, database, and lock for one non-mutating read."""
+    from alpha_mining.platform.browser_transport import BrowserBackedWorldQuantTransport
+    from alpha_mining.auth.session_manager import AuthSettings, auth_state_metadata
+    from alpha_mining.platform.client import ReadOnlyPlatformClient
+
+    requested_transport = str(getattr(args, "transport", "auto") or "auto")
+    if requested_transport not in {"auto", "browser", "dpapi"}:
+        raise ValueError("transport must be one of: auto, browser, dpapi")
+    browser_report: dict[str, object] = {
+        "BROWSER_TRANSPORT_AUTH": "NOT_ATTEMPTED",
+        "BROWSER_IDENTITY_PROBE": 0,
+    }
+    if requested_transport in {"auto", "browser"}:
+        transport = BrowserBackedWorldQuantTransport(
+            profile_dir=getattr(args, "browser_profile_dir", str(ROOT / ".validation_workspace" / "wq_browser_profile")),
+            database=args.database,
+            lock_path=args.lock_path,
+            min_interval=2.0,
+        )
+        try:
+            response = transport.request(
+                "GET", "https://platform.worldquantbrain.com/users/self", endpoint_class="identity"
+            )
+            browser_report["BROWSER_IDENTITY_PROBE"] = response.status_code
+            browser_report["BROWSER_TRANSPORT_AUTH"] = "FRESH" if response.status_code == 200 else "AUTH_PAUSED"
+            if response.status_code == 200:
+                result = {
+                    "RECOVERY_AUTH_SOURCE": {"mechanism": "BROWSER", "profile": str(transport.profile_dir)},
+                    "PROGRAM_PROBE": 200,
+                    "HANDOFF_RESULT": "BROWSER_TRANSPORT_READY",
+                    "SELECTED_TRANSPORT": "browser",
+                    **browser_report,
+                }
+                args._selected_transport = "browser"
+                return result
+        except Exception as exc:
+            browser_report["BROWSER_TRANSPORT_ERROR"] = type(exc).__name__
+            browser_report["BROWSER_TRANSPORT_AUTH"] = "AUTH_PAUSED"
+        finally:
+            transport.close()
+        if requested_transport == "browser":
+            return {
+                "RECOVERY_AUTH_SOURCE": {"mechanism": "BROWSER", "profile": str(transport.profile_dir)},
+                "PROGRAM_PROBE": int(browser_report["BROWSER_IDENTITY_PROBE"]),
+                "HANDOFF_RESULT": "AUTH_PAUSED",
+                "SELECTED_TRANSPORT": "browser",
+                **browser_report,
+            }
+
+    state_path = AuthSettings(state_path=args.auth_state_file).resolved_state_path()
+    metadata = auth_state_metadata(state_path)
+    result: dict[str, object] = {
+        "RECOVERY_AUTH_SOURCE": {
+            "path": str(state_path),
+            "mechanism": "DPAPI",
+            "generation": metadata["generation"],
+        },
+        "PROGRAM_PROBE": 401,
+        "HANDOFF_RESULT": "BROKEN",
+        "SELECTED_TRANSPORT": "dpapi",
+        **browser_report,
+    }
+    client = ReadOnlyPlatformClient(
+        state_path=state_path,
+        database=args.database,
+        lock_path=args.lock_path,
+        min_interval=2.0,
+    )
+    try:
+        status = client.probe_stored_identity(recovery_probe=True)
+    except Exception as exc:
+        result["PROGRAM_PROBE_ERROR"] = type(exc).__name__
+        return result
+    result["PROGRAM_PROBE"] = status
+    if status == 200:
+        result["HANDOFF_RESULT"] = "SUCCESS"
+        args._selected_transport = "dpapi"
+    return result
+
+
+def _cmd_recovery_auth_probe(args: argparse.Namespace) -> int:
+    report = _recovery_auth_probe(args)
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0 if report["PROGRAM_PROBE"] == 200 else 1
+
+
 def _cmd_gates_sync(args: argparse.Namespace) -> int:
     from datetime import datetime, timezone
     from alpha_mining.platform.check_parser import parse_gate_observations
@@ -572,6 +720,30 @@ def _cmd_platform_browser_login(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_platform_browser_auth(args: argparse.Namespace) -> int:
+    """Open the dedicated Chrome profile and prove browser-backed read access."""
+    from alpha_mining.platform.browser_transport import BrowserBackedWorldQuantTransport
+
+    transport = BrowserBackedWorldQuantTransport(
+        profile_dir=args.profile_dir,
+        database=args.database,
+        lock_path=args.lock_path,
+        min_interval=args.min_interval,
+    )
+    try:
+        transport.open()
+        print("[platform/browser-auth] Complete WorldQuant login in the dedicated Chrome window; no credential is exported.", flush=True)
+        status = transport.wait_for_authentication(timeout_seconds=args.timeout)
+        if status != 200:
+            print(json.dumps({"BROWSER_TRANSPORT": "FAILED", "BROWSER_TRANSPORT_AUTH": "AUTH_PAUSED", "IDENTITY_PROBE": {"HTTP_STATUS": status}}, sort_keys=True))
+            return 1
+        report = transport.readonly_probes(alpha_id=args.alpha_id)
+        print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
+        return 0 if report["BROWSER_TRANSPORT"] == "READY" else 1
+    finally:
+        transport.close()
+
+
 def _cmd_platform_access_status(args: argparse.Namespace) -> int:
     from dataclasses import asdict
     from alpha_mining.auth.session_manager import auth_state_metadata
@@ -762,6 +934,45 @@ def _build_parser() -> argparse.ArgumentParser:
     p_pipeline.add_argument("pipeline_args", nargs=argparse.REMAINDER)
     p_pipeline.set_defaults(func=_cmd_pipeline)
 
+    # Recovery is deliberately separate from the frozen generate -> READY CSV
+    # -> submit workflow.  It exposes no submit flag or queue path.
+    p_recovery = sub.add_parser(
+        "recovery",
+        help="Evidence-driven real-simulation recovery; never submits Alphas.",
+    )
+    recovery_sub = p_recovery.add_subparsers(dest="recovery_command", required=True)
+    recovery_defaults = {
+        "database": str(ROOT / "数据" / "本地运行产物" / "数据库" / "research_memory.sqlite"),
+        "root": str(ROOT),
+        "catalog_dir": str(ROOT / ".validation_workspace"),
+        "auth_state_file": str(ROOT / ".wq_auth_state.json"),
+        "lock_path": str(ROOT / "worldquant_api.lock"),
+    }
+    for name, handler in (
+        ("analyze", _cmd_recovery_analyze),
+        ("run", _cmd_recovery_run),
+        ("simulation-poc", _cmd_recovery_simulation_poc),
+        ("status", _cmd_recovery_status),
+        ("auth-probe", _cmd_recovery_auth_probe),
+    ):
+        command_parser = recovery_sub.add_parser(name)
+        command_parser.add_argument("--database", default=recovery_defaults["database"])
+        command_parser.add_argument("--root", default=recovery_defaults["root"])
+        command_parser.add_argument("--catalog-dir", default=recovery_defaults["catalog_dir"])
+        command_parser.add_argument("--auth-state-file", default=recovery_defaults["auth_state_file"])
+        command_parser.add_argument("--lock-path", default=recovery_defaults["lock_path"])
+        if name in {"run", "simulation-poc"}:
+            command_parser.add_argument("--resume", action="store_true")
+            command_parser.add_argument("--transport", choices=("auto", "browser", "dpapi"), default="auto")
+            command_parser.add_argument(
+                "--browser-profile-dir",
+                default=str(ROOT / ".validation_workspace" / "wq_browser_profile"),
+            )
+        if name == "simulation-poc":
+            command_parser.set_defaults(transport="browser")
+            command_parser.add_argument("--alpha-id", default="")
+        command_parser.set_defaults(func=handler)
+
     p_gates = sub.add_parser("gates", help="Dynamic platform gate registry.")
     gates_sub = p_gates.add_subparsers(dest="gates_command", required=True)
     p_gate_sync = gates_sub.add_parser("sync")
@@ -826,6 +1037,17 @@ def _build_parser() -> argparse.ArgumentParser:
     p_browser_login.add_argument("--headless", action="store_true")
     p_browser_login.add_argument("--timeout", type=float, default=300.0)
     p_browser_login.set_defaults(func=_cmd_platform_browser_login)
+    p_browser_auth = platform_sub.add_parser(
+        "browser-auth",
+        help="Open the dedicated Chrome profile and run browser-backed read-only validation probes.",
+    )
+    p_browser_auth.add_argument("--profile-dir", default=str(ROOT / ".validation_workspace" / "wq_browser_profile"))
+    p_browser_auth.add_argument("--database", default=str(ROOT / "数据" / "本地运行产物" / "数据库" / "research_memory.sqlite"))
+    p_browser_auth.add_argument("--lock-path", default=str(ROOT / "worldquant_api.lock"))
+    p_browser_auth.add_argument("--min-interval", type=float, default=2.0)
+    p_browser_auth.add_argument("--timeout", type=float, default=900.0)
+    p_browser_auth.add_argument("--alpha-id", default="")
+    p_browser_auth.set_defaults(func=_cmd_platform_browser_auth)
     p_recovery_report = platform_sub.add_parser("recovery-report")
     p_recovery_report.add_argument("--database", default="research_memory.sqlite")
     p_recovery_report.add_argument("--auth-state-file", default=".wq_auth_state.json")

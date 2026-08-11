@@ -236,6 +236,7 @@ def record_candidate_outcome(
     error_category: str = "",
     error_message: str = "",
     settings: Mapping[str, Any] | None = None,
+    provenance: str | None = None,
 ) -> None:
     """Persist one active-workflow result with the proposal provenance intact."""
 
@@ -278,7 +279,7 @@ def record_candidate_outcome(
         context_refs=tuple(getattr(proposal, "context_refs", ()) or ()),
         knowledge_context_hash=str(getattr(proposal, "knowledge_context_hash", "") or ""),
         degraded=bool(getattr(proposal, "degraded", False)),
-        provenance=derive_provenance(list(checks), error_category),
+        provenance=provenance or derive_provenance(list(checks), error_category),
         parent_candidate_id=str(getattr(proposal, "parent_candidate_id", "") or ""),
         repair_action=str(getattr(proposal, "repair_origin", "") or ""),
         operator_topology=operator_topology(expression),

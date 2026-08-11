@@ -19,17 +19,19 @@ Only the `t` and `cf_clearance` cookies are stored; everything else is discarded
 
 from __future__ import annotations
 
-import base64
-import json
+import argparse
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 
-_ROOT = Path(__file__).resolve().parent
-if str(_ROOT) not in sys.path:
-    sys.path.insert(0, str(_ROOT))
+# Resolve from the repository root so invocation cwd cannot select a second
+# auth-state file.
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
-STATE_PATH = ".wq_auth_state.json"
+STATE_PATH = REPO_ROOT / ".wq_auth_state.json"
+RECOVERY_DATABASE = REPO_ROOT / "数据" / "本地运行产物" / "数据库" / "research_memory.sqlite"
+RECOVERY_LOCK = REPO_ROOT / "worldquant_api.lock"
 
 
 def _read_cookie_header() -> str:
@@ -48,31 +50,50 @@ def _read_cookie_header() -> str:
     return " ".join(lines)
 
 
-def _report_jwt_expiry(state_path: Path) -> int:
-    from alpha_mining.auth.session_manager import _unprotect_cookie_rows
+def _probe_recovery_auth_state(
+    state_path: Path = STATE_PATH,
+    database: Path = RECOVERY_DATABASE,
+    lock_path: Path = RECOVERY_LOCK,
+) -> int:
+    """Prove the imported state through recovery's exact read-only client."""
+    from alpha_mining.auth.session_manager import auth_state_metadata
+    from alpha_mining.platform.client import ReadOnlyPlatformClient
 
-    state = json.loads(state_path.read_text(encoding="utf-8"))
-    for row in _unprotect_cookie_rows(state.get("cookie_blob_dpapi_b64")):
-        if row.get("name") != "t":
-            continue
-        payload = str(row["value"]).split(".")[1]
-        payload += "=" * (4 - len(payload) % 4)
-        claims = json.loads(base64.urlsafe_b64decode(payload))
-        expires_at = datetime.fromtimestamp(int(claims["exp"]), tz=timezone.utc)
-        remaining = (expires_at - datetime.now(timezone.utc)).total_seconds()
-        if remaining <= 0:
-            print(f"WARNING: this JWT expired {-remaining / 3600:.1f}h ago; log in again.")
-            return 1
-        print(
-            f"JWT valid until {expires_at.strftime('%H:%M UTC')} "
-            f"({remaining / 3600:.1f}h remaining)"
-        )
-        return 0
-    print("WARNING: stored state has no `t` cookie.")
-    return 1
+    metadata = auth_state_metadata(state_path)
+    print(f"RECOVERY_AUTH_STATE_PATH={state_path}")
+    print("RECOVERY_AUTH_MECHANISM=DPAPI")
+    print(f"AUTH_STATE_GENERATION={metadata['generation']}")
+    client = ReadOnlyPlatformClient(
+        state_path=state_path,
+        database=database,
+        lock_path=lock_path,
+        min_interval=2.0,
+    )
+    try:
+        status = client.probe_stored_identity(recovery_probe=True)
+    except Exception as exc:
+        print(f"PROGRAM_PROBE_ERROR={type(exc).__name__}")
+        print("HANDOFF_RESULT=BROKEN")
+        return 1
+    print(f"PROGRAM_PROBE={status}")
+    if status != 200:
+        print("HANDOFF_RESULT=BROKEN")
+        return 1
+    print("AUTHENTICATED_IDENTITY=CONFIRMED")
+    print("JWT_SESSION=VALID")
+    print("HANDOFF_RESULT=SUCCESS")
+    return 0
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description="Import and prove a browser session for recovery")
+    parser.add_argument("--auth-state-file", default=str(STATE_PATH))
+    parser.add_argument("--database", default=str(RECOVERY_DATABASE))
+    parser.add_argument("--lock-path", default=str(RECOVERY_LOCK))
+    args = parser.parse_args()
+    state_path = Path(args.auth_state_file).expanduser().resolve()
+    database = Path(args.database).expanduser().resolve()
+    lock_path = Path(args.lock_path).expanduser().resolve()
     from alpha_mining.auth.session_manager import (
         AuthSettings,
         AuthStateError,
@@ -80,7 +101,7 @@ def main() -> int:
     )
     from alpha_mining.common import load_workspace_env
 
-    load_workspace_env(_ROOT / ".env")
+    load_workspace_env(REPO_ROOT / ".env")
 
     import os
 
@@ -96,14 +117,14 @@ def main() -> int:
 
     try:
         result = import_browser_session(
-            username, cookie_header, AuthSettings(state_path=STATE_PATH)
+            username, cookie_header, AuthSettings(state_path=state_path)
         )
     except AuthStateError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
 
-    print(f"Imported session for {username} (generation={result.generation})")
-    return _report_jwt_expiry(_ROOT / STATE_PATH)
+    print(f"Imported protected session (generation={result.generation})")
+    return _probe_recovery_auth_state(state_path, database, lock_path)
 
 
 if __name__ == "__main__":

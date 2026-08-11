@@ -88,6 +88,18 @@ class SimulationRequestStore:
         with sqlite3.connect(self.database) as con:
             try:
                 con.execute("BEGIN IMMEDIATE")
+                resumable = con.execute(
+                    """SELECT 1 FROM simulation_requests
+                       WHERE request_hash=? AND status='PENDING' AND last_error LIKE 'AUTH_PAUSED:%'""",
+                    (request_hash,),
+                ).fetchone()
+                if resumable:
+                    con.execute(
+                        "UPDATE factory_candidate_claims SET status='CLAIMED',updated_at=? WHERE request_hash=?",
+                        (now, request_hash),
+                    )
+                    con.commit()
+                    return ClaimResult(True, "resuming_pending_request", request_hash)
                 historical = con.execute(
                     """SELECT 1 FROM expression_identities WHERE exact_hash=?
                        UNION ALL
@@ -297,6 +309,27 @@ class SimulationRequestStore:
                 con.execute(
                     "UPDATE factory_candidate_claims SET status=?,updated_at=? WHERE request_hash=?",
                     (terminal, now, request_hash),
+                )
+            con.commit()
+        return updated.rowcount == 1
+
+    def defer_for_authentication(
+        self, request_hash: str, *, lease_started_at: str, error: str = ""
+    ) -> bool:
+        """Release an authenticated request without losing its checkpoint."""
+
+        now = self._now()
+        with sqlite3.connect(self.database) as con:
+            con.execute("BEGIN IMMEDIATE")
+            updated = con.execute(
+                """UPDATE simulation_requests SET status='PENDING',last_error=?,updated_at=?
+                   WHERE request_hash=? AND status='IN_PROGRESS' AND lease_started_at=?""",
+                ("AUTH_PAUSED: " + str(error)[:980], now, request_hash, lease_started_at),
+            )
+            if updated.rowcount == 1:
+                con.execute(
+                    "UPDATE factory_candidate_claims SET status='CLAIMED',updated_at=? WHERE request_hash=?",
+                    (now, request_hash),
                 )
             con.commit()
         return updated.rowcount == 1

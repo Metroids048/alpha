@@ -42,6 +42,57 @@ def test_adapter_has_stable_identity_and_single_dataset() -> None:
     assert first.dataset == "pv1"
 
 
+def test_adapter_extracts_vec_reduced_field_and_keeps_its_dataset() -> None:
+    from alpha_mining.factory.v50_adapter import adapt_v50_candidate
+
+    candidate = SimpleNamespace(
+        expression="group_neutralize(rank(vec_avg(asset_replacement_cost_factor_2)),market)",
+        family="fundamental",
+        source="v50",
+    )
+    catalog = SimpleNamespace(field_dataset={"asset_replacement_cost_factor_2": "fundamental"})
+
+    adapted = adapt_v50_candidate(candidate, catalog)
+
+    assert adapted.dataset == "fundamental"
+    assert adapted.field_skeleton == "group_neutralize(vec_avg(FIELD),market)"
+
+
+def test_expression_factory_reduces_vector_fields_before_matrix_operators() -> None:
+    import pandas as pd
+    import auto_alpha_pipeline_rebuilt_v50 as v50
+
+    catalog = v50.FieldCatalog.from_df(pd.DataFrame([
+        {"id": "asset_replacement_cost_factor_2", "_ds": "fundamental", "type": "VECTOR"},
+        {"id": "cashflow_trend_analysis_10", "_ds": "fundamental", "type": "VECTOR"},
+        {"id": "debt_to_ebitda_ratio_metric_3", "_ds": "fundamental", "type": "MATRIX"},
+    ]))
+    config = v50.PipelineConfig(
+        username="",
+        password="",
+        budget=12,
+        candidate_multiplier=3,
+        min_candidates_floor=1,
+        alpha_models_enabled=False,
+        generate_template_rescue=False,
+        fallback_disable_library_skeleton_dedup=False,
+        fallback_disable_history_skeleton_dedup=False,
+    )
+    factory = v50.ExpressionFactory(config, catalog, v50.PreflightValidator(catalog))
+
+    expressions = [
+        candidate.expression
+        for candidate in factory.generate(set(), set(), v50.HistorySimilarityPools(), set())
+    ]
+
+    assert any("vec_avg(asset_replacement_cost_factor_2)" in expression for expression in expressions)
+    assert any("vec_avg(cashflow_trend_analysis_10)" in expression for expression in expressions)
+    assert any("debt_to_ebitda_ratio_metric_3" in expression for expression in expressions)
+    assert all("vec_avg(debt_to_ebitda_ratio_metric_3)" not in expression for expression in expressions)
+    assert all("ts_delta(asset_replacement_cost_factor_2," not in expression for expression in expressions)
+    assert all("cashflow_trend_analysis_10/cap" not in expression for expression in expressions)
+
+
 def test_active_cycle_blocks_mandatory_metric_failure_without_submit(tmp_path) -> None:
     from alpha_mining.factory.runtime import GenerationCycleConfig, run_generation_cycle
     from alpha_mining.storage.migrations import migrate

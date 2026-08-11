@@ -97,7 +97,7 @@
     "universe": "TOP3000",
     "visualization": false
   },
-  "fetched_at": 1786368997.609576,
+  "fetched_at": 1786356438.783741,
   "provenance": {
     "alpha_type": "PLATFORM_REQUIRED_FIELD:simulation_400_required",
     "decay": "PLATFORM_ACCEPTED_ALPHA:research_memory_quality.sqlite:legacy_alphas",

@@ -1,0 +1,983 @@
+{
+  "decision": "AB_REJECTED_KEEP_BASELINE",
+  "mode": "PAIRED",
+  "baseline": {
+    "branch": "main",
+    "head": "9a3c3fe2c5e4598f187c8e820f9475d5d7c5787f",
+    "status": "?? tmp_db_probe.py\n?? tmp_db_search_all.py\n?? tmp_v50_ab_harness.py\n?? tmp_v50_ab_process_drift.md\n?? tmp_v50_ab_report.json\n?? tmp_v50_ab_settings_cache.json",
+    "remote": "origin\thttps://github.com/Metroids048/alpha.git (fetch)\norigin\thttps://github.com/Metroids048/alpha.git (push)"
+  },
+  "auth": {
+    "status": "AUTH_PREFLIGHT_OK",
+    "client": "alpha_mining.platform.client.ReadOnlyPlatformClient",
+    "gateway": "alpha_mining.platform.gateway.PlatformGateway",
+    "auth_state_path": "C:\\Users\\Windows11\\Desktop\\alpha\\.wq_auth_state.json",
+    "username_present": true,
+    "password_present": true,
+    "stored_session_present": true,
+    "stored_session_remaining_seconds": 12504,
+    "stored_cookie_blob_present": true,
+    "preflight_started_at": "2026-08-10T10:19:32.469254Z",
+    "access_before": {
+      "state": "CLOSED",
+      "retry_after_until": null,
+      "recovery_attempts": 0,
+      "max_auto_recoveries": 4,
+      "last_successful_auth": "2026-08-06T11:29:36.489780+00:00",
+      "last_401": "2026-08-10T10:15:47.644140Z",
+      "last_429": "2026-08-09T03:59:04.469887Z",
+      "reason": "http_401"
+    },
+    "access_after": {
+      "state": "CLOSED",
+      "retry_after_until": null,
+      "recovery_attempts": 0,
+      "max_auto_recoveries": 4,
+      "last_successful_auth": "2026-08-06T11:29:36.489780+00:00",
+      "last_401": "2026-08-10T10:15:47.644140Z",
+      "last_429": "2026-08-09T03:59:04.469887Z",
+      "reason": "http_401"
+    },
+    "401_count": 0,
+    "429_count": 0
+  },
+  "fixed_settings": {
+    "instrumentType": "EQUITY",
+    "region": "USA",
+    "universe": "TOP3000",
+    "delay": 1,
+    "decay": 4,
+    "neutralization": "MARKET",
+    "truncation": 0.08,
+    "language": "FASTEXPR",
+    "pasteurization": "ON",
+    "unitHandling": "VERIFY",
+    "nanHandling": "ON",
+    "visualization": false
+  },
+  "b": [
+    {
+      "group": "current_llm_rewrite",
+      "source_file": "tmp_sim_closeout_1_09e065.json",
+      "candidate_id": "09e0656633e48fb0",
+      "alpha_id": "78zwRNqx",
+      "expression": "group_rank(ts_delta(anl82_delta_epsq_q1_madp,21), industry) - group_rank(ts_std_dev(anl82_delta_epsy_y1_madp,21), industry)",
+      "settings": {
+        "region": "USA",
+        "universe": "TOP3000",
+        "delay": 1,
+        "decay": 4,
+        "neutralization": "MARKET",
+        "truncation": 0.08,
+        "language": "FASTEXPR",
+        "pasteurization": "ON",
+        "unitHandling": "VERIFY",
+        "nanHandling": "ON",
+        "visualization": false,
+        "instrumentType": "EQUITY"
+      },
+      "status": "COMPLETE",
+      "metrics": {
+        "sharpe": 0.03,
+        "fitness": 0.0,
+        "turnover": 0.1274,
+        "returns": 0.0009,
+        "drawdown": 0.0771,
+        "margin": 1.4e-05
+      },
+      "checks": [
+        {
+          "name": "LOW_SHARPE",
+          "result": "FAIL",
+          "limit": 1.58,
+          "value": 0.03
+        },
+        {
+          "name": "CLUSTER_TEST",
+          "result": "WARNING",
+          "limit": 1.58,
+          "value": -0.08
+        },
+        {
+          "name": "LOW_FITNESS",
+          "result": "FAIL",
+          "limit": 1.0,
+          "value": 0.0
+        },
+        {
+          "name": "LOW_TURNOVER",
+          "result": "PASS",
+          "limit": 0.01,
+          "value": 0.1274
+        },
+        {
+          "name": "HIGH_TURNOVER",
+          "result": "PASS",
+          "limit": 0.7,
+          "value": 0.1274
+        },
+        {
+          "name": "CONCENTRATED_WEIGHT",
+          "result": "PASS"
+        },
+        {
+          "name": "LOW_SUB_UNIVERSE_SHARPE",
+          "result": "PASS",
+          "limit": 0.01,
+          "value": 0.11
+        },
+        {
+          "name": "SELF_CORRELATION",
+          "result": "PENDING"
+        },
+        {
+          "name": "DATA_DIVERSITY",
+          "result": "PENDING"
+        },
+        {
+          "name": "PROD_CORRELATION",
+          "result": "PENDING"
+        },
+        {
+          "name": "REGULAR_SUBMISSION",
+          "result": "PENDING"
+        },
+        {
+          "name": "LOW_2Y_SHARPE",
+          "result": "FAIL",
+          "value": 0.22,
+          "limit": 1.58
+        },
+        {
+          "name": "MATCHES_COMPETITION",
+          "result": "WARNING",
+          "competitions": [
+            {
+              "id": "GAC2026",
+              "name": "Global Alpha Competition 2026"
+            }
+          ]
+        },
+        {
+          "result": "PASS",
+          "name": "MATCHES_PYRAMID",
+          "effective": 1,
+          "multiplier": 1.2,
+          "pyramids": [
+            {
+              "name": "USA/D1/ANALYST",
+              "multiplier": 1.2
+            }
+          ]
+        },
+        {
+          "result": "WARNING",
+          "name": "MATCHES_THEMES",
+          "themes": [
+            {
+              "id": "myzqOo4",
+              "multiplier": 2.0,
+              "name": "GLB High Turnover Theme"
+            },
+            {
+              "id": "8BLLk1B",
+              "multiplier": 1.0,
+              "name": "GLB/D1 Power Pool Aug`26"
+            }
+          ]
+        },
+        {
+          "name": "OSMOSIS_ALLOCATION",
+          "result": "WARNING"
+        }
+      ],
+      "quality_status": "WAITING_CHECKS",
+      "major_failures": [
+        "DATA_DIVERSITY_PENDING",
+        "PROD_CORRELATION_PENDING",
+        "REGULAR_SUBMISSION_PENDING",
+        "SELF_CORRELATION_PENDING"
+      ],
+      "provenance": "PLATFORM_JSON_EVIDENCE"
+    },
+    {
+      "group": "current_llm_rewrite",
+      "source_file": "tmp_sim_closeout_2_75f9ff.json",
+      "candidate_id": "75f9ff9af8bdabae",
+      "alpha_id": "e73OZE9z",
+      "expression": "group_neutralize(ts_zscore(ts_std_dev(anl16_overallratinganaest,126) - ts_delta(anl16_overallratinganaest1through5,21),126), industry)",
+      "settings": {
+        "region": "USA",
+        "universe": "TOP3000",
+        "delay": 1,
+        "decay": 4,
+        "neutralization": "MARKET",
+        "truncation": 0.08,
+        "language": "FASTEXPR",
+        "pasteurization": "ON",
+        "unitHandling": "VERIFY",
+        "nanHandling": "ON",
+        "visualization": false,
+        "instrumentType": "EQUITY"
+      },
+      "status": "COMPLETE",
+      "metrics": {
+        "sharpe": -0.88,
+        "fitness": -0.36,
+        "turnover": 0.0668,
+        "returns": -0.0213,
+        "drawdown": 0.1184,
+        "margin": -0.000637
+      },
+      "checks": [
+        {
+          "name": "LOW_SHARPE",
+          "result": "FAIL",
+          "limit": 1.58,
+          "value": -0.88
+        },
+        {
+          "name": "CLUSTER_TEST",
+          "result": "WARNING",
+          "limit": 1.58,
+          "value": -0.48
+        },
+        {
+          "name": "LOW_FITNESS",
+          "result": "FAIL",
+          "limit": 1.0,
+          "value": -0.36
+        },
+        {
+          "name": "LOW_TURNOVER",
+          "result": "PASS",
+          "limit": 0.01,
+          "value": 0.0668
+        },
+        {
+          "name": "HIGH_TURNOVER",
+          "result": "PASS",
+          "limit": 0.7,
+          "value": 0.0668
+        },
+        {
+          "name": "CONCENTRATED_WEIGHT",
+          "result": "PASS"
+        },
+        {
+          "name": "LOW_SUB_UNIVERSE_SHARPE",
+          "result": "PASS",
+          "limit": -0.38,
+          "value": -0.01
+        },
+        {
+          "name": "SELF_CORRELATION",
+          "result": "PENDING"
+        },
+        {
+          "name": "DATA_DIVERSITY",
+          "result": "PENDING"
+        },
+        {
+          "name": "PROD_CORRELATION",
+          "result": "PENDING"
+        },
+        {
+          "name": "REGULAR_SUBMISSION",
+          "result": "PENDING"
+        },
+        {
+          "name": "LOW_2Y_SHARPE",
+          "result": "FAIL",
+          "value": -0.47,
+          "limit": 1.58
+        },
+        {
+          "name": "MATCHES_COMPETITION",
+          "result": "WARNING",
+          "competitions": [
+            {
+              "id": "GAC2026",
+              "name": "Global Alpha Competition 2026"
+            }
+          ]
+        },
+        {
+          "result": "PASS",
+          "name": "MATCHES_PYRAMID",
+          "effective": 1,
+          "multiplier": 1.2,
+          "pyramids": [
+            {
+              "name": "USA/D1/ANALYST",
+              "multiplier": 1.2
+            }
+          ]
+        },
+        {
+          "result": "WARNING",
+          "name": "MATCHES_THEMES",
+          "themes": [
+            {
+              "id": "myzqOo4",
+              "multiplier": 2.0,
+              "name": "GLB High Turnover Theme"
+            },
+            {
+              "id": "8BLLk1B",
+              "multiplier": 1.0,
+              "name": "GLB/D1 Power Pool Aug`26"
+            }
+          ]
+        },
+        {
+          "name": "OSMOSIS_ALLOCATION",
+          "result": "WARNING"
+        }
+      ],
+      "quality_status": "WAITING_CHECKS",
+      "major_failures": [
+        "DATA_DIVERSITY_PENDING",
+        "PROD_CORRELATION_PENDING",
+        "REGULAR_SUBMISSION_PENDING",
+        "SELF_CORRELATION_PENDING"
+      ],
+      "provenance": "PLATFORM_JSON_EVIDENCE"
+    },
+    {
+      "group": "current_llm_rewrite",
+      "source_file": "tmp_sim_closeout_3_e7b26c.json",
+      "candidate_id": "e7b26c4dbdcc5ec4",
+      "alpha_id": "2rp7V1wb",
+      "expression": "group_neutralize(rank(ts_zscore(ts_std_dev(anl15_ebtgics_s_cal_fy3_3m_chg, 60), 60)), sector)",
+      "settings": {
+        "region": "USA",
+        "universe": "TOP3000",
+        "delay": 1,
+        "decay": 4,
+        "neutralization": "MARKET",
+        "truncation": 0.08,
+        "language": "FASTEXPR",
+        "pasteurization": "ON",
+        "unitHandling": "VERIFY",
+        "nanHandling": "ON",
+        "visualization": false,
+        "instrumentType": "EQUITY"
+      },
+      "status": "COMPLETE",
+      "metrics": {
+        "sharpe": 0.25,
+        "fitness": 0.1,
+        "turnover": 0.1121,
+        "returns": 0.0185,
+        "drawdown": 0.1662,
+        "margin": 0.000331
+      },
+      "checks": [
+        {
+          "name": "LOW_SHARPE",
+          "result": "FAIL",
+          "limit": 1.58,
+          "value": 0.25
+        },
+        {
+          "name": "CLUSTER_TEST",
+          "result": "WARNING",
+          "limit": 1.58,
+          "value": 0.24
+        },
+        {
+          "name": "LOW_FITNESS",
+          "result": "FAIL",
+          "limit": 1.0,
+          "value": 0.1
+        },
+        {
+          "name": "LOW_TURNOVER",
+          "result": "PASS",
+          "limit": 0.01,
+          "value": 0.1121
+        },
+        {
+          "name": "HIGH_TURNOVER",
+          "result": "PASS",
+          "limit": 0.7,
+          "value": 0.1121
+        },
+        {
+          "name": "CONCENTRATED_WEIGHT",
+          "result": "PASS"
+        },
+        {
+          "name": "LOW_SUB_UNIVERSE_SHARPE",
+          "result": "PASS",
+          "limit": 0.11,
+          "value": 0.3
+        },
+        {
+          "name": "SELF_CORRELATION",
+          "result": "PENDING"
+        },
+        {
+          "name": "DATA_DIVERSITY",
+          "result": "PENDING"
+        },
+        {
+          "name": "PROD_CORRELATION",
+          "result": "PENDING"
+        },
+        {
+          "name": "REGULAR_SUBMISSION",
+          "result": "PENDING"
+        },
+        {
+          "name": "LOW_2Y_SHARPE",
+          "result": "FAIL",
+          "value": -0.29,
+          "limit": 1.58
+        },
+        {
+          "name": "MATCHES_COMPETITION",
+          "result": "WARNING",
+          "competitions": [
+            {
+              "id": "GAC2026",
+              "name": "Global Alpha Competition 2026"
+            }
+          ]
+        },
+        {
+          "result": "PASS",
+          "name": "MATCHES_PYRAMID",
+          "effective": 1,
+          "multiplier": 1.2,
+          "pyramids": [
+            {
+              "name": "USA/D1/ANALYST",
+              "multiplier": 1.2
+            }
+          ]
+        },
+        {
+          "result": "WARNING",
+          "name": "MATCHES_THEMES",
+          "themes": [
+            {
+              "id": "myzqOo4",
+              "multiplier": 2.0,
+              "name": "GLB High Turnover Theme"
+            },
+            {
+              "id": "8BLLk1B",
+              "multiplier": 1.0,
+              "name": "GLB/D1 Power Pool Aug`26"
+            }
+          ]
+        },
+        {
+          "name": "OSMOSIS_ALLOCATION",
+          "result": "WARNING"
+        }
+      ],
+      "quality_status": "WAITING_CHECKS",
+      "major_failures": [
+        "DATA_DIVERSITY_PENDING",
+        "PROD_CORRELATION_PENDING",
+        "REGULAR_SUBMISSION_PENDING",
+        "SELF_CORRELATION_PENDING"
+      ],
+      "provenance": "PLATFORM_JSON_EVIDENCE"
+    },
+    {
+      "group": "current_llm_rewrite",
+      "source_file": "tmp_simulate_report.json",
+      "candidate_id": "dab7a3c591646ca4",
+      "alpha_id": "ak1d5dlv",
+      "expression": "group_neutralize(ts_decay_linear(rank(ts_delta(mean_connection_significance_score,21)/ts_std_dev(mean_connection_significance_score,126)),10),sector)",
+      "settings": {
+        "region": "USA",
+        "universe": "TOP3000",
+        "delay": 1,
+        "decay": 4,
+        "neutralization": "MARKET",
+        "truncation": 0.08,
+        "language": "FASTEXPR",
+        "pasteurization": "ON",
+        "unitHandling": "VERIFY",
+        "nanHandling": "ON",
+        "visualization": false,
+        "instrumentType": "EQUITY"
+      },
+      "status": "COMPLETE",
+      "metrics": {
+        "sharpe": 0.26,
+        "fitness": 0.03,
+        "turnover": 0.0409,
+        "returns": 0.0015,
+        "drawdown": 0.0131,
+        "margin": 7.5e-05
+      },
+      "checks": [
+        {
+          "name": "LOW_SHARPE",
+          "result": "FAIL",
+          "limit": 1.58,
+          "value": 0.26
+        },
+        {
+          "name": "CLUSTER_TEST",
+          "result": "WARNING",
+          "limit": 1.58,
+          "value": 0.24
+        },
+        {
+          "name": "LOW_FITNESS",
+          "result": "FAIL",
+          "limit": 1.0,
+          "value": 0.03
+        },
+        {
+          "name": "LOW_TURNOVER",
+          "result": "PASS",
+          "limit": 0.01,
+          "value": 0.0409
+        },
+        {
+          "name": "HIGH_TURNOVER",
+          "result": "PASS",
+          "limit": 0.7,
+          "value": 0.0409
+        },
+        {
+          "name": "CONCENTRATED_WEIGHT",
+          "result": "FAIL"
+        },
+        {
+          "name": "LOW_SUB_UNIVERSE_SHARPE",
+          "result": "FAIL",
+          "limit": 0.11,
+          "value": -0.24
+        },
+        {
+          "name": "SELF_CORRELATION",
+          "result": "PENDING"
+        },
+        {
+          "name": "DATA_DIVERSITY",
+          "result": "PENDING"
+        },
+        {
+          "name": "PROD_CORRELATION",
+          "result": "PENDING"
+        },
+        {
+          "name": "REGULAR_SUBMISSION",
+          "result": "PENDING"
+        },
+        {
+          "name": "LOW_2Y_SHARPE",
+          "result": "FAIL",
+          "value": -0.47,
+          "limit": 1.58
+        },
+        {
+          "name": "MATCHES_COMPETITION",
+          "result": "WARNING",
+          "competitions": [
+            {
+              "id": "GAC2026",
+              "name": "Global Alpha Competition 2026"
+            }
+          ]
+        },
+        {
+          "result": "PASS",
+          "name": "MATCHES_PYRAMID",
+          "effective": 1,
+          "multiplier": 1.3,
+          "pyramids": [
+            {
+              "name": "USA/D1/MODEL",
+              "multiplier": 1.3
+            }
+          ]
+        },
+        {
+          "result": "WARNING",
+          "name": "MATCHES_THEMES",
+          "themes": [
+            {
+              "id": "myzqOo4",
+              "multiplier": 2.0,
+              "name": "GLB High Turnover Theme"
+            },
+            {
+              "id": "8BLLk1B",
+              "multiplier": 1.0,
+              "name": "GLB/D1 Power Pool Aug`26"
+            }
+          ]
+        },
+        {
+          "name": "OSMOSIS_ALLOCATION",
+          "result": "WARNING"
+        }
+      ],
+      "quality_status": "WAITING_CHECKS",
+      "major_failures": [
+        "DATA_DIVERSITY_PENDING",
+        "PROD_CORRELATION_PENDING",
+        "REGULAR_SUBMISSION_PENDING",
+        "SELF_CORRELATION_PENDING"
+      ],
+      "provenance": "PLATFORM_JSON_EVIDENCE"
+    }
+  ],
+  "b_summary": {
+    "n": 4,
+    "simulate_success_rate": 1.0,
+    "median_sharpe": 0.14,
+    "max_sharpe": 0.26,
+    "median_fitness": 0.015,
+    "sharpe_gt_0": 3,
+    "sharpe_gt_1": 0,
+    "near_pass": 0,
+    "ready_pass": 0,
+    "dead_alpha": "UNKNOWN"
+  },
+  "parent_mappings": [
+    {
+      "b_alpha_id": "78zwRNqx",
+      "b_candidate_id": "09e0656633e48fb0",
+      "b_expression": "group_rank(ts_delta(anl82_delta_epsq_q1_madp,21), industry) - group_rank(ts_std_dev(anl82_delta_epsy_y1_madp,21), industry)",
+      "parent_seed": "(group_rank(ts_delta(asset_replacement_cost_factor_2,126)/cap,industry)-0.5)*rank(ts_mean(volume,63)/adv20)",
+      "parent_template": "(group_rank(ts_delta(asset_replacement_cost_factor_2,126)/cap,industry)-0.5)*rank(ts_mean(volume,63)/adv20)",
+      "mapping_evidence": {
+        "source": "C:\\Users\\Windows11\\Desktop\\alpha\\.validation_workspace\\待提交Alpha列表.csv",
+        "candidate_id_prefix_exact": true,
+        "expression_exact": true,
+        "parent_seed_field_present": true
+      }
+    },
+    {
+      "b_alpha_id": "e73OZE9z",
+      "b_candidate_id": "75f9ff9af8bdabae",
+      "b_expression": "group_neutralize(ts_zscore(ts_std_dev(anl16_overallratinganaest,126) - ts_delta(anl16_overallratinganaest1through5,21),126), industry)",
+      "parent_seed": "group_neutralize(ts_zscore(cashflow_trend_analysis_10/cap,126)-ts_zscore(debt_to_ebitda_ratio_metric_3/cap,126),industry)",
+      "parent_template": "group_neutralize(ts_zscore(cashflow_trend_analysis_10/cap,126)-ts_zscore(debt_to_ebitda_ratio_metric_3/cap,126),industry)",
+      "mapping_evidence": {
+        "source": "C:\\Users\\Windows11\\Desktop\\alpha\\.validation_workspace\\待提交Alpha列表.csv",
+        "candidate_id_prefix_exact": true,
+        "expression_exact": true,
+        "parent_seed_field_present": true
+      }
+    },
+    {
+      "b_alpha_id": "2rp7V1wb",
+      "b_candidate_id": "e7b26c4dbdcc5ec4",
+      "b_expression": "group_neutralize(rank(ts_zscore(ts_std_dev(anl15_ebtgics_s_cal_fy3_3m_chg, 60), 60)), sector)",
+      "parent_seed": "group_neutralize(ts_zscore(ts_delta(asset_replacement_cost_factor_2,126)/cap,126)*rank(ts_mean(volume,63)/adv20),sector)",
+      "parent_template": "group_neutralize(ts_zscore(ts_delta(asset_replacement_cost_factor_2,126)/cap,126)*rank(ts_mean(volume,63)/adv20),sector)",
+      "mapping_evidence": {
+        "source": "C:\\Users\\Windows11\\Desktop\\alpha\\.validation_workspace\\待提交Alpha列表.csv",
+        "candidate_id_prefix_exact": true,
+        "expression_exact": true,
+        "parent_seed_field_present": true
+      }
+    },
+    {
+      "b_alpha_id": "ak1d5dlv",
+      "b_candidate_id": "dab7a3c591646ca4",
+      "b_expression": "group_neutralize(ts_decay_linear(rank(ts_delta(mean_connection_significance_score,21)/ts_std_dev(mean_connection_significance_score,126)),10),sector)",
+      "parent_seed": "group_neutralize(ts_zscore(ts_delta(asset_replacement_cost_factor_2,126)/cap,126)*rank(ts_mean(volume,63)/adv20),sector)",
+      "parent_template": "group_neutralize(ts_zscore(ts_delta(asset_replacement_cost_factor_2,126)/cap,126)*rank(ts_mean(volume,63)/adv20),sector)",
+      "mapping_evidence": {
+        "source": "C:\\Users\\Windows11\\Desktop\\alpha\\.validation_workspace\\待提交Alpha列表.csv",
+        "candidate_id_prefix_exact": true,
+        "expression_exact": true,
+        "parent_seed_field_present": true
+      }
+    }
+  ],
+  "a": [
+    {
+      "group": "raw_v50",
+      "candidate_id": "7b0e250c7f9a16f6de909a0132849004c25baed749ed8df0b4468ef97567bbc1",
+      "expression": "(group_rank(ts_delta(asset_replacement_cost_factor_2,126)/cap,industry)-0.5)*rank(ts_mean(volume,63)/adv20)",
+      "raw_expression": "(group_rank(ts_delta(asset_replacement_cost_factor_2,126)/cap,industry)-0.5)*rank(ts_mean(volume,63)/adv20)",
+      "generator_source": "V50_PRESERVED",
+      "parent_b_alpha_id": "78zwRNqx",
+      "settings": {
+        "instrumentType": "EQUITY",
+        "region": "USA",
+        "universe": "TOP3000",
+        "delay": 1,
+        "decay": 4,
+        "neutralization": "MARKET",
+        "truncation": 0.08,
+        "language": "FASTEXPR",
+        "pasteurization": "ON",
+        "unitHandling": "VERIFY",
+        "nanHandling": "ON",
+        "visualization": false
+      },
+      "request_hash": "9d478b647dd9d266ba5100a487150f65f7a3751ca888c2cd5465bfa2ebd9ed58",
+      "status": "FAILED",
+      "quality_status": "FAILED",
+      "provenance": "PLATFORM_REJECTION_EVIDENCE",
+      "metrics": {},
+      "checks": [],
+      "major_failures": [
+        "PLATFORM_EXPRESSION_REJECTED"
+      ],
+      "error_category": "INVALID_RESULT",
+      "error_message": "alpha_id is empty",
+      "platform_progress": {
+        "request_status": "FAILED",
+        "last_error": "alpha_id is empty",
+        "progress_location_present": true,
+        "http_status": 200,
+        "platform_status": "ERROR",
+        "message": "Operator ts_delta does not support event inputs. <linkToCommonErrorMessages>Learn more</linkToCommonErrorMessages>"
+      }
+    },
+    {
+      "group": "raw_v50",
+      "candidate_id": "3ffb7f242bf2021a28804305221e3e986806a41093bd6d3a2bf7924612644761",
+      "expression": "group_neutralize(ts_zscore(cashflow_trend_analysis_10/cap,126)-ts_zscore(debt_to_ebitda_ratio_metric_3/cap,126),industry)",
+      "raw_expression": "group_neutralize(ts_zscore(cashflow_trend_analysis_10/cap,126)-ts_zscore(debt_to_ebitda_ratio_metric_3/cap,126),industry)",
+      "generator_source": "V50_PRESERVED",
+      "parent_b_alpha_id": "e73OZE9z",
+      "settings": {
+        "instrumentType": "EQUITY",
+        "region": "USA",
+        "universe": "TOP3000",
+        "delay": 1,
+        "decay": 4,
+        "neutralization": "MARKET",
+        "truncation": 0.08,
+        "language": "FASTEXPR",
+        "pasteurization": "ON",
+        "unitHandling": "VERIFY",
+        "nanHandling": "ON",
+        "visualization": false
+      },
+      "request_hash": "53388a2cbf6f3b8d4323984fc3d6ce2c197487a33a0fc448c62fae67f3c8c020",
+      "status": "FAILED",
+      "quality_status": "FAILED",
+      "provenance": "PLATFORM_REJECTION_EVIDENCE",
+      "metrics": {},
+      "checks": [],
+      "major_failures": [
+        "PLATFORM_EXPRESSION_REJECTED"
+      ],
+      "error_category": "INVALID_RESULT",
+      "error_message": "alpha_id is empty",
+      "platform_progress": {
+        "request_status": "FAILED",
+        "last_error": "alpha_id is empty",
+        "progress_location_present": true,
+        "http_status": 200,
+        "platform_status": "ERROR",
+        "message": "Operator divide does not support event inputs. <linkToCommonErrorMessages>Learn more</linkToCommonErrorMessages>"
+      }
+    },
+    {
+      "group": "raw_v50",
+      "candidate_id": "00a27d614bf0fce4ddf5ccd84fcae35d35d3c212b223a943cf0b9187cc07241f",
+      "expression": "group_neutralize(ts_zscore(ts_delta(asset_replacement_cost_factor_2,126)/cap,126)*rank(ts_mean(volume,63)/adv20),sector)",
+      "raw_expression": "group_neutralize(ts_zscore(ts_delta(asset_replacement_cost_factor_2,126)/cap,126)*rank(ts_mean(volume,63)/adv20),sector)",
+      "generator_source": "V50_PRESERVED",
+      "parent_b_alpha_id": "2rp7V1wb",
+      "settings": {
+        "instrumentType": "EQUITY",
+        "region": "USA",
+        "universe": "TOP3000",
+        "delay": 1,
+        "decay": 4,
+        "neutralization": "MARKET",
+        "truncation": 0.08,
+        "language": "FASTEXPR",
+        "pasteurization": "ON",
+        "unitHandling": "VERIFY",
+        "nanHandling": "ON",
+        "visualization": false
+      },
+      "request_hash": "9da4bd08b2f93fc8becbac16779a6f9e6f84d023588ee206da2c03812797f126",
+      "status": "FAILED",
+      "quality_status": "FAILED",
+      "provenance": "PLATFORM_REJECTION_EVIDENCE",
+      "metrics": {},
+      "checks": [],
+      "major_failures": [
+        "PLATFORM_EXPRESSION_REJECTED"
+      ],
+      "error_category": "INVALID_RESULT",
+      "error_message": "alpha_id is empty",
+      "platform_progress": {
+        "request_status": "FAILED",
+        "last_error": "alpha_id is empty",
+        "progress_location_present": true,
+        "http_status": 200,
+        "platform_status": "ERROR",
+        "message": "Operator ts_delta does not support event inputs. <linkToCommonErrorMessages>Learn more</linkToCommonErrorMessages>"
+      }
+    },
+    {
+      "group": "raw_v50",
+      "candidate_id": "00a27d614bf0fce4ddf5ccd84fcae35d35d3c212b223a943cf0b9187cc07241f",
+      "expression": "group_neutralize(ts_zscore(ts_delta(asset_replacement_cost_factor_2,126)/cap,126)*rank(ts_mean(volume,63)/adv20),sector)",
+      "raw_expression": "group_neutralize(ts_zscore(ts_delta(asset_replacement_cost_factor_2,126)/cap,126)*rank(ts_mean(volume,63)/adv20),sector)",
+      "generator_source": "V50_PRESERVED",
+      "parent_b_alpha_id": "ak1d5dlv",
+      "settings": {
+        "instrumentType": "EQUITY",
+        "region": "USA",
+        "universe": "TOP3000",
+        "delay": 1,
+        "decay": 4,
+        "neutralization": "MARKET",
+        "truncation": 0.08,
+        "language": "FASTEXPR",
+        "pasteurization": "ON",
+        "unitHandling": "VERIFY",
+        "nanHandling": "ON",
+        "visualization": false
+      },
+      "request_hash": "9da4bd08b2f93fc8becbac16779a6f9e6f84d023588ee206da2c03812797f126",
+      "status": "FAILED",
+      "quality_status": "FAILED",
+      "provenance": "PLATFORM_REJECTION_EVIDENCE",
+      "metrics": {},
+      "checks": [],
+      "major_failures": [
+        "PLATFORM_EXPRESSION_REJECTED_DUPLICATE_PARENT"
+      ],
+      "error_category": "CLAIM_REJECTED",
+      "error_message": "exact_hash_exists",
+      "platform_progress": {
+        "request_status": "FAILED",
+        "last_error": "alpha_id is empty",
+        "progress_location_present": true,
+        "http_status": 200,
+        "platform_status": "ERROR",
+        "message": "Operator ts_delta does not support event inputs. <linkToCommonErrorMessages>Learn more</linkToCommonErrorMessages>"
+      },
+      "deduplicated_against_parent_b_alpha_id": "2rp7V1wb"
+    }
+  ],
+  "a_summary": {
+    "n": 4,
+    "simulate_success_rate": 0.0,
+    "median_sharpe": null,
+    "max_sharpe": null,
+    "median_fitness": null,
+    "sharpe_gt_0": 0,
+    "sharpe_gt_1": 0,
+    "near_pass": 0,
+    "ready_pass": 0,
+    "dead_alpha": "UNKNOWN"
+  },
+  "paired_comparison": {
+    "pairs": [
+      {
+        "b_alpha_id": "78zwRNqx",
+        "a_expression": "(group_rank(ts_delta(asset_replacement_cost_factor_2,126)/cap,industry)-0.5)*rank(ts_mean(volume,63)/adv20)",
+        "b_expression": "group_rank(ts_delta(anl82_delta_epsq_q1_madp,21), industry) - group_rank(ts_std_dev(anl82_delta_epsy_y1_madp,21), industry)",
+        "a_sharpe": null,
+        "b_sharpe": 0.03,
+        "sharpe_winner": "INVALID",
+        "a_fitness": null,
+        "b_fitness": 0.0,
+        "fitness_winner": "INVALID",
+        "a_quality_class": "FAILED",
+        "b_quality_class": "WAITING_CHECKS",
+        "valid": false
+      },
+      {
+        "b_alpha_id": "e73OZE9z",
+        "a_expression": "group_neutralize(ts_zscore(cashflow_trend_analysis_10/cap,126)-ts_zscore(debt_to_ebitda_ratio_metric_3/cap,126),industry)",
+        "b_expression": "group_neutralize(ts_zscore(ts_std_dev(anl16_overallratinganaest,126) - ts_delta(anl16_overallratinganaest1through5,21),126), industry)",
+        "a_sharpe": null,
+        "b_sharpe": -0.88,
+        "sharpe_winner": "INVALID",
+        "a_fitness": null,
+        "b_fitness": -0.36,
+        "fitness_winner": "INVALID",
+        "a_quality_class": "FAILED",
+        "b_quality_class": "WAITING_CHECKS",
+        "valid": false
+      },
+      {
+        "b_alpha_id": "2rp7V1wb",
+        "a_expression": "group_neutralize(ts_zscore(ts_delta(asset_replacement_cost_factor_2,126)/cap,126)*rank(ts_mean(volume,63)/adv20),sector)",
+        "b_expression": "group_neutralize(rank(ts_zscore(ts_std_dev(anl15_ebtgics_s_cal_fy3_3m_chg, 60), 60)), sector)",
+        "a_sharpe": null,
+        "b_sharpe": 0.25,
+        "sharpe_winner": "INVALID",
+        "a_fitness": null,
+        "b_fitness": 0.1,
+        "fitness_winner": "INVALID",
+        "a_quality_class": "FAILED",
+        "b_quality_class": "WAITING_CHECKS",
+        "valid": false
+      },
+      {
+        "b_alpha_id": "ak1d5dlv",
+        "a_expression": "group_neutralize(ts_zscore(ts_delta(asset_replacement_cost_factor_2,126)/cap,126)*rank(ts_mean(volume,63)/adv20),sector)",
+        "b_expression": "group_neutralize(ts_decay_linear(rank(ts_delta(mean_connection_significance_score,21)/ts_std_dev(mean_connection_significance_score,126)),10),sector)",
+        "a_sharpe": null,
+        "b_sharpe": 0.26,
+        "sharpe_winner": "INVALID",
+        "a_fitness": null,
+        "b_fitness": 0.03,
+        "fitness_winner": "INVALID",
+        "a_quality_class": "FAILED",
+        "b_quality_class": "WAITING_CHECKS",
+        "valid": false
+      }
+    ],
+    "valid_pair_count": 0,
+    "sharpe_wins": 0,
+    "fitness_wins": 0,
+    "a_summary": {
+      "n": 0,
+      "simulate_success_rate": 0.0,
+      "median_sharpe": null,
+      "max_sharpe": null,
+      "median_fitness": null,
+      "sharpe_gt_0": 0,
+      "sharpe_gt_1": 0,
+      "near_pass": 0,
+      "ready_pass": 0,
+      "dead_alpha": "UNKNOWN"
+    },
+    "b_summary": {
+      "n": 0,
+      "simulate_success_rate": 0.0,
+      "median_sharpe": null,
+      "max_sharpe": null,
+      "median_fitness": null,
+      "sharpe_gt_0": 0,
+      "sharpe_gt_1": 0,
+      "near_pass": 0,
+      "ready_pass": 0,
+      "dead_alpha": "UNKNOWN"
+    }
+  },
+  "pending_a": [],
+  "submit_calls": 0,
+  "settings_optimizer_used": false,
+  "feedback_persistence_evidence_gap": true,
+  "field_catalog_probe": {
+    "status": "COMPLETE",
+    "source": "authenticated ReadOnlyPlatformClient id-filter probe",
+    "rows": [
+      {"id": "asset_replacement_cost_factor_2", "dataset": "ai_equity_alpha", "type": "VECTOR"},
+      {"id": "cashflow_trend_analysis_10", "dataset": "ai_equity_alpha", "type": "VECTOR"},
+      {"id": "debt_to_ebitda_ratio_metric_3", "dataset": "ai_equity_alpha", "type": "MATRIX"}
+    ],
+    "remaining": []
+  },
+  "reason": "Three distinct preserved v50 parent expressions were accepted as simulation requests and later rejected by the platform without alpha_id; no resubmission performed."
+}

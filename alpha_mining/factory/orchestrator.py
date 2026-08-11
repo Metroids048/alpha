@@ -15,6 +15,7 @@ from alpha_mining.domain.expression_normalization import expression_identity, op
 from alpha_mining.domain.operator_registry import BASE_VARS
 from alpha_mining.description.pipeline import DescriptionPipeline
 from alpha_mining.factory.contracts import (
+    SimulationAuthenticationPaused,
     SimulationCheckpoint,
     SimulationOutcomeUnknown,
     validate_simulation_result,
@@ -154,6 +155,14 @@ class FactoryOrchestrator:
         )
         try:
             result = self._call_simulation(lease)
+        except SimulationAuthenticationPaused as exc:
+            detail = self._sanitize_error(f"{type(exc).__name__}: {exc}")
+            self.requests.defer_for_authentication(
+                lease.request_hash, lease_started_at=lease.lease_started_at, error=detail
+            )
+            return CandidateExecutionResult(
+                lease.request_hash, error_category="AUTH_PAUSED", error_message=detail
+            )
         except SimulationOutcomeUnknown as exc:
             detail = self._sanitize_error(f"{type(exc).__name__}: {exc}")
             self.requests.finalize_failure(

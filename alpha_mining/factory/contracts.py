@@ -37,3 +37,11 @@ def validate_simulation_result(result: Any) -> ResultValidation:
 
 class SimulationOutcomeUnknown(RuntimeError):
     """The platform may have accepted a POST, but its outcome is unknowable."""
+
+
+class SimulationAuthenticationPaused(RuntimeError):
+    """Authentication expired after a simulation lease was acquired.
+
+    The request remains resumable; callers must not turn this into a terminal
+    failure because a persisted progress URL or alpha ID may still be valid.
+    """

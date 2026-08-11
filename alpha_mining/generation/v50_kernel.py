@@ -48,6 +48,7 @@ class V50Kernel:
                 "dateCoverage": field.date_coverage if field.date_coverage is not None else float("nan"),
                 "userCount": field.user_count if field.user_count is not None else float("nan"),
                 "description": field.description,
+                "type": field.field_type,
             }
             for field in snapshots.catalog.fields.values()
         ]

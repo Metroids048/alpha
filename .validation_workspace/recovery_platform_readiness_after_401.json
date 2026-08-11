@@ -1,0 +1,25 @@
+{
+  "auth_age_seconds": 983.370241,
+  "auth_attempts_today": 3,
+  "auth_status": "FRESH",
+  "circuit_state": "CLOSED",
+  "count_probe": "SKIPPED",
+  "error_class": "AuthenticationFailed",
+  "failed_stage": "identity",
+  "identity_probe": "FAIL",
+  "last_401": "2026-08-10T13:51:18.202690Z",
+  "last_403": null,
+  "last_429": "2026-08-09T03:59:04.469887Z",
+  "last_successful_auth": "2026-08-10T13:34:54.841958Z",
+  "limit_1_rows": null,
+  "list_probe": "SKIPPED",
+  "platform_count": null,
+  "probe_completed_at": "2026-08-10T13:51:18.212199Z",
+  "probe_started_at": "2026-08-10T13:51:13.187569Z",
+  "ready_for_ledger_sync": false,
+  "recovery_attempts": 0,
+  "retry_after_until": null,
+  "status_counts": {
+    "401": 2
+  }
+}

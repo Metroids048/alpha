@@ -41,6 +41,13 @@ FUNCTIONS = frozenset(
         "winsorize",
         "zscore",
         "bucket",
+        "vec_avg",
+        "vec_sum",
+        "vec_min",
+        "vec_max",
+        "vec_count",
+        "vec_stddev",
+        "vec_range",
     }
 )
 BLOCKED_FUNCTIONS = frozenset({"if_else", "bucket"})

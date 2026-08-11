@@ -1398,6 +1398,7 @@ FUNCTIONS = {
     "ts_av_diff", "ts_decay_linear", "ts_decay_exp_window", "group_rank",
     "group_neutralize", "group_mean", "trade_when", "bucket",
     "ts_regression", "if_else", "min", "max",
+    "vec_avg", "vec_sum", "vec_min", "vec_max", "vec_count", "vec_stddev", "vec_range",
 }
 
 # Operators that either error on common BRAIN tiers ("inaccessible or unknown operator")
@@ -1854,6 +1855,7 @@ class FieldCatalog:
     base_vars: set[str] = field(default_factory=lambda: set(BASE_VARS))
     field_dataset: dict[str, str] = field(default_factory=dict)
     field_user_count: dict[str, float] = field(default_factory=dict)
+    field_type: dict[str, str] = field(default_factory=dict)
 
     @classmethod
     def from_df(cls, df: Any) -> "FieldCatalog":
@@ -1867,6 +1869,7 @@ class FieldCatalog:
         other: list[str] = []
         field_dataset: dict[str, str] = {}
         field_user_count: dict[str, float] = {}
+        field_type: dict[str, str] = {}
         for _, row in df.iterrows():
             fid = str(row.get("id", "")).strip()
             if not fid:
@@ -1875,6 +1878,10 @@ class FieldCatalog:
             by_ds[ds].append(fid)
             field_dataset[fid] = ds
             field_user_count[fid] = float(_to_float(row.get("userCount")) or 0.0)
+            raw_type = row.get("type", row.get("dataType", "UNKNOWN"))
+            if raw_type is None or (isinstance(raw_type, float) and math.isnan(raw_type)):
+                raw_type = row.get("dataType", "UNKNOWN")
+            field_type[fid] = str(raw_type or "UNKNOWN").strip().upper() or "UNKNOWN"
             low = fid.lower()
             if "fundamental" in ds or any(x in low for x in ("sales", "revenue", "income", "profit", "ebit", "asset", "debt", "cash", "book", "capex", "inventory", "receivable", "dividend", "eps", "roe", "roa")):
                 fund.append(fid)
@@ -1900,6 +1907,7 @@ class FieldCatalog:
             other=list(dict.fromkeys(other)),
             field_dataset=field_dataset,
             field_user_count=field_user_count,
+            field_type=field_type,
         )
 
     def best(self, pools: Iterable[list[str]], tokens: tuple[str, ...] = ()) -> str | None:
@@ -1926,7 +1934,13 @@ class FieldCatalog:
         source_ds = self.field_dataset.get(field_name, "")
         pools = (self.fund, self.analyst, self.model, self.sent, self.pv, self.other)
         pool = next((p for p in pools if field_name in p), [])
-        choices = [f for f in pool if f != field_name and self.field_dataset.get(f, "") != source_ds]
+        source_type = self.field_type.get(field_name, "UNKNOWN")
+        choices = [
+            f for f in pool
+            if f != field_name
+            and self.field_dataset.get(f, "") != source_ds
+            and self.field_type.get(f, "UNKNOWN") == source_type
+        ]
         choices.sort(key=lambda f: (field_quality_score(f), -self.field_user_count.get(f, 0.0), f), reverse=True)
         return choices[0] if choices else None
 
@@ -3117,7 +3131,24 @@ class ExpressionFactory:
 
     def _add(self, out: list["ExpressionCandidate"], expr: str,
              family: str, source: str, score: float = 0.0) -> None:
-        out.append(ExpressionCandidate(_sig(expr), family, source, score))
+        out.append(ExpressionCandidate(self._render_vector_fields(expr), family, source, score))
+
+    def _render_vector_fields(self, expr: str) -> str:
+        """Reduce event fields before v50 templates feed them to matrix operators."""
+        rendered = _sig(expr)
+        for field_name, field_type in self.catalog.field_type.items():
+            if field_type != "VECTOR":
+                continue
+            pattern = re.compile(rf"(?<![A-Za-z0-9_]){re.escape(field_name)}(?![A-Za-z0-9_])")
+
+            def reduce_vector(match: re.Match[str]) -> str:
+                prefix = rendered[:match.start()]
+                if re.search(r"\bvec_[a-z0-9_]+\s*\(\s*$", prefix, flags=re.I):
+                    return match.group(0)
+                return f"vec_avg({field_name})"
+
+            rendered = pattern.sub(reduce_vector, rendered)
+        return _sig(rendered)
 
     def _map_placeholders(self, expr: str) -> str | None:
         expr = _sig(expr)

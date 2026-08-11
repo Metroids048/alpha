@@ -12,10 +12,12 @@ from urllib.parse import urljoin
 import requests
 
 from alpha_mining.factory.contracts import (
+    SimulationAuthenticationPaused,
     SimulationCheckpoint,
     SimulationOutcomeUnknown,
 )
 
+from .browser_transport import BrowserBackedWorldQuantTransport, BrowserTransportError
 from .client import BASE_URL, PlatformReadError, ReadOnlyPlatformClient
 from .protocol import alpha_id_from_progress, extract_checks, extract_metrics
 from .simulation_contract import SimulationSettingsContract
@@ -32,6 +34,9 @@ class PlatformGateway:
     max_poll_seconds: float = 600.0
     sleeper: Callable[[float], None] = time.sleep
     settings_schema_path: str | Path = ".alpha_simulation_settings_cache.json"
+    require_stored_session: bool = False
+    allow_auth_replay: bool = True
+    transport: BrowserBackedWorldQuantTransport | None = None
 
     def __post_init__(self) -> None:
         self.client = ReadOnlyPlatformClient(
@@ -41,17 +46,48 @@ class PlatformGateway:
             database=self.database,
             lock_path=self.lock_path,
             sleeper=self.sleeper,
+            require_stored_session=self.require_stored_session,
+            allow_auth_replay=self.allow_auth_replay,
         )
 
     def authenticate(self) -> None:
+        if self.transport is not None:
+            self.transport.authenticate()
+            return
         self.client.authenticate()
+
+    def close(self) -> None:
+        if self.transport is not None:
+            self.transport.close()
+
+    def _request(self, method: str, url: str, **kwargs: Any) -> Any:
+        if self.transport is not None:
+            return self.transport.request(method, url, **kwargs)
+        return self.client.request(method, url, **kwargs)
 
     @property
     def simulation_settings_contract(self) -> SimulationSettingsContract:
         return SimulationSettingsContract.load(self.settings_schema_path)
 
     def fetch_alpha(self, alpha_id: str) -> dict[str, Any]:
-        return self.client.fetch_alpha(alpha_id)
+        # Recovery's strict mode restores the proven DPAPI session before every
+        # read, so a fresh worker never probes the platform anonymously.
+        if self.require_stored_session:
+            self.authenticate()
+        if self.transport is None:
+            try:
+                return self.client.fetch_alpha(alpha_id)
+            except PlatformReadError as exc:
+                self._raise_auth_paused_from_text("alpha detail", str(exc))
+                raise
+        response = self._request("GET", f"{BASE_URL}/alphas/{alpha_id}", endpoint_class="alpha_detail")
+        self._raise_auth_paused("alpha detail", response)
+        if response.status_code != 200:
+            raise PlatformReadError(f"read-only alpha detail failed with HTTP {response.status_code}")
+        payload = response.json()
+        if not isinstance(payload, dict):
+            raise PlatformReadError("read-only alpha detail response is not an object")
+        return payload
 
     def refresh_alpha_checks(self, alpha_id: str) -> dict[str, Any]:
         """Read current checks and PnL-bearing metadata without another POST."""
@@ -73,7 +109,9 @@ class PlatformGateway:
         return []
 
     def patch_alpha(self, alpha_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-        response = self.client.request(
+        if self.transport is not None:
+            raise PermissionError("browser validation transport does not allow alpha PATCH")
+        response = self._request(
             "PATCH",
             f"{BASE_URL}/alphas/{alpha_id}",
             json=payload,
@@ -85,7 +123,9 @@ class PlatformGateway:
         return {"status_code": int(response.status_code)}
 
     def submit_alpha(self, alpha_id: str) -> dict[str, Any]:
-        response = self.client.request(
+        if self.transport is not None:
+            raise PermissionError("browser validation transport never submits Alphas")
+        response = self._request(
             "POST",
             f"{BASE_URL}/alphas/{alpha_id}/submit",
             endpoint_class="submit",
@@ -106,7 +146,11 @@ class PlatformGateway:
     ):
         from alpha_mining.factory.orchestrator import SimulationResult
 
-        self.authenticate()
+        try:
+            self.authenticate()
+        except Exception as exc:
+            self._raise_auth_paused_from_text("authentication", str(exc))
+            raise
         resume = checkpoint or SimulationCheckpoint()
         alpha_id = str(resume.alpha_id or "").strip()
         location = str(resume.progress_location or "").strip()
@@ -132,18 +176,19 @@ class PlatformGateway:
             else:
                 payload["expression"] = expression
             try:
-                response = self.client.request(
+                response = self._request(
                     "POST",
                     f"{BASE_URL}/simulations",
                     json=payload,
                     endpoint_class="simulation_submit",
                     allow_server_retry=False,
                 )
-            except (requests.Timeout, requests.ConnectionError) as exc:
+            except (requests.Timeout, requests.ConnectionError, BrowserTransportError) as exc:
                 raise SimulationOutcomeUnknown(
                     "simulation POST ended without a confirmable platform response"
                 ) from exc
             if response.status_code not in {200, 201, 202}:
+                self._raise_auth_paused("simulation submit", response)
                 raise self._http_error("simulation submit", response)
             try:
                 parsed = response.json()
@@ -172,10 +217,11 @@ class PlatformGateway:
             progress_url = location if location.startswith("http") else urljoin(f"{BASE_URL}/", location.lstrip("/"))
             deadline = time.monotonic() + max(1.0, float(self.max_poll_seconds))
             while time.monotonic() < deadline:
-                progress = self.client.request(
+                progress = self._request(
                     "GET", progress_url, endpoint_class="simulation_poll"
                 )
                 if progress.status_code != 200:
+                    self._raise_auth_paused("simulation poll", progress)
                     raise self._http_error("simulation poll", progress)
                 try:
                     current = progress.json()
@@ -212,6 +258,16 @@ class PlatformGateway:
             checks=extract_checks(detail),
             raw=detail,
         )
+
+    @staticmethod
+    def _raise_auth_paused(operation: str, response: Any) -> None:
+        if int(getattr(response, "status_code", 0) or 0) in {401, 403}:
+            raise SimulationAuthenticationPaused(f"{operation} returned HTTP {response.status_code}")
+
+    @staticmethod
+    def _raise_auth_paused_from_text(operation: str, detail: str) -> None:
+        if "HTTP 401" in str(detail) or "HTTP 403" in str(detail):
+            raise SimulationAuthenticationPaused(f"{operation} authentication expired: {detail}")
 
     @staticmethod
     def _http_error(operation: str, response: Any) -> PlatformReadError:

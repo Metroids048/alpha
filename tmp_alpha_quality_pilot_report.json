@@ -1,0 +1,387 @@
+{
+  "status": "BLOCKED_EXTERNAL",
+  "root_cause": "v50 generation boundary erased field_type before FieldCatalog/ExpressionFactory",
+  "fixed_settings": {
+    "decay": 4,
+    "delay": 1,
+    "language": "FASTEXPR",
+    "nanHandling": "ON",
+    "neutralization": "MARKET",
+    "pasteurization": "ON",
+    "region": "USA",
+    "truncation": 0.05,
+    "unitHandling": "VERIFY",
+    "universe": "TOP3000",
+    "visualization": false,
+    "instrumentType": "EQUITY"
+  },
+  "feedback_provenance": {
+    "records": 33,
+    "platform_verified": 2,
+    "positive": 0,
+    "near_pass": 0
+  },
+  "catalog_slice": {
+    "dataset": "pv87",
+    "matrix_fields": 12,
+    "vector_fields": 4
+  },
+  "round1": [
+    {
+      "expression": "group_neutralize(ts_zscore(ts_delta(pv87_qtr_matrix_ebitda_estimate_mean,126)/cap,126)*rank(ts_mean(volume,63)/adv20),sector)",
+      "generator_source": "v50-native",
+      "provenance": "platform_feedback_pool+v50-native",
+      "fields": [
+        {
+          "id": "pv87_qtr_matrix_ebitda_estimate_mean",
+          "type": "MATRIX",
+          "dataset": "pv87"
+        }
+      ],
+      "round": 1,
+      "settings": {
+        "decay": 4,
+        "delay": 1,
+        "language": "FASTEXPR",
+        "nanHandling": "ON",
+        "neutralization": "MARKET",
+        "pasteurization": "ON",
+        "region": "USA",
+        "truncation": 0.05,
+        "unitHandling": "VERIFY",
+        "universe": "TOP3000",
+        "visualization": false,
+        "instrumentType": "EQUITY"
+      },
+      "error": "ValueError: simulation settings schema is stale",
+      "quality_status": "EXTERNAL_ERROR"
+    },
+    {
+      "expression": "group_neutralize(ts_zscore(ts_delta(pv87_qtr_matrix_ebitda_estimate_scale,126)/cap,126)*rank(ts_mean(volume,63)/adv20),sector)",
+      "generator_source": "v50-native",
+      "provenance": "platform_feedback_pool+v50-native",
+      "fields": [
+        {
+          "id": "pv87_qtr_matrix_ebitda_estimate_scale",
+          "type": "MATRIX",
+          "dataset": "pv87"
+        }
+      ],
+      "round": 1,
+      "settings": {
+        "decay": 4,
+        "delay": 1,
+        "language": "FASTEXPR",
+        "nanHandling": "ON",
+        "neutralization": "MARKET",
+        "pasteurization": "ON",
+        "region": "USA",
+        "truncation": 0.05,
+        "unitHandling": "VERIFY",
+        "universe": "TOP3000",
+        "visualization": false,
+        "instrumentType": "EQUITY"
+      },
+      "error": "ValueError: simulation settings schema is stale",
+      "quality_status": "EXTERNAL_ERROR"
+    },
+    {
+      "expression": "group_neutralize(ts_zscore(ts_delta(pv87_qtr_matrix_ebitda_estimate_number,126)/cap,126)*rank(ts_mean(volume,63)/adv20),sector)",
+      "generator_source": "v50-native",
+      "provenance": "platform_feedback_pool+v50-native",
+      "fields": [
+        {
+          "id": "pv87_qtr_matrix_ebitda_estimate_number",
+          "type": "MATRIX",
+          "dataset": "pv87"
+        }
+      ],
+      "round": 1,
+      "settings": {
+        "decay": 4,
+        "delay": 1,
+        "language": "FASTEXPR",
+        "nanHandling": "ON",
+        "neutralization": "MARKET",
+        "pasteurization": "ON",
+        "region": "USA",
+        "truncation": 0.05,
+        "unitHandling": "VERIFY",
+        "universe": "TOP3000",
+        "visualization": false,
+        "instrumentType": "EQUITY"
+      },
+      "error": "ValueError: simulation settings schema is stale",
+      "quality_status": "EXTERNAL_ERROR"
+    },
+    {
+      "expression": "group_neutralize(ts_zscore(ts_delta(pv87_qtr_matrix_ebitda_estimate_median,126)/cap,126)*rank(ts_mean(volume,63)/adv20),sector)",
+      "generator_source": "v50-native",
+      "provenance": "platform_feedback_pool+v50-native",
+      "fields": [
+        {
+          "id": "pv87_qtr_matrix_ebitda_estimate_median",
+          "type": "MATRIX",
+          "dataset": "pv87"
+        }
+      ],
+      "round": 1,
+      "settings": {
+        "decay": 4,
+        "delay": 1,
+        "language": "FASTEXPR",
+        "nanHandling": "ON",
+        "neutralization": "MARKET",
+        "pasteurization": "ON",
+        "region": "USA",
+        "truncation": 0.05,
+        "unitHandling": "VERIFY",
+        "universe": "TOP3000",
+        "visualization": false,
+        "instrumentType": "EQUITY"
+      },
+      "error": "ValueError: simulation settings schema is stale",
+      "quality_status": "EXTERNAL_ERROR"
+    },
+    {
+      "expression": "group_neutralize(ts_zscore(ts_delta(pv87_return_on_assets_of_estimates_scale,126)/cap,126)*rank(ts_mean(volume,63)/adv20),sector)",
+      "generator_source": "v50-native",
+      "provenance": "platform_feedback_pool+v50-native",
+      "fields": [
+        {
+          "id": "pv87_return_on_assets_of_estimates_scale",
+          "type": "MATRIX",
+          "dataset": "pv87"
+        }
+      ],
+      "round": 1,
+      "settings": {
+        "decay": 4,
+        "delay": 1,
+        "language": "FASTEXPR",
+        "nanHandling": "ON",
+        "neutralization": "MARKET",
+        "pasteurization": "ON",
+        "region": "USA",
+        "truncation": 0.05,
+        "unitHandling": "VERIFY",
+        "universe": "TOP3000",
+        "visualization": false,
+        "instrumentType": "EQUITY"
+      },
+      "error": "ValueError: simulation settings schema is stale",
+      "quality_status": "EXTERNAL_ERROR"
+    },
+    {
+      "expression": "group_neutralize(ts_zscore(ts_delta(pv87_qtr_matrix_return_on_assets_estimate_number,126)/cap,126)*rank(ts_mean(volume,63)/adv20),sector)",
+      "generator_source": "v50-native",
+      "provenance": "platform_feedback_pool+v50-native",
+      "fields": [
+        {
+          "id": "pv87_qtr_matrix_return_on_assets_estimate_number",
+          "type": "MATRIX",
+          "dataset": "pv87"
+        }
+      ],
+      "round": 1,
+      "settings": {
+        "decay": 4,
+        "delay": 1,
+        "language": "FASTEXPR",
+        "nanHandling": "ON",
+        "neutralization": "MARKET",
+        "pasteurization": "ON",
+        "region": "USA",
+        "truncation": 0.05,
+        "unitHandling": "VERIFY",
+        "universe": "TOP3000",
+        "visualization": false,
+        "instrumentType": "EQUITY"
+      },
+      "error": "ValueError: simulation settings schema is stale",
+      "quality_status": "EXTERNAL_ERROR"
+    },
+    {
+      "expression": "group_neutralize(ts_zscore(pv87_qtr_matrix_ebitda_estimate_mean/cap,126)*rank(ts_mean(volume,63)/adv20),market)",
+      "generator_source": "v50-native",
+      "provenance": "platform_feedback_pool+v50-native",
+      "fields": [
+        {
+          "id": "pv87_qtr_matrix_ebitda_estimate_mean",
+          "type": "MATRIX",
+          "dataset": "pv87"
+        }
+      ],
+      "round": 1,
+      "settings": {
+        "decay": 4,
+        "delay": 1,
+        "language": "FASTEXPR",
+        "nanHandling": "ON",
+        "neutralization": "MARKET",
+        "pasteurization": "ON",
+        "region": "USA",
+        "truncation": 0.05,
+        "unitHandling": "VERIFY",
+        "universe": "TOP3000",
+        "visualization": false,
+        "instrumentType": "EQUITY"
+      },
+      "error": "ValueError: simulation settings schema is stale",
+      "quality_status": "EXTERNAL_ERROR"
+    },
+    {
+      "expression": "group_neutralize(ts_zscore(pv87_qtr_matrix_ebitda_estimate_high/cap,126)*rank(ts_mean(volume,63)/adv20),sector)",
+      "generator_source": "v50-native",
+      "provenance": "platform_feedback_pool+v50-native",
+      "fields": [
+        {
+          "id": "pv87_qtr_matrix_ebitda_estimate_high",
+          "type": "MATRIX",
+          "dataset": "pv87"
+        }
+      ],
+      "round": 1,
+      "settings": {
+        "decay": 4,
+        "delay": 1,
+        "language": "FASTEXPR",
+        "nanHandling": "ON",
+        "neutralization": "MARKET",
+        "pasteurization": "ON",
+        "region": "USA",
+        "truncation": 0.05,
+        "unitHandling": "VERIFY",
+        "universe": "TOP3000",
+        "visualization": false,
+        "instrumentType": "EQUITY"
+      },
+      "error": "ValueError: simulation settings schema is stale",
+      "quality_status": "EXTERNAL_ERROR"
+    },
+    {
+      "expression": "group_neutralize(ts_zscore(pv87_qtr_matrix_ebitda_estimate_scale/cap,126)*rank(ts_mean(volume,63)/adv20),market)",
+      "generator_source": "v50-native",
+      "provenance": "platform_feedback_pool+v50-native",
+      "fields": [
+        {
+          "id": "pv87_qtr_matrix_ebitda_estimate_scale",
+          "type": "MATRIX",
+          "dataset": "pv87"
+        }
+      ],
+      "round": 1,
+      "settings": {
+        "decay": 4,
+        "delay": 1,
+        "language": "FASTEXPR",
+        "nanHandling": "ON",
+        "neutralization": "MARKET",
+        "pasteurization": "ON",
+        "region": "USA",
+        "truncation": 0.05,
+        "unitHandling": "VERIFY",
+        "universe": "TOP3000",
+        "visualization": false,
+        "instrumentType": "EQUITY"
+      },
+      "error": "ValueError: simulation settings schema is stale",
+      "quality_status": "EXTERNAL_ERROR"
+    },
+    {
+      "expression": "group_neutralize(ts_zscore(pv87_qtr_matrix_ebitda_estimate_number/cap,126)*rank(ts_mean(volume,63)/adv20),sector)",
+      "generator_source": "v50-native",
+      "provenance": "platform_feedback_pool+v50-native",
+      "fields": [
+        {
+          "id": "pv87_qtr_matrix_ebitda_estimate_number",
+          "type": "MATRIX",
+          "dataset": "pv87"
+        }
+      ],
+      "round": 1,
+      "settings": {
+        "decay": 4,
+        "delay": 1,
+        "language": "FASTEXPR",
+        "nanHandling": "ON",
+        "neutralization": "MARKET",
+        "pasteurization": "ON",
+        "region": "USA",
+        "truncation": 0.05,
+        "unitHandling": "VERIFY",
+        "universe": "TOP3000",
+        "visualization": false,
+        "instrumentType": "EQUITY"
+      },
+      "error": "ValueError: simulation settings schema is stale",
+      "quality_status": "EXTERNAL_ERROR"
+    },
+    {
+      "expression": "group_neutralize(ts_zscore(pv87_return_on_assets_of_estimates_scale/cap,126)*rank(ts_mean(volume,63)/adv20),market)",
+      "generator_source": "v50-native",
+      "provenance": "platform_feedback_pool+v50-native",
+      "fields": [
+        {
+          "id": "pv87_return_on_assets_of_estimates_scale",
+          "type": "MATRIX",
+          "dataset": "pv87"
+        }
+      ],
+      "round": 1,
+      "settings": {
+        "decay": 4,
+        "delay": 1,
+        "language": "FASTEXPR",
+        "nanHandling": "ON",
+        "neutralization": "MARKET",
+        "pasteurization": "ON",
+        "region": "USA",
+        "truncation": 0.05,
+        "unitHandling": "VERIFY",
+        "universe": "TOP3000",
+        "visualization": false,
+        "instrumentType": "EQUITY"
+      },
+      "error": "ValueError: simulation settings schema is stale",
+      "quality_status": "EXTERNAL_ERROR"
+    },
+    {
+      "expression": "group_neutralize(ts_zscore(pv87_qtr_matrix_ebitda_estimate_median/cap,126)*rank(ts_mean(volume,63)/adv20),industry)",
+      "generator_source": "v50-native",
+      "provenance": "platform_feedback_pool+v50-native",
+      "fields": [
+        {
+          "id": "pv87_qtr_matrix_ebitda_estimate_median",
+          "type": "MATRIX",
+          "dataset": "pv87"
+        }
+      ],
+      "round": 1,
+      "settings": {
+        "decay": 4,
+        "delay": 1,
+        "language": "FASTEXPR",
+        "nanHandling": "ON",
+        "neutralization": "MARKET",
+        "pasteurization": "ON",
+        "region": "USA",
+        "truncation": 0.05,
+        "unitHandling": "VERIFY",
+        "universe": "TOP3000",
+        "visualization": false,
+        "instrumentType": "EQUITY"
+      },
+      "error": "ValueError: simulation settings schema is stale",
+      "quality_status": "EXTERNAL_ERROR"
+    }
+  ],
+  "round2": [],
+  "failure_clusters": {
+    "EXTERNAL_ERROR": 12
+  },
+  "round2_reason": "no READY/NEAR; preserve generator, rerun native candidates after round-1 evidence",
+  "submit_calls": 0,
+  "pilot_database": "C:\\Users\\Windows11\\Desktop\\alpha\\tmp_alpha_quality_pilot_workspace\\pilot.sqlite",
+  "observed_at": "2026-08-10T11:49:54.557634Z"
+}

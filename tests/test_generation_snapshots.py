@@ -239,6 +239,31 @@ def test_field_quality_metadata_is_preserved_into_v50_adapter(tmp_path: Path) ->
     assert float(row["userCount"]) == 137
 
 
+def test_v50_kernel_preserves_field_type_at_generation_boundary(tmp_path: Path) -> None:
+    from alpha_mining.generation.snapshots import load_local_snapshots
+    from alpha_mining.generation.v50_kernel import V50Kernel
+
+    _write_dot_catalog(tmp_path)
+    path = tmp_path / ".alpha_datafields_cache.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["rows"] = [
+        {"id": "asset_replacement_cost_factor_2", "_ds": "fundamental", "type": "VECTOR"},
+        {"id": "cashflow_trend_analysis_10", "_ds": "fundamental", "type": "VECTOR"},
+        {"id": "debt_to_ebitda_ratio_metric_3", "_ds": "fundamental", "type": "MATRIX"},
+    ]
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    snapshots = load_local_snapshots(root=tmp_path, database=tmp_path / "history.sqlite")
+    batch = V50Kernel(seed_pool_size=12).generate_batch(snapshots)
+
+    assert batch.catalog.field_type == {
+        "asset_replacement_cost_factor_2": "VECTOR",
+        "cashflow_trend_analysis_10": "VECTOR",
+        "debt_to_ebitda_ratio_metric_3": "MATRIX",
+    }
+    assert set(batch.catalog.df["type"]) == {"VECTOR", "MATRIX"}
+
+
 def test_feedback_uses_quality_reasons_and_does_not_promote_unchecked_outcomes(tmp_path: Path) -> None:
     from alpha_mining.generation.feedback import CandidateFeedbackStore
     from alpha_mining.generation.snapshots import load_local_snapshots

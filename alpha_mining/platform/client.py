@@ -94,6 +94,8 @@ class ReadOnlyPlatformClient:
     controller: PlatformAccessController | None = field(default=None, repr=False)
     auth_protector: CookieProtector | None = field(default=None, repr=False)
     use_environment_proxy: bool | None = None
+    require_stored_session: bool = False
+    allow_auth_replay: bool = True
     active_sync_id: str = field(default="", init=False, repr=False)
     _authenticated_username: str = field(default="", init=False, repr=False)
 
@@ -154,6 +156,15 @@ class ReadOnlyPlatformClient:
         # Remove any stale Bearer header that might have been set previously.
         self.session.headers.pop("Authorization", None)
         self.session.auth = None
+
+        # Recovery runs are browser-session-only: a missing or expired saved
+        # session must pause validation rather than falling back to password auth.
+        if self.require_stored_session:
+            restored = self._restore_unexpired_session_cookies(username)
+            if not restored:
+                raise PlatformReadError("stored browser session is unavailable or expired")
+            self._authenticated_username = username
+            return
 
         # Step 1: reuse the stored session while its `t` JWT is genuinely unexpired.
         # The auth-state cooldown window (25 min) is far shorter than the JWT's real
@@ -325,6 +336,7 @@ class ReadOnlyPlatformClient:
                 endpoint_class != "authentication"
                 and _response_requires_reauthentication(response)
                 and allow_auth_replay
+                and self.allow_auth_replay
                 and not auth_replayed
             ):
                 auth_replayed = True
@@ -469,6 +481,55 @@ class ReadOnlyPlatformClient:
         if not isinstance(payload, dict):
             raise PlatformReadError("identity response is not an object")
         return payload
+
+    def probe_stored_identity(self, *, recovery_probe: bool = True) -> int:
+        """Probe the persisted session with one identity GET and no auth replay.
+
+        This is the handoff proof used before recovery may resume.  It restores
+        only this client's configured DPAPI state, never sends a password-login
+        POST, and therefore cannot turn an expired imported cookie into an
+        invisible authentication attempt.
+        """
+        username = os.environ.get("WQ_USERNAME", "").strip()
+        if not username:
+            raise PlatformReadError(
+                "WQ_USERNAME is not configured; it must match the protected auth-state account"
+            )
+
+        self.session.headers.pop("Authorization", None)
+        self.session.auth = None
+        restored = self._restore_unexpired_session_cookies(username)
+        response = self.request(
+            "GET",
+            f"{BASE_URL}/users/self",
+            allow_server_retry=False,
+            allow_auth_replay=False,
+            endpoint_class="identity",
+            recovery_probe=recovery_probe,
+        )
+        status_code = int(response.status_code)
+        if status_code != 200:
+            return status_code
+        if not restored:
+            raise PlatformReadError(
+                "identity returned HTTP 200 without restoring the configured auth state"
+            )
+        payload = response.json()
+        if not isinstance(payload, dict):
+            raise PlatformReadError("identity response is not an object")
+        identity = str(
+            payload.get("username") or payload.get("email") or payload.get("user_name") or ""
+        ).strip()
+        if not identity:
+            raise PlatformReadError("identity response does not identify the authenticated account")
+        if identity.casefold() != username.casefold():
+            raise PlatformReadError("identity response does not match WQ_USERNAME")
+        mark_session_validated(
+            username,
+            AuthSettings(state_path=self.state_path, protector=self.auth_protector),
+        )
+        self._authenticated_username = username
+        return status_code
 
     def fetch_many(self, alpha_ids: Iterable[str]) -> list[dict[str, Any]]:
         self.authenticate()

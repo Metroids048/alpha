@@ -185,3 +185,4 @@ alpha-backup-before-filter.git/
 *.csv.backup*
 /archive_*/
 /已提交Alpha历史.csv
+.validation_workspace/wq_browser_profile/

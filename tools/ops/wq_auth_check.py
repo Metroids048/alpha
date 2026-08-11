@@ -5,11 +5,17 @@ from __future__ import annotations
 
 import argparse
 import os
+import sys
 from pathlib import Path
 from typing import Sequence
 
 import requests
 from requests.auth import HTTPBasicAuth
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -33,7 +39,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(list(argv) if argv is not None else [])
     from alpha_mining.common import load_workspace_env
 
-    load_workspace_env(Path(__file__).resolve().parent / ".env")
+    load_workspace_env(REPO_ROOT / ".env")
     username = os.environ.get("WQ_USERNAME", "").strip()
     password = os.environ.get("WQ_PASSWORD", "")
     # A local proxy port is machine-specific.  Only use one the operator has
@@ -50,23 +56,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         return 0
     if args.cookie_env:
-        cookie_header = os.environ.get(str(args.cookie_env), "")
-        if not cookie_header:
-            print("Browser Cookie environment variable is not configured")
-            return 1
-        from alpha_mining.auth.session_manager import AuthSettings, import_browser_session
-
-        try:
-            result = import_browser_session(
-                username,
-                cookie_header,
-                AuthSettings(state_path=Path(__file__).resolve().parent / ".wq_auth_state.json"),
-            )
-        except Exception as exc:
-            print(f"Browser session import failed: {type(exc).__name__}")
-            return 1
-        print(f"Browser session imported (generation={result.generation})")
-        return 0
+        print(
+            "Cookie import is disabled in wq_auth_check; use "
+            "tools/ops/import_cookie_now.py so the recovery identity probe is mandatory."
+        )
+        return 2
 
     session = requests.Session()
     if args.profile == "current":
