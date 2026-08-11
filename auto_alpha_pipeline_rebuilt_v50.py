@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import ast
 import csv
+import functools
 import glob
 import json
 import math
@@ -142,6 +143,18 @@ def _parse_utc_like(ts: Any) -> datetime | None:
 
 def _sig(expr: str) -> str:
     return re.sub(r"\s+", " ", str(expr or "").strip())
+
+
+# Vector-field reduction helpers.  These run once per emitted candidate, so the
+# patterns are module-level / memoized rather than rebuilt per call.
+_IDENTIFIER_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+_VEC_REDUCER_TAIL_RE = re.compile(r"\bvec_[a-z0-9_]+\s*\(\s*$", re.I)
+
+
+@functools.lru_cache(maxsize=32768)
+def _vector_field_pattern(field_name: str) -> "re.Pattern[str]":
+    """Word-boundary matcher for one VECTOR field name (compiled at most once)."""
+    return re.compile(rf"(?<![A-Za-z0-9_]){re.escape(field_name)}(?![A-Za-z0-9_])")
 
 
 def _expression_identity(expr: str) -> str:
@@ -2215,6 +2228,13 @@ class ExpressionFactory:
         self.catalog   = catalog
         self.validator = validator
         self.rng       = random.Random(time.time_ns() & 0xFFFFFFFF)
+        # Vector reduction is applied to every emitted candidate.  Resolve the
+        # VECTOR field names once (production: 16,144 of 89,768 fields) so
+        # _render_vector_fields can be driven by the handful of identifiers in
+        # the expression instead of re-scanning and re-compiling the catalog.
+        self._vector_fields = frozenset(
+            name for name, ftype in catalog.field_type.items() if ftype == "VECTOR"
+        )
 
     # ══════════════════════════════════════════════════════════════════════
     #  Entry point
@@ -3153,14 +3173,19 @@ class ExpressionFactory:
     def _render_vector_fields(self, expr: str) -> str:
         """Reduce event fields before v50 templates feed them to matrix operators."""
         rendered = _sig(expr)
-        for field_name, field_type in self.catalog.field_type.items():
-            if field_type != "VECTOR":
-                continue
-            pattern = re.compile(rf"(?<![A-Za-z0-9_]){re.escape(field_name)}(?![A-Za-z0-9_])")
+        if not self._vector_fields:
+            return rendered
+        # Only identifiers actually present in the expression can match, and
+        # every VECTOR field name is a plain identifier, so intersecting the
+        # expression's tokens with the VECTOR set is equivalent to scanning the
+        # whole catalog -- at O(tokens) instead of O(catalog) per candidate.
+        present = self._vector_fields.intersection(_IDENTIFIER_RE.findall(rendered))
+        for field_name in sorted(present):
+            pattern = _vector_field_pattern(field_name)
 
             def reduce_vector(match: re.Match[str]) -> str:
                 prefix = rendered[:match.start()]
-                if re.search(r"\bvec_[a-z0-9_]+\s*\(\s*$", prefix, flags=re.I):
+                if _VEC_REDUCER_TAIL_RE.search(prefix):
                     return match.group(0)
                 return f"vec_avg({field_name})"
 
