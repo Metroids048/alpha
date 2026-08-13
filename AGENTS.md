@@ -62,6 +62,7 @@ Do not edit files when the user asks only for analysis, planning, review, resear
 3. Non-trivial work: short milestones with verification each.
 4. Smallest coherent change; run targeted pytest after milestones.
 5. Substantial changes: independent read-only review when available (`verify-work` / code-reviewer).
+6. **Agent autonomy (mandatory)**: Except for physical actions requiring user presence (face scan, hardware operations, external auth flows that pop browser windows), the agent MUST execute all commands, read all results, fetch all files, and complete all verification steps autonomously. DO NOT interrupt the user to ask them to run commands, paste terminal output, or provide file contents. The agent has full filesystem and command execution permissions — use them.
 
 ### Bug fixes
 

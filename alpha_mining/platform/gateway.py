@@ -37,18 +37,20 @@ class PlatformGateway:
     require_stored_session: bool = False
     allow_auth_replay: bool = True
     transport: BrowserBackedWorldQuantTransport | None = None
+    client: ReadOnlyPlatformClient | None = None
 
     def __post_init__(self) -> None:
-        self.client = ReadOnlyPlatformClient(
-            state_path=self.state_path,
-            timeout=self.timeout,
-            min_interval=self.min_interval,
-            database=self.database,
-            lock_path=self.lock_path,
-            sleeper=self.sleeper,
-            require_stored_session=self.require_stored_session,
-            allow_auth_replay=self.allow_auth_replay,
-        )
+        if self.client is None:
+            self.client = ReadOnlyPlatformClient(
+                state_path=self.state_path,
+                timeout=self.timeout,
+                min_interval=self.min_interval,
+                database=self.database,
+                lock_path=self.lock_path,
+                sleeper=self.sleeper,
+                require_stored_session=self.require_stored_session,
+                allow_auth_replay=self.allow_auth_replay,
+            )
 
     def authenticate(self) -> None:
         if self.transport is not None:

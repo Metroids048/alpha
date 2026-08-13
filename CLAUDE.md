@@ -19,6 +19,7 @@
 - Treat CLAUDE.md and auto memory as guidance, not enforcement. Mandatory checks must be implemented through tests, CI, permissions, or Hooks.
 - Auto memory may store stable project discoveries only. No secrets / temp task / unverified guesses.
 - Prefer `verify-work` before claiming COMPLETE.
+- **Agent autonomy**: Except for physical actions (face scan, hardware operations), the agent MUST execute commands, read results, and complete verification autonomously. DO NOT ask the user to run commands, paste outputs, or fetch file contents. The agent has full file/command access and should use it.
 <!-- AGENT-CONFIG-PACK:CLAUDE-ADDITIONS END -->
 
 <!-- AI-KNOWLEDGE-MANAGED-START -->
