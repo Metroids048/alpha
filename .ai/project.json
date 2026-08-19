@@ -1,0 +1,5 @@
+{
+  "project_id": "alpha",
+  "memory_pack": ["alpha"],
+  "skill_profiles": ["engineering", "research", "debugging", "data"]
+}
