@@ -1,4 +1,4 @@
-"""CLI and long-running loop for pure, local Alpha candidate production."""
+"""CLI and long-running loop for Alpha generation plus platform feedback."""
 
 from __future__ import annotations
 
@@ -65,6 +65,10 @@ class ProductionConfig:
     offline_catalog_max_age_hours: float = DEFAULT_OFFLINE_CATALOG_MAX_AGE_HOURS
     offline_quality_threshold: float = 75.0  # 离线模式正常阈值：确保入队候选具备基本质量
     settings_schema_path: Path | None = None
+    validation_transport: str = "browser"
+    browser_profile_dir: Path | None = None
+    lock_path: Path = Path("worldquant_api.lock")
+    browser_auth_timeout: float = 900.0
 
     @property
     def queue_path(self) -> Path:
@@ -113,6 +117,7 @@ class CycleSummary:
     detail: str = ""
     queue_rows: tuple[dict[str, str], ...] = ()
     next_wait_seconds: float = 0.0
+    platform_simulated: int = 0
 
 
 @dataclass
@@ -122,14 +127,84 @@ class GenerationLoopState:
     zero_output_streak: int = 0
 
 
+class _LazyProductionWorkflow:
+    """Create one browser-backed workflow only when a real production round runs."""
+
+    def __init__(self, config: ProductionConfig) -> None:
+        self.config = config
+        self._service: Any | None = None
+        self._transport: Any | None = None
+        self._auth_paused = False
+
+    def _ensure(self) -> Any | None:
+        if self._auth_paused:
+            return None
+        if self._service is not None:
+            return self._service
+        try:
+            from alpha_mining.factory.operator_service import CandidateWorkflowService
+            from alpha_mining.platform.gateway import PlatformGateway
+            from alpha_mining.platform.browser_transport import BrowserBackedWorldQuantTransport
+
+            if self.config.validation_transport == "direct":
+                self._service = CandidateWorkflowService(self.config.database_path, max_simulations_per_24h=100)
+                return self._service
+            transport = BrowserBackedWorldQuantTransport(
+                profile_dir=self.config.browser_profile_dir or (self.config.root / ".validation_workspace" / "wq_browser_profile"),
+                database=self.config.database_path,
+                lock_path=self.config.lock_path,
+            )
+            try:
+                transport.open()
+                status = transport.wait_for_authentication(timeout_seconds=self.config.browser_auth_timeout)
+            except Exception:
+                transport.close()
+                raise
+            if status != 200:
+                transport.close()
+                self._auth_paused = True
+                return None
+            gateway = PlatformGateway(database=self.config.database_path, lock_path=self.config.lock_path, transport=transport)
+            self._transport = transport
+            self._service = CandidateWorkflowService(self.config.database_path, gateway, max_simulations_per_24h=100)
+            return self._service
+        except Exception as exc:
+            if type(exc).__name__ in {"BrowserTransportError", "ValidationAuthPaused"} or "401" in str(exc) or "403" in str(exc):
+                self._auth_paused = True
+                if self._transport is not None:
+                    self._transport.close()
+                return None
+            raise
+
+    def prepare_once(self) -> Any:
+        from alpha_mining.factory.operator_service import PreparationSummary
+
+        service = self._ensure()
+        if service is None:
+            return PreparationSummary(0, 0, {WorkflowStatus.PENDING_SIMULATION.value: 1, "AUTH_PAUSED": 1})
+        return service.prepare_once()
+
+    def close(self) -> None:
+        if self._transport is not None:
+            self._transport.close()
+            self._transport = None
+        self._service = None
+
+
 def run_cycle(
     config: ProductionConfig,
     *,
     llm: Any | None = None,
     kernel: Any | None = None,
     runtime_state: GenerationLoopState | None = None,
+    workflow_service: Any | None = None,
 ) -> CycleSummary:
-    """Run one read-local, LLM-required generation cycle without platform I/O."""
+    """Run one generation cycle and, when supplied, consume platform feedback.
+
+    ``workflow_service`` is deliberately optional so unit tests and offline
+    catalogue maintenance remain read/local-only.  The production CLI supplies
+    one persistent service backed by the dedicated browser persona.
+    """
 
     cycle_id = _cycle_id()
     if config.database is None:
@@ -142,6 +217,9 @@ def run_cycle(
     # CSV is regenerated only after its transaction has committed.
     work_items.import_csv(config.queue_path)
     work_items.project_csv(config.queue_path, config.events_path)
+    workflow_before = _prepare_workflow(workflow_service)
+    if workflow_service is not None:
+        work_items.project_csv(config.queue_path, config.events_path)
     existing_rows = tuple(queue.read())
     try:
         snapshots = load_local_snapshots(
@@ -188,7 +266,16 @@ def run_cycle(
         row.get("queue_status") == "PENDING_SIMULATION" for row in existing_rows
     )
     fingerprint = _input_fingerprint(snapshots, existing_rows, config.worldquant_root)
-    if pending_before >= max(1, int(config.pending_limit)):
+    if _workflow_auth_paused(workflow_before):
+        summary = _summary_from_snapshot(
+            cycle_id, "AUTH_PAUSED", snapshots, existing_rows,
+            detail="platform authentication is paused; queued candidates remain resumable",
+            pending_total=pending_before,
+            next_wait_seconds=config.interval_seconds,
+        )
+        _log_cycle(cycle_id, summary.state, pending=summary.pending_total, detail=summary.detail)
+        return summary
+    if pending_before >= max(1, int(config.pending_limit)) and workflow_service is None:
         summary = _summary_from_snapshot(
             cycle_id,
             "WAITING_FOR_CONSUMER",
@@ -198,12 +285,7 @@ def run_cycle(
             pending_total=pending_before,
             next_wait_seconds=config.interval_seconds,
         )
-        _log_cycle(
-            cycle_id,
-            summary.state,
-            pending=summary.pending_total,
-            detail=summary.detail,
-        )
+        _log_cycle(cycle_id, summary.state, pending=summary.pending_total, detail=summary.detail)
         return summary
     forced_refresh = False
     if (
@@ -302,6 +384,10 @@ def run_cycle(
     # CSV compatibility data is never the source of a successful generation.
     work_items.project_csv(config.queue_path, config.events_path)
     rows = tuple(queue.read())
+    workflow_after = _prepare_workflow(workflow_service)
+    if workflow_service is not None:
+        work_items.project_csv(config.queue_path, config.events_path)
+        rows = tuple(queue.read())
     pending = sum(row.get("queue_status") == "PENDING_SIMULATION" for row in rows)
     wait_seconds = config.interval_seconds
     if runtime_state is not None:
@@ -315,9 +401,10 @@ def run_cycle(
             )
         else:
             runtime_state.zero_output_streak = 0
+    workflow_state = _workflow_state(workflow_before, workflow_after)
     summary = CycleSummary(
         cycle_id,
-        "COMPLETE",
+        workflow_state or "COMPLETE",
         len(snapshots.catalog.fields),
         len(snapshots.catalog.operators),
         len(snapshots.catalog.datasets),
@@ -334,6 +421,8 @@ def run_cycle(
         result.rejections,
         queue_rows=rows,
         next_wait_seconds=wait_seconds,
+        detail=_workflow_detail(workflow_before, workflow_after),
+        platform_simulated=int(getattr(workflow_after, "simulated", 0) or 0),
     )
     _log_cycle(
         cycle_id,
@@ -357,13 +446,50 @@ def run_cycle(
     return summary
 
 
+def _prepare_workflow(service: Any | None) -> Any | None:
+    """Run one bounded workflow round, returning its summary without masking errors."""
+
+    if service is None:
+        return None
+    return service.prepare_once()
+
+
+def _workflow_state(*summaries: Any | None) -> str:
+    states: list[str] = []
+    for summary in summaries:
+        if summary is None:
+            continue
+        for state, count in dict(getattr(summary, "states", {}) or {}).items():
+            if int(count or 0) > 0:
+                states.append(str(state))
+    if "AUTH_PAUSED" in states:
+        return "AUTH_PAUSED"
+    return ""
+
+
+def _workflow_auth_paused(summary: Any | None) -> bool:
+    if summary is None:
+        return False
+    return bool((dict(getattr(summary, "states", {}) or {})).get("AUTH_PAUSED"))
+
+
+def _workflow_detail(*summaries: Any | None) -> str:
+    for summary in summaries:
+        if summary is None:
+            continue
+        states = dict(getattr(summary, "states", {}) or {})
+        if states.get("PENDING_SIMULATION") and not getattr(summary, "simulated", 0):
+            return "platform authentication or simulation remains resumable"
+    return ""
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
     )
     _install_console_interrupt_handler()
     parser = argparse.ArgumentParser(
-        description="纯本地 Alpha 生产器：只生成待平台 simulate 的候选"
+        description="Alpha 生产闭环：生成、平台 simulate、反馈与下一轮"
     )
     parser.add_argument(
         "--once", action="store_true", help="执行一轮；LLM 或 catalog 不可用时返回非零"
@@ -402,6 +528,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="待 simulate 队列上限；达到后暂停调用 LLM",
     )
     parser.add_argument(
+        "--validation-transport", choices=("browser",), default="browser",
+        help="平台 simulate/check 通道；生产入口固定复用持久 Browser Persona",
+    )
+    parser.add_argument(
+        "--browser-profile-dir", type=Path, default=Path(".validation_workspace") / "wq_browser_profile",
+    )
+    parser.add_argument("--browser-auth-timeout", type=float, default=900.0)
+    parser.add_argument("--lock-path", type=Path, default=Path("worldquant_api.lock"))
+    parser.add_argument(
         "--portfolio-mode",
         choices=("shadow", "enforce"),
         default="enforce",
@@ -427,19 +562,24 @@ def main(argv: Sequence[str] | None = None) -> int:
         offline_catalog_max_age_hours=max(
             1.0, float(args.offline_catalog_max_age_hours)
         ),
+        validation_transport=args.validation_transport,
+        browser_profile_dir=args.browser_profile_dir,
+        browser_auth_timeout=max(1.0, float(args.browser_auth_timeout)),
+        lock_path=args.lock_path,
     )
     max_rounds = 1 if args.once else max(0, int(args.max_rounds))
     rounds = 0
     final_state = "COMPLETE"
     runtime_state = GenerationLoopState()
+    workflow = _LazyProductionWorkflow(config)
     try:
         while max_rounds == 0 or rounds < max_rounds:
-            summary = run_cycle(config, runtime_state=runtime_state)
+            summary = run_cycle(config, runtime_state=runtime_state, workflow_service=workflow)
             rounds += 1
             final_state = summary.state
             if max_rounds and rounds >= max_rounds:
                 break
-            wait_seconds = summary.next_wait_seconds or config.interval_seconds
+            wait_seconds = 0.0 if summary.platform_simulated else (summary.next_wait_seconds or config.interval_seconds)
             LOG.info(
                 "cycle_id=%s next_round_wait=%.1fs", summary.cycle_id, wait_seconds
             )
@@ -447,6 +587,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     except KeyboardInterrupt:
         LOG.info("generation loop interrupted by operator after %s cycle(s)", rounds)
         return 0
+    finally:
+        workflow.close()
     if final_state in {"CATALOG_UNAVAILABLE", "SIMULATION_SETTINGS_UNAVAILABLE"}:
         return 8
     if final_state == "LLM_UNAVAILABLE":

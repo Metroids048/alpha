@@ -111,8 +111,8 @@ class PlatformGateway:
         return []
 
     def patch_alpha(self, alpha_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-        if self.transport is not None:
-            raise PermissionError("browser validation transport does not allow alpha PATCH")
+        if self.transport is not None and not bool(getattr(self.transport, "write_capability", False)):
+            raise PermissionError("browser transport does not allow alpha PATCH without write capability")
         response = self._request(
             "PATCH",
             f"{BASE_URL}/alphas/{alpha_id}",
@@ -125,8 +125,8 @@ class PlatformGateway:
         return {"status_code": int(response.status_code)}
 
     def submit_alpha(self, alpha_id: str) -> dict[str, Any]:
-        if self.transport is not None:
-            raise PermissionError("browser validation transport never submits Alphas")
+        if self.transport is not None and not bool(getattr(self.transport, "write_capability", False)):
+            raise PermissionError("browser transport never submits Alphas without write capability")
         response = self._request(
             "POST",
             f"{BASE_URL}/alphas/{alpha_id}/submit",

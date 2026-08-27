@@ -134,7 +134,7 @@ def test_production_correlation_alias_satisfies_required_gate() -> None:
     assert decision.status is QualityStatus.READY_TO_SUBMIT
 
 
-def test_only_one_repairable_metric_can_be_near_pass() -> None:
+def test_platform_checks_are_final_truth_while_explicit_local_thresholds_remain_tunable() -> None:
     from alpha_mining.quality.decision import QualityStatus, evaluate_quality
 
     near = evaluate_quality(
@@ -148,12 +148,29 @@ def test_only_one_repairable_metric_can_be_near_pass() -> None:
         alpha_id="alpha-1",
         status="COMPLETE",
         metrics={"sharpe": 1.10, "fitness": 0.60, "turnover": 0.90},
-        checks=_checks(),
+        checks=[
+            {"name": "LOW_SHARPE", "result": "FAIL"},
+            {"name": "LOW_FITNESS", "result": "FAIL"},
+            {"name": "HIGH_TURNOVER", "result": "FAIL"},
+            *(_checks()),
+        ],
     )
 
     assert near.status is QualityStatus.NEAR_PASS
     assert near.repairable is True
     assert far.status is QualityStatus.FAR_FAIL
+
+
+def test_platform_pass_is_not_overridden_by_legacy_numeric_floor() -> None:
+    from alpha_mining.quality.decision import QualityStatus, evaluate_quality
+
+    decision = evaluate_quality(
+        alpha_id="alpha-1", status="COMPLETE",
+        metrics={"sharpe": 0.3, "fitness": 0.2, "turnover": 0.95},
+        checks=_checks(),
+    )
+
+    assert decision.status is QualityStatus.READY_TO_SUBMIT
 
 
 def test_migration_18_persists_quality_and_lineage_first_write_wins(tmp_path) -> None:

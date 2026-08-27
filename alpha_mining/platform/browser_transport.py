@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import time
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Mapping
@@ -91,6 +92,7 @@ class BrowserBackedWorldQuantTransport:
     min_interval: float = 2.0
     timeout_ms: float = 60_000
     worker_url: str = ""
+    write_capability: bool = False
     sleeper: Callable[[float], None] = field(default=time.sleep, repr=False)
     controller: PlatformAccessController | None = field(default=None, repr=False)
     _pw: Any = field(default=None, init=False, repr=False)
@@ -177,14 +179,18 @@ class BrowserBackedWorldQuantTransport:
         return str(url)
 
     @staticmethod
-    def _validate_operation(method: str, url: str) -> None:
+    def _validate_operation(method: str, url: str, *, endpoint_class: str = "read", write_capability: bool = False) -> None:
         parsed = urlparse(url)
         verb = str(method).upper()
         if verb == "GET":
             return
         if verb == "POST" and parsed.hostname == "api.worldquantbrain.com" and parsed.path == "/simulations":
             return
-        raise BrowserTransportError("browser validation transport permits only reads and POST /simulations")
+        if write_capability and endpoint_class == "description_patch" and verb == "PATCH" and parsed.hostname == "api.worldquantbrain.com" and re.fullmatch(r"/alphas/[^/]+", parsed.path):
+            return
+        if write_capability and endpoint_class == "submit" and verb == "POST" and parsed.hostname == "api.worldquantbrain.com" and re.fullmatch(r"/alphas/[^/]+/submit", parsed.path):
+            return
+        raise BrowserTransportError("browser transport permits only reads and POST /simulations unless an explicit write capability is enabled")
 
     def request(
         self,
@@ -201,7 +207,7 @@ class BrowserBackedWorldQuantTransport:
 
         verb = str(method).upper()
         target = self._safe_url(url, params)
-        self._validate_operation(verb, target)
+        self._validate_operation(verb, target, endpoint_class=endpoint_class, write_capability=bool(self.write_capability))
         if self.worker_url:
             result = self._worker_call(
                 "POST",

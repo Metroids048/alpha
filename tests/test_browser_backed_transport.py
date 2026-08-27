@@ -116,6 +116,22 @@ def test_gateway_blocks_patch_and_submit_for_browser_transport(tmp_path: Path) -
         gateway.submit_alpha("alpha-1")
 
 
+def test_browser_transport_allows_only_explicit_alpha_writes(tmp_path: Path) -> None:
+    transport, page = _transport(
+        tmp_path,
+        [
+            {"status": 204, "text": "", "headers": {}},
+            {"status": 202, "text": "{}", "headers": {}},
+        ],
+    )
+    transport.write_capability = True
+
+    transport.request("PATCH", "https://api.worldquantbrain.com/alphas/alpha-1", json={}, endpoint_class="description_patch")
+    transport.request("POST", "https://api.worldquantbrain.com/alphas/alpha-1/submit", endpoint_class="submit")
+
+    assert [call["method"] for call in page.calls] == ["PATCH", "POST"]
+
+
 def test_recovery_probe_prefers_a_fresh_browser_transport(monkeypatch, tmp_path: Path) -> None:
     from argparse import Namespace
 
@@ -365,7 +381,7 @@ def test_submit_entry_defaults_to_browser_validation_transport() -> None:
     assert entry._parser().parse_args(["--validation-transport", "direct"]).validation_transport == "direct"
 
 
-def test_submit_entry_real_submission_never_uses_the_browser_transport(fake_browser, tmp_path: Path) -> None:
+def test_submit_entry_real_submission_uses_browser_transport_with_explicit_write_capability(fake_browser, tmp_path: Path) -> None:
     import inspect
 
     entry = _submit_entry()
@@ -373,8 +389,8 @@ def test_submit_entry_real_submission_never_uses_the_browser_transport(fake_brow
     dispatch = inspect.getsource(entry.main).split("if args.允许提交:", 1)[1].split("\n", 2)[1]
 
     assert "_run_real_submission" in dispatch
-    assert "_build_validation_service" not in submit_branch
-    assert "transport" not in submit_branch
+    assert "_build_validation_service" in submit_branch
+    assert "allow_writes=True" in submit_branch
     assert "confirmation=args.确认短语" in submit_branch
     assert "execute=True" in submit_branch
     assert fake_browser.instances == []

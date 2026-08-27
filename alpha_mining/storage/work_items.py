@@ -133,10 +133,11 @@ class CandidateWorkStore:
                 return False
             con.execute(
                 """INSERT INTO candidate_work_items
-                (candidate_id,request_hash,payload_json,source_evidence_json,state,alpha_id,last_error_category,last_error,created_at,updated_at)
-                VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                (candidate_id,request_hash,payload_json,source_evidence_json,state,alpha_id,parent_candidate_id,last_error_category,last_error,created_at,updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
                 (candidate_id, request_hash, _json(dict(candidate)), _json(dict(source_evidence or {})), state,
-                 str(candidate.get("alpha_id") or ""), str(candidate.get("last_error_category") or ""),
+                 str(candidate.get("alpha_id") or ""), str(candidate.get("parent_candidate_id") or ""),
+                 str(candidate.get("last_error_category") or ""),
                  str(candidate.get("last_error") or ""), now, now),
             )
             self._event(con, candidate_id, event_type, "", state, {"request_hash": request_hash})

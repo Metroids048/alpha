@@ -52,10 +52,17 @@ def _canonical_check_name(value: Any) -> str:
     return "PROD_CORRELATION" if name == "PRODUCTION_CORRELATION" else name
 
 
-def normalize_platform_checks(checks: list[Mapping[str, Any]] | tuple[Mapping[str, Any], ...]) -> dict[str, str]:
+def normalize_platform_checks(checks: Any) -> dict[str, str]:
     """Return canonical check names and fail-closed statuses."""
 
     normalized: dict[str, str] = {}
+    if isinstance(checks, Mapping):
+        checks = [
+            {"name": name, "result": value}
+            for name, value in checks.items()
+        ]
+    if not isinstance(checks, (list, tuple)):
+        checks = []
     for check in checks:
         if not isinstance(check, Mapping) or not str(check.get("name") or "").strip():
             continue
@@ -109,17 +116,19 @@ def blocking_check_reasons(
 
     waiting = sorted(
         name for name, value in by_name.items()
-        if name not in ignored
-        and (name not in _METRIC_CHECKS or name in required)
-        and value in {"MISSING", "UNKNOWN", "PENDING", "WAITING"}
+        if name not in ignored and value in {"MISSING", "UNKNOWN", "PENDING", "WAITING"}
     )
     if waiting:
         return QualityStatus.WAITING_CHECKS, tuple(f"{name}_{by_name[name]}" for name in waiting)
+    near = sorted(
+        name for name, value in by_name.items()
+        if name not in ignored and value in {"NEAR_PASS", "NEAR"}
+    )
+    if near:
+        return QualityStatus.NEAR_PASS, tuple(f"{name}_{by_name[name]}" for name in near)
     failed = sorted(
         name for name, value in by_name.items()
-        if name not in ignored
-        and (name not in _METRIC_CHECKS or name in required)
-        and value != "PASS"
+        if name not in ignored and value != "PASS"
     )
     if failed:
         return QualityStatus.FAR_FAIL, tuple(f"{name}_{by_name[name]}" for name in failed)
@@ -139,6 +148,7 @@ def evaluate_quality(
     prod_corr_exception_confirmed: bool = False,
 ) -> QualityDecision:
     """Classify a completed simulation without implicit passes or loose gates."""
+    explicit_local_thresholds = thresholds is not None or live_thresholds is not None
     effective = thresholds or QualityThresholds.with_live_thresholds(live_thresholds)
     reasons: list[str] = []
     if str(status or "").upper() != "COMPLETE":
@@ -163,6 +173,13 @@ def evaluate_quality(
     missing_metrics = [name for name, value in (("SHARPE", sharpe), ("FITNESS", fitness), ("TURNOVER", turnover)) if value is None]
     if missing_metrics:
         return QualityDecision(QualityStatus.FAR_FAIL, tuple(f"{name}_MISSING" for name in missing_metrics), effective)
+
+    # The live platform checks are the production source of truth.  Numeric
+    # thresholds are retained only for callers that explicitly request the
+    # legacy local heuristic (for example a bounded optimizer trial); the
+    # default production path never turns a platform PASS into a local FAIL.
+    if not explicit_local_thresholds:
+        return QualityDecision(QualityStatus.READY_TO_SUBMIT, ("PLATFORM_CHECKS_PASSED",), effective)
 
     failed_dimensions: list[str] = []
     if sharpe < effective.sharpe:

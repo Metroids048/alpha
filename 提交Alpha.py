@@ -69,6 +69,7 @@ def _build_validation_service(
     browser_profile_dir: Path,
     lock_path: Path,
     auth_timeout: float,
+    allow_writes: bool = False,
 ):
     """Build the simulate/prepare service and, for browser mode, its transport.
 
@@ -89,6 +90,7 @@ def _build_validation_service(
         profile_dir=browser_profile_dir,
         database=database,
         lock_path=lock_path,
+        write_capability=allow_writes,
     )
     try:
         transport.open()
@@ -111,26 +113,37 @@ def _build_validation_service(
 
 
 def _run_real_submission(args, database: Path) -> int:
-    """Real platform writes keep the existing direct gateway and both guards."""
+    """Real platform writes reuse the authenticated browser persona and guards."""
 
     from alpha_mining.factory.operator_service import CandidateWorkflowService
     from alpha_mining.storage.work_items import WorkflowStatus
 
-    service = CandidateWorkflowService(database, max_simulations_per_24h=100)
-    service.store.import_csv(Path(args.input))
-    service.store.project_csv(Path(args.input), _ROOT / "数据" / "本地运行产物" / "状态" / "generation_queue_events.csv")
-    candidate_ids = args.candidate_id or [
-        item.candidate_id for item in service.list_items(
-            states=[WorkflowStatus.AWAITING_BATCH_CONFIRMATION.value], limit=max(1, min(5, args.batch_size))
-        )
-    ]
-    if not candidate_ids:
-        print("[提交Alpha] 没有已冻结且待确认的批次")
+    service, transport = _build_validation_service(
+        database,
+        transport_mode="browser",
+        browser_profile_dir=Path(args.browser_profile_dir),
+        lock_path=Path(args.lock_path),
+        auth_timeout=args.browser_auth_timeout,
+        allow_writes=True,
+    )
+    try:
+        service.store.import_csv(Path(args.input))
+        service.store.project_csv(Path(args.input), _ROOT / "数据" / "本地运行产物" / "状态" / "generation_queue_events.csv")
+        candidate_ids = args.candidate_id or [
+            item.candidate_id for item in service.list_items(
+                states=[WorkflowStatus.AWAITING_BATCH_CONFIRMATION.value], limit=max(1, min(5, args.batch_size))
+            )
+        ]
+        if not candidate_ids:
+            print("[提交Alpha] 没有已冻结且待确认的批次")
+            return 0
+        batch = service.submit_batch(candidate_ids, confirmation=args.确认短语, execute=True)
+        print(json.dumps(batch.__dict__, ensure_ascii=False, sort_keys=True))
+        service.store.project_csv(Path(args.input))
         return 0
-    batch = service.submit_batch(candidate_ids, confirmation=args.确认短语, execute=True)
-    print(json.dumps(batch.__dict__, ensure_ascii=False, sort_keys=True))
-    service.store.project_csv(Path(args.input))
-    return 0
+    finally:
+        if transport is not None:
+            transport.close()
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -130,6 +130,32 @@ def test_near_pass_tuning_is_bounded_to_four_children(tmp_path: Path) -> None:
     assert service.store.get_item("candidate-1").tune_child_count == 4
 
 
+def test_near_pass_is_automatically_tuned_once_per_round(tmp_path: Path) -> None:
+    from alpha_mining.factory.operator_service import CandidateWorkflowService
+    from alpha_mining.storage.work_items import WorkflowStatus
+
+    gateway = MetricsGateway(
+        {"sharpe": 1.4, "fitness": 1.2, "turnover": 0.2},
+        checks=[
+            {"name": "LOW_SHARPE", "result": "NEAR_PASS"},
+            {"name": "SELF_CORRELATION", "result": "PASS"},
+            {"name": "PROD_CORRELATION", "result": "PASS"},
+        ],
+    )
+    service = CandidateWorkflowService(tmp_path / "auto-tune.sqlite", gateway)
+    service.store.upsert_candidate(_candidate_with_provenance())
+
+    summary = service.prepare_once()
+
+    assert summary.simulated == 1
+    parent = service.store.get_item("candidate-1")
+    assert parent is not None and parent.state == WorkflowStatus.NEAR_PASS.value
+    children = service.list_items(states=[WorkflowStatus.PENDING_SIMULATION.value])
+    assert len(children) == 1
+    assert children[0].parent_candidate_id == "candidate-1"
+    assert children[0].payload.get("tune_stage") == "STABILITY"
+
+
 def test_batch_preparation_never_performs_platform_write(tmp_path: Path) -> None:
     from alpha_mining.factory.operator_service import CandidateWorkflowService
     from alpha_mining.storage.work_items import WorkflowStatus
@@ -282,17 +308,17 @@ def test_active_simulation_persists_authoritative_outcome_and_provenance(tmp_pat
 
 
 @pytest.mark.parametrize(
-    ("metrics", "expected"),
+    ("metrics", "checks", "expected"),
     [
-        ({"sharpe": 1.4, "fitness": 1.2, "turnover": 0.2}, "NEAR_PASS"),
-        ({"sharpe": 0.5, "fitness": 0.4, "turnover": 0.9}, "FAR_FAIL"),
+        ({"sharpe": 1.4, "fitness": 1.2, "turnover": 0.2}, [{"name": "LOW_SHARPE", "result": "FAIL"}, {"name": "SELF_CORRELATION", "result": "PASS"}, {"name": "PROD_CORRELATION", "result": "PASS"}], "FAR_FAIL"),
+        ({"sharpe": 0.5, "fitness": 0.4, "turnover": 0.9}, [{"name": "LOW_SHARPE", "result": "FAIL"}, {"name": "LOW_FITNESS", "result": "FAIL"}, {"name": "HIGH_TURNOVER", "result": "FAIL"}, {"name": "SELF_CORRELATION", "result": "PASS"}, {"name": "PROD_CORRELATION", "result": "PASS"}], "FAR_FAIL"),
     ],
 )
-def test_active_simulation_persists_quality_classification(tmp_path: Path, metrics, expected: str) -> None:
+def test_active_simulation_persists_platform_quality_classification(tmp_path: Path, metrics, checks, expected: str) -> None:
     from alpha_mining.factory.operator_service import CandidateWorkflowService
 
     database = tmp_path / f"{expected}.sqlite"
-    service = CandidateWorkflowService(database, MetricsGateway(metrics))
+    service = CandidateWorkflowService(database, MetricsGateway(metrics, checks=checks))
     service.store.upsert_candidate(_candidate_with_provenance())
 
     service.prepare_once()

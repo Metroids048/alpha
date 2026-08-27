@@ -101,6 +101,12 @@ class CandidateWorkflowService:
                 attempt = self._simulate(item)
                 if attempt == _SIMULATED:
                     simulated += 1
+                    refreshed = self.store.get_item(item.candidate_id)
+                    if refreshed is not None and refreshed.state == WorkflowStatus.NEAR_PASS.value:
+                        # A near-pass is actionable platform feedback.  Create
+                        # exactly one bounded optimizer child automatically so
+                        # the next generation round can consume a real trial.
+                        self.retry_item(refreshed.candidate_id)
                 elif attempt == _AUTH_PAUSED:
                     # Stop the whole round on the first paused session so one
                     # expired login cannot burn the rest of the batch.
@@ -165,6 +171,24 @@ class CandidateWorkflowService:
         control = FactoryControl(self.database)
         if not (control.can_patch_description() and control.can_submit()):
             raise PermissionError("FactoryControl does not permit description and submission writes")
+        # Re-read the platform immediately before any write.  A stale local
+        # READY state is never sufficient for a real description PATCH/submit.
+        for item in items:
+            current = self.gateway.refresh_alpha_checks(item.alpha_id)
+            checks = current.get("checks") or []
+            if isinstance(checks, dict):
+                checks = [{"name": name, "result": value} for name, value in checks.items()]
+            decision = evaluate_quality(
+                alpha_id=item.alpha_id,
+                status="COMPLETE",
+                metrics=current.get("metrics") or {},
+                checks=checks,
+                prod_corr_exception_confirmed=bool((current.get("raw") or {}).get("prodCorrExceptionConfirmed")),
+            )
+            if decision.status is not QualityStatus.READY_TO_SUBMIT:
+                raise PermissionError(
+                    f"candidate {item.candidate_id} no longer has fresh READY checks: {decision.status.value}"
+                )
         payloads = {item.candidate_id: self._description_payload(item) for item in items}
         ids = self.store.confirm_batch(batch_id, payload_hash)
         for candidate_id in ids:
@@ -226,9 +250,10 @@ class CandidateWorkflowService:
         result = execution.result
         decision = evaluate_quality(alpha_id=result.alpha_id, status=result.status, metrics=result.metrics, checks=result.checks, prod_corr_exception_confirmed=bool((result.raw or {}).get("prodCorrExceptionConfirmed")))
         state = decision.status.value
+        repair_action = _targeted_repair_action(decision.reasons)
         record_candidate_outcome(
             self.feedback, proposal, execution.request_hash, outcome=state, result=result,
-            quality_reasons=decision.reasons, settings=settings,
+            quality_reasons=decision.reasons, settings=settings, repair_action=repair_action,
         )
         self.store.transition(item.candidate_id, state, event_type="QUALITY_EVALUATED", alpha_id=result.alpha_id, metrics=result.metrics, checks=result.checks, quality_reasons=decision.reasons)
         refreshed = self.store.get_item(item.candidate_id)
@@ -244,20 +269,32 @@ class CandidateWorkflowService:
         try:
             current = self.gateway.refresh_alpha_checks(item.alpha_id)
         except Exception as exc:
+            detail = str(exc)
+            if "401" in detail or "403" in detail or type(exc).__name__ in {"SimulationAuthenticationPaused", "BrowserTransportError"}:
+                self.store.transition(
+                    item.candidate_id, WorkflowStatus.WAITING_CHECKS.value,
+                    event_type="CHECK_REFRESH_AUTH_PAUSED",
+                    error_category=_AUTH_PAUSED, error=detail,
+                )
+                self._emit(item, WorkflowStatus.WAITING_CHECKS.value, detail)
+                return
             self._emit(item, item.state, f"check refresh deferred: {type(exc).__name__}")
             return
-        decision = evaluate_quality(alpha_id=item.alpha_id, status="COMPLETE", metrics=current.get("metrics") or {}, checks=current.get("checks") or {}, prod_corr_exception_confirmed=bool((current.get("raw") or {}).get("prodCorrExceptionConfirmed")))
+        checks = current.get("checks") or []
+        if isinstance(checks, dict):
+            checks = [{"name": name, "result": value} for name, value in checks.items()]
+        decision = evaluate_quality(alpha_id=item.alpha_id, status="COMPLETE", metrics=current.get("metrics") or {}, checks=checks, prod_corr_exception_confirmed=bool((current.get("raw") or {}).get("prodCorrExceptionConfirmed")))
         proposal = self._proposal(item)
         result = SimpleNamespace(
             alpha_id=item.alpha_id, status="COMPLETE", metrics=current.get("metrics") or {},
-            checks=current.get("checks") or [], raw=current.get("raw") or {},
+            checks=checks, raw=current.get("raw") or {},
         )
         record_candidate_outcome(
             self.feedback, proposal, self._feedback_request_hash(item),
             outcome=decision.status.value, result=result, quality_reasons=decision.reasons,
-            settings=self._settings(item),
+            settings=self._settings(item), repair_action=_targeted_repair_action(decision.reasons),
         )
-        self.store.transition(item.candidate_id, decision.status.value, event_type="CHECKS_REFRESHED", metrics=current.get("metrics") or {}, checks=current.get("checks") or [], quality_reasons=decision.reasons)
+        self.store.transition(item.candidate_id, decision.status.value, event_type="CHECKS_REFRESHED", metrics=current.get("metrics") or {}, checks=checks, quality_reasons=decision.reasons)
         if decision.status is QualityStatus.READY_TO_SUBMIT:
             refreshed = self.store.get_item(item.candidate_id)
             if refreshed:
@@ -376,3 +413,24 @@ class CandidateWorkflowService:
 
     def _emit(self, item: CandidateWorkItem, state: str, message: str, *, simulated: int = 0) -> None:
         self.progress_sink(WorkflowProgress(item.candidate_id, state, message, simulated))
+
+
+def _targeted_repair_action(reasons: Iterable[str]) -> str:
+    """Turn platform failure dimensions into a bounded next-generation hint."""
+
+    mapping = {
+        "SELF_CORRELATION": "STRUCTURE_REPAIR_CORRELATION",
+        "PROD_CORRELATION": "STRUCTURE_REPAIR_CORRELATION",
+        "LOW_SHARPE": "STRUCTURE_REPAIR_SHARPE",
+        "LOW_FITNESS": "STRUCTURE_REPAIR_FITNESS",
+        "HIGH_TURNOVER": "STRUCTURE_REPAIR_TURNOVER",
+        "LOW_TURNOVER": "STRUCTURE_REPAIR_TURNOVER",
+        "CONCENTRATED_WEIGHT": "STRUCTURE_REPAIR_WEIGHT",
+        "LOW_SUB_UNIVERSE_SHARPE": "STRUCTURE_REPAIR_SUBUNIVERSE",
+    }
+    for reason in reasons:
+        token = str(reason).upper()
+        for source, action in mapping.items():
+            if source in token:
+                return action
+    return ""

@@ -43,6 +43,11 @@ class FeedbackRecord:
     provenance: str = "UNVERIFIED"
     sharpe: float | None = None
     fitness: float | None = None
+    turnover: float | None = None
+    check_summary: tuple[str, ...] = ()
+    quality_reasons: tuple[str, ...] = ()
+    parent_candidate_id: str = ""
+    repair_action: str = ""
 
     @property
     def platform_verified(self) -> bool:
@@ -214,7 +219,7 @@ def load_feedback_summary(
                 wanted = [
                     "request_hash", "candidate_id", "expression", "outcome", "strategy_family", "dataset", "field_skeleton",
                     "checks_json", "quality_reasons_json", "error_category", "self_correlation", "prod_correlation",
-                    "provenance", "sharpe", "fitness",
+                    "provenance", "sharpe", "fitness", "turnover", "parent_candidate_id", "repair_action",
                 ]
                 if "candidate_outcomes" in _tables(con):
                     query = "SELECT " + ",".join(name if name in columns else "''" for name in wanted) + " FROM candidate_outcomes"
@@ -222,7 +227,7 @@ def load_feedback_summary(
                         (
                             request_hash, candidate_id, stored_expression, outcome, family, dataset, field_skeleton,
                             checks_json, quality_reasons_json, error_category, self_corr, prod_corr,
-                            provenance, sharpe, fitness,
+                            provenance, sharpe, fitness, turnover, parent_candidate_id, repair_action,
                         ) = row
                         request_hash = str(request_hash or "")
                         candidate_id = str(candidate_id or "")
@@ -246,6 +251,11 @@ def load_feedback_summary(
                                 _provenance_value(provenance, checks_json, error_category),
                                 _float_or_none(sharpe),
                                 _float_or_none(fitness),
+                                _float_or_none(turnover),
+                                _check_summary(checks_json),
+                                tuple(_json_string_tuple(quality_reasons_json)),
+                                str(parent_candidate_id or source.get("parent_candidate_id") or ""),
+                                str(repair_action or source.get("repair_action") or ""),
                             )
                         )
         except sqlite3.Error:
@@ -490,6 +500,20 @@ def _json_value(value: object) -> object:
         return json.loads(value)
     except (TypeError, ValueError, json.JSONDecodeError):
         return value
+
+
+def _check_summary(value: object) -> tuple[str, ...]:
+    parsed = _json_value(value)
+    if not isinstance(parsed, list):
+        return ()
+    summary: list[str] = []
+    for item in parsed:
+        if isinstance(item, dict):
+            name = str(item.get("name") or "").strip().upper()
+            status = str(item.get("result") or item.get("status") or "").strip().upper()
+            if name:
+                summary.append(f"{name}={status or 'MISSING'}")
+    return tuple(summary)
 
 
 def _collect_failure_tokens(

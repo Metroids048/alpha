@@ -1446,6 +1446,23 @@ class HighQualityGenerator:
                 "near_pass_refs": [item.ref_id for item in snapshots.feedback.near_pass[:12]],
                 "failure_counts": snapshots.feedback.failure_counts,
                 "self_corr_refs": [item.ref_id for item in snapshots.feedback.self_corr_risk[:12]],
+                "observations": [
+                    {
+                        "ref_id": item.ref_id,
+                        "outcome": item.outcome,
+                        "expression": item.expression,
+                        "sharpe": item.sharpe,
+                        "fitness": item.fitness,
+                        "turnover": item.turnover,
+                        "checks": list(item.check_summary),
+                        "failure_types": list(item.failure_types),
+                        "quality_reasons": list(item.quality_reasons),
+                        "parent_candidate_id": item.parent_candidate_id,
+                        "repair_action": item.repair_action,
+                    }
+                    for item in snapshots.feedback.records
+                    if item.grounded and item.platform_verified
+                ][:24],
             },
             "candidate_inventory": _inventory_prompt_summary(snapshots),
             "knowledge": [{"ref_id": item.ref_id, "text": item.text} for item in knowledge.snippets],
@@ -1550,6 +1567,23 @@ class HighQualityGenerator:
             "allowed_feedback_refs": [
                 item.ref_id for item in snapshots.feedback.records if item.grounded and item.expression
             ],
+            "platform_feedback_observations": [
+                {
+                    "ref_id": item.ref_id,
+                    "outcome": item.outcome,
+                    "expression": item.expression,
+                    "sharpe": item.sharpe,
+                    "fitness": item.fitness,
+                    "turnover": item.turnover,
+                    "checks": list(item.check_summary),
+                    "failure_types": list(item.failure_types),
+                    "quality_reasons": list(item.quality_reasons),
+                    "parent_candidate_id": item.parent_candidate_id,
+                    "repair_action": item.repair_action,
+                }
+                for item in snapshots.feedback.records
+                if item.grounded and item.platform_verified
+            ][:24],
             "allowed_parent_seeds": [str(getattr(item, "expression", "")) for item in seeds],
             "candidate_inventory": _inventory_prompt_summary(snapshots),
             "forbidden_identifiers": sorted(BASE_VARS - set(snapshots.catalog.fields)),
