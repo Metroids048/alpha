@@ -4,8 +4,14 @@ import sqlite3
 con = sqlite3.connect('alpha_state.sqlite3')
 
 print("Status counts:")
-print(f"  ACTIVE: {con.execute('SELECT COUNT(*) FROM hypotheses WHERE status=\"ACTIVE\"').fetchone()[0]}")
-print(f"  active: {con.execute('SELECT COUNT(*) FROM hypotheses WHERE status=\"active\"').fetchone()[0]}")
+active_count = con.execute(
+    "SELECT COUNT(*) FROM hypotheses WHERE status='ACTIVE'"
+).fetchone()[0]
+lowercase_active_count = con.execute(
+    "SELECT COUNT(*) FROM hypotheses WHERE status='active'"
+).fetchone()[0]
+print(f"  ACTIVE: {active_count}")
+print(f"  active: {lowercase_active_count}")
 
 print("\nAll distinct statuses:")
 statuses = con.execute('SELECT DISTINCT status FROM hypotheses').fetchall()

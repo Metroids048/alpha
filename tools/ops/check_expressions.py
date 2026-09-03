@@ -24,4 +24,7 @@ else:
 
 print(f"\n📊 Total expressions: {con.execute('SELECT COUNT(*) FROM expressions').fetchone()[0]}")
 print(f"📊 Total simulation_runs: {con.execute('SELECT COUNT(*) FROM simulation_runs').fetchone()[0]}")
-print(f"📊 Total hypotheses: {con.execute('SELECT COUNT(*) FROM hypotheses WHERE status=\"ACTIVE\"').fetchone()[0]}")
+active_hypotheses = con.execute(
+    "SELECT COUNT(*) FROM hypotheses WHERE status='ACTIVE'"
+).fetchone()[0]
+print(f"📊 Total hypotheses: {active_hypotheses}")
