@@ -16,13 +16,16 @@ import pytest
 _REPO_ROOT = Path(__file__).parent.parent
 
 
-def _run_scanner(*extra_args: str) -> subprocess.CompletedProcess[str]:
+def _run_scanner(
+    *extra_args: str, cwd: Path | None = None
+) -> subprocess.CompletedProcess[str]:
     script = _REPO_ROOT / "tools" / "security" / "verify_git_history.py"
     return subprocess.run(
         [sys.executable, str(script), *extra_args],
         capture_output=True,
         text=True,
         encoding="utf-8",
+        cwd=cwd,
     )
 
 
@@ -93,15 +96,42 @@ class TestScannerDetectionLogic:
             "Scanner must output NOT_VERIFIED when no .git directory is present"
         )
 
-    def test_current_repo_exits_1_due_to_known_history(self):
-        """This repo is known to have sensitive paths — scanner must exit 1."""
-        result = _run_scanner()
-        # The repo has known .wq_browser_profile commits; scanner must find them
-        assert result.returncode in (1, 2), (
-            f"Expected exit code 1 (hits found) or 2 (no git); got {result.returncode}"
+    def test_sensitive_history_is_detected_in_a_temp_repo(self, tmp_path):
+        """A repository containing a sensitive path must be rejected."""
+        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.name", "scanner-test"],
+            cwd=tmp_path,
+            check=True,
         )
-        if result.returncode == 1:
-            assert "FOUND" in result.stdout
+        subprocess.run(
+            ["git", "config", "user.email", "scanner-test@example.invalid"],
+            cwd=tmp_path,
+            check=True,
+        )
+        sensitive_path = tmp_path / ".wq_browser_profile" / "Default" / "Cookies"
+        sensitive_path.parent.mkdir(parents=True)
+        sensitive_path.write_text("placeholder", encoding="utf-8")
+        subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+        subprocess.run(
+            ["git", "commit", "-m", "fixture"],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+
+        result = _run_scanner(cwd=tmp_path)
+        assert result.returncode == 1
+        assert "FOUND" in result.stdout
+        assert ".wq_browser_profile/Default/Cookies" in result.stdout
+
+    def test_current_repo_is_clean_after_history_rewrite(self):
+        """The checked-in repository must contain no sensitive history."""
+        result = _run_scanner()
+        assert result.returncode == 0, (
+            f"Expected exit code 0 for a clean history; got {result.returncode}"
+        )
+        assert "OK: no sensitive authentication paths found" in result.stdout
 
     def test_output_only_contains_path_commit_rule(self):
         """Scanner lines for hits must only contain commit ID, rule name, and path."""
